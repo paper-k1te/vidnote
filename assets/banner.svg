@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280" role="img" aria-label="vidnote — Bilibili video to timestamped Markdown notes">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0f14"/>
+      <stop offset="55%" stop-color="#0d1a22"/>
+      <stop offset="100%" stop-color="#0b2019"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00A1D6"/>
+      <stop offset="100%" stop-color="#07C160"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="280" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="4" fill="url(#accent)"/>
+
+  <text x="80" y="128" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="86" font-weight="700" fill="#ffffff" letter-spacing="-2">vidnote</text>
+
+  <text x="82" y="176" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="25" fill="#9aa4b2">Bilibili video → timestamped Markdown notes</text>
+
+  <g opacity="0.9">
+    <line x1="80" y1="222" x2="520" y2="222" stroke="#1f2b36" stroke-width="2"/>
+    <circle cx="80" cy="222" r="6" fill="#00A1D6"/>
+    <circle cx="300" cy="222" r="6" fill="#2f3d4a"/>
+    <circle cx="520" cy="222" r="6" fill="#07C160"/>
+    <text x="66" y="252" font-family="Menlo, Consolas, monospace" font-size="16" fill="#5d6b7a">00:00</text>
+    <text x="280" y="252" font-family="Menlo, Consolas, monospace" font-size="16" fill="#5d6b7a">02:26</text>
+    <text x="496" y="252" font-family="Menlo, Consolas, monospace" font-size="16" fill="#5d6b7a">12:34</text>
+  </g>
+
+  <g font-family="Menlo, Consolas, monospace" font-size="18">
+    <rect x="700" y="76" width="420" height="128" rx="10" fill="#0f1720" stroke="#1f2b36"/>
+    <text x="726" y="112" fill="#5d6b7a">$</text>
+    <text x="750" y="112" fill="#e6edf3">vidnote fetch BV1xx411c7mD</text>
+    <text x="726" y="146" fill="#07C160">✓</text>
+    <text x="750" y="146" fill="#9aa4b2">2026-11-04_标题_BV1xx411c7mD.md</text>
+    <text x="726" y="180" fill="#00A1D6">→</text>
+    <text x="750" y="180" fill="#9aa4b2">字幕 · 时间戳 · YAML frontmatter</text>
+  </g>
+</svg>
