@@ -14,9 +14,11 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 from . import __version__
-from .bilibili import BilibiliClient, BiliError, parse_video_id
+from .bilibili import BilibiliClient, BiliError, Cue, VideoMeta, parse_video_id
+from .media import MediaError, transcribe_video
 from .note import NoteOptions, build_note, filename
 
 app = typer.Typer(
@@ -29,6 +31,7 @@ err = Console(stderr=True)
 
 EXIT_OK = 0
 EXIT_ERROR = 1
+EXIT_MISSING_DEPS = 2
 EXIT_EXISTS = 3
 
 
@@ -36,6 +39,33 @@ EXIT_EXISTS = 3
 def version() -> None:
     """打印版本号。"""
     console.print(f"vidnote {__version__}")
+
+
+def _transcribe(
+    meta: VideoMeta, page_no: int, model: str, *, use_cache: bool
+) -> tuple[str, list[Cue]]:
+    """带进度条地跑一遍「下载音频 → 本地转写」。"""
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        console=err,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("正在下载音频…", total=None)
+
+        def on_progress(done: float, total: float) -> None:
+            progress.update(
+                task, description="正在本地转写…", total=total, completed=done
+            )
+
+        return transcribe_video(
+            meta,
+            page_no,
+            model_size=model,
+            use_cache=use_cache,
+            on_progress=on_progress,
+        )
 
 
 @app.command()
@@ -48,6 +78,11 @@ def fetch(
     no_desc: bool = typer.Option(False, "--no-desc", help="不包含视频简介"),
     stdout: bool = typer.Option(False, "--stdout", help="打印到终端，不写文件"),
     force: bool = typer.Option(False, "--force", "-f", help="覆盖已存在的文件"),
+    whisper: bool = typer.Option(
+        False, "--whisper", "-w", help="没有字幕时，在本机转写音频（需要 [whisper] 依赖）"
+    ),
+    model: str = typer.Option("small", "--model", help="转写模型：tiny/base/small/medium/large-v3"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="不读也不写转写缓存"),
 ) -> None:
     """抓取一个视频，生成 Markdown 笔记。"""
     try:
@@ -75,6 +110,15 @@ def fetch(
 
     cues = subtitle[1] if subtitle else None
     lang = subtitle[0] if subtitle else "none"
+    transcribed = False
+
+    if cues is None and whisper:
+        try:
+            lang, cues = _transcribe(meta, page_no, model, use_cache=not no_cache)
+            transcribed = True
+        except MediaError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_MISSING_DEPS) from exc
 
     text = build_note(
         meta,
@@ -102,7 +146,12 @@ def fetch(
     temporary.write_text(text, encoding="utf-8")
     temporary.replace(destination)
 
-    status = "有字幕" if cues else "无字幕"
+    if transcribed:
+        status = "本地转写"
+    elif cues:
+        status = "有字幕"
+    else:
+        status = "无字幕"
     console.print(f"[green]已生成[/green] {destination}  （{status}，{len(cues or [])} 条）")
 
 

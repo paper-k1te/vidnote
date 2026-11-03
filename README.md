@@ -48,6 +48,32 @@ vidnote fetch BV1xx411c7mD --source my-blog
 
 输出文件名形如 `2026-11-04_标题_BV1xx411c7mD.md`。文件已存在时不会覆盖，除非加 `--force`。
 
+### 没有字幕怎么办
+
+B 站对字幕接口做了登录限制，未登录时大多数视频拿不到字幕。这时用本地转写：
+
+```bash
+pip install 'vidnote[whisper]'
+vidnote fetch BV1xx411c7mD --whisper
+```
+
+流程是：yt-dlp 取音频 → faster-whisper 在本机转写 → 生成带时间戳的笔记。音频不会上传到任何服务器。
+
+首次运行会下载模型：
+
+| 模型 | 大小 | 速度 | 建议 |
+| --- | --- | --- | --- |
+| `tiny` | ~75MB | 最快 | 只用来验证流程 |
+| `base` | ~145MB | 快 | 英文内容 |
+| `small`（默认） | ~485MB | 中等 | 中文内容，准确率与速度平衡 |
+| `medium` | ~1.5GB | 慢 | 对准确率要求高 |
+
+```bash
+vidnote fetch BV1xx411c7mD --whisper --model medium
+```
+
+转写结果会缓存在本地（`%LOCALAPPDATA%\vidnote` 或 `~/.cache/vidnote`），同一个视频第二次跑会直接命中缓存。加 `--no-cache` 可跳过。
+
 ### 退出码
 
 | 码 | 含义 |
@@ -114,7 +140,7 @@ MCP 客户端里会多出一个工具 `fetch_note`，传链接就返回整篇笔
 
 - [x] B 站单P/多P 抓取、字幕、时间戳
 - [x] CLI + MCP
-- [ ] 无字幕视频的本地转写（`--whisper`，依赖 faster-whisper）
+- [x] 无字幕视频的本地转写（`--whisper`）
 - [ ] 抖音、小红书
 - [ ] 按章节自动切分（读简介里的时间点）
 - [ ] 批量：一个收藏夹/一个 UP 主的所有视频

@@ -21,7 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]
-whisper = ["faster-whisper>=1.0", "yt-dlp>=2025.1"]
+whisper = ["faster-whisper>=1.0", "av>=11,<14", "yt-dlp>=2025.1"]
 dev = ["pytest>=8.0", "ruff>=0.6", "mcp>=1.2"]
 
 [project.scripts]
