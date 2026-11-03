@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 import typer
@@ -83,6 +84,9 @@ def fetch(
     ),
     model: str = typer.Option("small", "--model", help="转写模型：tiny/base/small/medium/large-v3"),
     no_cache: bool = typer.Option(False, "--no-cache", help="不读也不写转写缓存"),
+    delay: float = typer.Option(
+        0.0, "--delay", min=0.0, help="两次接口请求之间等待的秒数，批量处理时降低频率"
+    ),
 ) -> None:
     """抓取一个视频，生成 Markdown 笔记。"""
     try:
@@ -100,6 +104,9 @@ def fetch(
                 err.print(f"[red]这个视频只有 {len(meta.pages)} 个分P。[/red]")
                 raise typer.Exit(EXIT_ERROR)
             current = meta.pages[page_no - 1]
+            if delay > 0:
+                # 批量循环时用：把两次接口请求之间拉开，别把对方接口打爆。
+                time.sleep(delay)
             subtitle = client.subtitles(meta.bvid, current.cid)
     except BiliError as exc:
         err.print(f"[red]{exc}[/red]")
