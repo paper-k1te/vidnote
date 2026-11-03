@@ -1,0 +1,57 @@
+[project]
+name = "vidnote"
+version = "0.1.0"
+description = "把 B 站视频变成带时间戳的 Markdown 笔记。"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "vidnote contributors" }]
+keywords = ["bilibili", "markdown", "notes", "transcript", "obsidian", "mcp"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "httpx>=0.27",
+  "typer>=0.12",
+  "rich>=13.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.2"]
+whisper = ["faster-whisper>=1.0", "yt-dlp>=2025.1"]
+dev = ["pytest>=8.0", "ruff>=0.6", "mcp>=1.2"]
+
+[project.scripts]
+vidnote = "vidnote.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "mcp>=1.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vidnote"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = ["archive"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer 的惯用写法就是直接在默认值里调用 Option/Argument。
+"src/vidnote/cli.py" = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,125 @@
+from datetime import datetime, timezone
+
+import httpx
+import pytest
+
+from vidnote.bilibili import BilibiliClient, BiliError, VideoId, parse_video_id
+
+
+def test_parse_full_url_with_page() -> None:
+    video = parse_video_id("https://www.bilibili.com/video/BV1xx411c7mD/?p=3&spm=1")
+    assert video.bvid == "BV1xx411c7mD"
+    assert video.page == 3
+
+
+def test_parse_bare_bv_and_av() -> None:
+    assert parse_video_id("BV1xx411c7mD").bvid == "BV1xx411c7mD"
+    assert parse_video_id("av170001").aid == 170001
+
+
+def test_parse_short_link() -> None:
+    assert parse_video_id("https://b23.tv/BV1xx411c7mD").bvid == "BV1xx411c7mD"
+
+
+def test_parse_rejects_garbage() -> None:
+    with pytest.raises(BiliError):
+        parse_video_id("https://example.com/not-a-video")
+
+
+VIEW = {
+    "code": 0,
+    "data": {
+        "bvid": "BV1xx411c7mD",
+        "aid": 170001,
+        "title": "测试视频",
+        "desc": "简介正文",
+        "duration": 3723,
+        "pubdate": 1714521600,
+        "owner": {"name": "某UP"},
+        "pages": [
+            {"page": 1, "cid": 111, "part": "上半场", "duration": 1800},
+            {"page": 2, "cid": 222, "part": "下半场", "duration": 1923},
+        ],
+        "tags": [{"tag_name": "测试"}],
+    },
+}
+
+
+def test_view_maps_fields() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=VIEW)
+
+    with BilibiliClient(transport=httpx.MockTransport(handler)) as client:
+        meta = client.view(VideoId(bvid="BV1xx411c7mD"))
+
+    assert meta.title == "测试视频"
+    assert meta.owner == "某UP"
+    assert len(meta.pages) == 2
+    assert meta.pages[1].title == "下半场"
+    assert meta.pubdate.tzinfo == timezone.utc
+
+
+def test_view_raises_on_api_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"code": -404, "message": "啥都木有"})
+
+    with BilibiliClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(BiliError) as excinfo:
+            client.view(VideoId(bvid="BV1xx411c7mD"))
+    assert "-404" in str(excinfo.value)
+
+
+def test_subtitles_returns_cues() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/x/player/v2"):
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "data": {
+                        "subtitle": {
+                            "subtitles": [
+                                {"lan": "zh-CN", "subtitle_url": "//example.com/sub.json"}
+                            ]
+                        }
+                    },
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "body": [
+                    {"from": 1.5, "to": 3.0, "content": "第一句"},
+                    {"from": 4, "to": 5, "content": "第二句"},
+                ]
+            },
+        )
+
+    with BilibiliClient(transport=httpx.MockTransport(handler)) as client:
+        result = client.subtitles("BV1xx411c7mD", 111)
+
+    assert result is not None
+    lang, cues = result
+    assert lang == "zh-CN"
+    assert [c.text for c in cues] == ["第一句", "第二句"]
+    assert cues[0].start == 1.5
+
+
+def test_subtitles_returns_none_when_absent() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"code": 0, "data": {"subtitle": {"subtitles": []}}})
+
+    with BilibiliClient(transport=httpx.MockTransport(handler)) as client:
+        assert client.subtitles("BV1xx411c7mD", 111) is None
+
+
+def _meta():
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=VIEW))
+    with BilibiliClient(transport=transport) as client:
+        return client.view(VideoId(bvid="BV1xx411c7mD"))
+
+
+def test_pubdate_is_timezone_aware() -> None:
+    meta = _meta()
+    assert isinstance(meta.pubdate, datetime)
+    assert meta.pubdate.tzinfo is not None
