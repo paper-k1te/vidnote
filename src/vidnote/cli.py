@@ -26,6 +26,30 @@ from .media import MediaError, transcribe_video
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch
 
+
+def _force_utf8_output() -> None:
+    """Windows 控制台默认是 GBK（代码页 936），中文会乱码。
+
+    统一把控制台输出代码页和 Python 的流编码改成 UTF-8。Python 3.15 起默认就是
+    UTF-8，但在那之前、以及打包成 exe 之后，必须显式设置。
+    """
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+            ctypes.windll.kernel32.SetConsoleCP(65001)
+        except Exception:  # noqa: BLE001 - 没有控制台时忽略
+            pass
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
+_force_utf8_output()
+
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
@@ -272,7 +296,13 @@ def serve() -> None:
     try:
         from .mcp_server import run
     except ImportError:
-        err.print("[red]缺少依赖：pip install 'vidnote[mcp]'[/red]")
+        if getattr(sys, "frozen", False):
+            err.print(
+                "[red]这个 exe 是核心版，没有内置 MCP 依赖。[/red]\n"
+                "用 pip 安装完整版后运行：pip install 'vidnote[mcp]' && vidnote serve"
+            )
+        else:
+            err.print("[red]缺少依赖：pip install 'vidnote[mcp]'[/red]")
         raise typer.Exit(EXIT_ERROR) from None
     run()
 

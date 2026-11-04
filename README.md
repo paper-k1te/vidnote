@@ -99,6 +99,19 @@ vidnote fetch BV1xx411c7mD --dir ~/Notes/videos --source my-blog
 uvx vidnote fetch BV1xx411c7mD
 ```
 
+### Windows 免安装 exe
+
+不想装 Python 的话，可以自己构建一个单文件 `vidnote.exe`（约 14 MB）：
+
+```powershell
+powershell -File scripts/build_exe.ps1
+# 产物：dist-exe\vidnote.exe，双击或命令行都能用
+```
+
+这个 exe 是**核心版**：抓取、搜索、笔记生成。不含本地转写（`faster-whisper`）和抽帧（PyAV/Pillow）——它们依赖重型原生库，会让体积涨到几百 MB，模型也仍要首次下载。需要这两项时用 `pip install 'vidnote[whisper]'` 或 `'vidnote[frames]'`。
+
+> exe 运行时需要系统临时目录可写（PyInstaller 会先解压到 `%TEMP%`）。如果报 `Could not create temporary directory`，检查 `TEMP` 环境变量是否指向一个可写目录。
+
 ### 退出码
 
 |  码  | 含义                                 |

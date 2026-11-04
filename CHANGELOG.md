@@ -2,6 +2,17 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 新增
+
+- **Windows 单文件 exe**：`scripts/build_exe.ps1` 生成 `dist-exe\vidnote.exe`（约 14 MB），包含抓取、搜索、笔记生成，不需要安装 Python。
+- exe 里运行 `vidnote serve` 时，会明确提示这是核心版、MCP 需要 pip 安装的完整版。
+
+### 修复
+
+- **Windows 中文乱码**：控制台默认代码页是 GBK，程序输出却是 UTF-8。现在启动时统一把控制台代码页和输出流设为 UTF-8。
+
 ## [0.2.0] - 2026-11-04
 
 ### 新增

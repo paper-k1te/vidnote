@@ -12,3 +12,5 @@ samples/
 build-env-*/
 .sandbox/
 pytest-of-*/
+dist-exe/
+build-exe/
