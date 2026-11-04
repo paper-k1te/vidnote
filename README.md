@@ -114,6 +114,24 @@ vidnote gui
 
 界面沿用 cc-switch 的设计语言（浅底灰阶 + 单一橙色强调色 + 13px 字号）。想用独立窗口而不是浏览器标签页，加 `--app`（Edge 未运行时更可靠）。
 
+### 桌面应用（真窗口，不是浏览器）
+
+```powershell
+powershell -File scripts/build_app.ps1
+# 产物：dist-app\vidnote-app.exe
+```
+
+`vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序：
+
+| 文件 | 作用 |
+| --- | --- |
+| `vidnote-app.exe` | 窗口外壳（C#，.NET Framework 4.8，Windows 自带） |
+| `vidnote-server.exe` | Python 后端，外壳会自动启动它并在退出时关闭 |
+| `Microsoft.Web.WebView2.*.dll` | WebView2 托管库 |
+| `WebView2Loader.dll` | WebView2 原生加载器 |
+
+整包约 15 MB，双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
+
 ### Windows 免安装 exe
 
 不想装 Python 的话，可以自己构建单文件可执行程序（约 15 MB）：

@@ -318,19 +318,33 @@ def gui(
     app_window: bool = typer.Option(
         False, "--app", help="用 Edge 的应用窗口打开（浏览器已在运行时可能失效）"
     ),
-    native: bool = typer.Option(False, "--native", help="用 tkinter 原生窗口（备选）"),
+    tk: bool = typer.Option(False, "--tk", help="用 tkinter 窗口（最轻的备选方案）"),
     port: int = typer.Option(0, "--port", help="监听端口，0 表示自动选择"),
 ) -> None:
-    """打开图形界面。默认在浏览器标签页里打开，最稳定。"""
-    if native:
-        from .gui_native import main as native_main
+    """打开图形界面（浏览器标签页）。
 
-        native_main()
+    要「双击就能用的桌面应用」，用打包出来的 ``vidnote-app.exe``：
+    那是 WinForms + WebView2 的原生窗口，不经过浏览器。
+    """
+    if tk:
+        from .gui_native import main as tk_main
+
+        tk_main()
         return
 
     from .gui import serve as serve_web
 
     serve_web(port=port, app_window=app_window)
+
+
+@app.command("serve-ui")
+def serve_ui(
+    port: int = typer.Option(0, "--port", help="监听端口，0 表示自动选择"),
+) -> None:
+    """只启动界面后端，不打开浏览器（供桌面外壳调用）。"""
+    from .gui import serve as serve_web
+
+    serve_web(port=port, open_browser=False)
 
 
 @app.command()

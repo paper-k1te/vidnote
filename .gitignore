@@ -18,3 +18,6 @@ build-exe/
 vidnote-ui-*/
 docs/screenshots/*.tmp
 vidnote-ui.log
+dist-app/
+build/
+.tools/

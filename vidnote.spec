@@ -32,6 +32,12 @@ a = Analysis(
         "tkinter",
         "pytest",
         "setuptools",
+        # 桌面窗口由 C# 外壳（WebView2）负责，Python 侧不需要这些
+        "webview",
+        "pythonnet",
+        "clr_loader",
+        "bottle",
+        "proxy_tools",
         # Pillow 里用不到的界面/插件部分
         "PIL.ImageQt",
         "PIL.ImageTk",
