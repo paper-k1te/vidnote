@@ -14,3 +14,4 @@ build-env-*/
 pytest-of-*/
 dist-exe/
 build-exe/
+.tools/

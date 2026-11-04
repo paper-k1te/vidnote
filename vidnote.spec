@@ -18,14 +18,13 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=[
-        # 可选功能的重型依赖
+        # 可选功能的重型依赖（转写、按画面变化选帧）
         "faster_whisper",
         "ctranslate2",
         "onnxruntime",
         "tokenizers",
         "huggingface_hub",
         "av",
-        "PIL",
         "yt_dlp",
         "numpy",
         # 与运行无关的东西
@@ -33,9 +32,30 @@ a = Analysis(
         "tkinter",
         "pytest",
         "setuptools",
+        # Pillow 里用不到的界面/插件部分
+        "PIL.ImageQt",
+        "PIL.ImageTk",
+        "PIL.ImageShow",
+        "PIL.ImageGrab",
+        "PIL.AvifImagePlugin",
+        "PIL.WebPImagePlugin",
+        "PIL.ImageFont",
+        "PIL.ImageDraw",
+        "PIL.ImageCms",
+        "PIL.IptcImagePlugin",
+        "PIL.FitsImagePlugin",
     ],
     noarchive=False,
 )
+
+# PIL 的预编译扩展是按二进制收集的，光靠 excludes 拦不住。这里显式丢掉用不到的：
+# _avif 一个就占 4.3 MB（压缩后），_imagingft / _webp / _imagingcms 也用不上。
+_DROP_BINARIES = ("PIL\\_avif", "PIL\\_imagingft", "PIL\\_webp", "PIL\\_imagingcms")
+a.binaries = [
+    item
+    for item in a.binaries
+    if not any(item[0].startswith(prefix) for prefix in _DROP_BINARIES)
+]
 
 pyz = PYZ(a.pure)
 

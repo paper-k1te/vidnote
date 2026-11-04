@@ -66,7 +66,7 @@ tags:
 - **分P 不迷路**：多P 视频会记录当前在第几集，时间戳链接自动添加 `&p=`。
 - **先搜再抓**：`vidnote search "关键词"` 直接列出候选视频，挑中 BV 号再归档。
 - **字幕优先，转写兜底**：视频有字幕就直接用；没有就在本机跑 Whisper，音频不出你的电脑。
-- **自动关键帧**：`--frames 6` 会分析画面变化，把 PPT 翻页、镜头切换这些时刻截出来，嵌进笔记。
+- **自动关键帧**：`--frames 6` 用 B 站现成的缩略图切出 6 张画面，带时间戳嵌进笔记；加 `--scene` 则按画面变化重新选帧。
 - **时间戳可点**：`[12:34](…?t=754)`，在 Obsidian、Logseq、浏览器里都能跳转。
 - **YAML frontmatter**：字段固定，能被 Dataview 之类的工具直接查询、筛选、聚合。
 
@@ -101,14 +101,21 @@ uvx vidnote fetch BV1xx411c7mD
 
 ### Windows 免安装 exe
 
-不想装 Python 的话，可以自己构建一个单文件 `vidnote.exe`（约 14 MB）：
+不想装 Python 的话，可以自己构建一个单文件 `vidnote.exe`（约 15 MB）：
 
 ```powershell
 powershell -File scripts/build_exe.ps1
 # 产物：dist-exe\vidnote.exe，双击或命令行都能用
 ```
 
-这个 exe 是**核心版**：抓取、搜索、笔记生成。不含本地转写（`faster-whisper`）和抽帧（PyAV/Pillow）——它们依赖重型原生库，会让体积涨到几百 MB，模型也仍要首次下载。需要这两项时用 `pip install 'vidnote[whisper]'` 或 `'vidnote[frames]'`。
+这个 exe 是**核心版**：抓取、搜索、笔记生成、缩略帧（`--frames`）都在里面。不含两项重型能力：
+
+| 能力 | 为什么不在 exe 里 |
+| --- | --- |
+| 本地转写（`--whisper`） | `faster-whisper` + `ctranslate2` + `onnxruntime` 会让体积涨到 300 MB 以上，模型仍需首次下载 |
+| 按画面变化选帧（`--scene`） | 需要 PyAV 和 yt-dlp，且要下载整段视频 |
+
+需要它们时用 pip 安装完整版：`pip install 'vidnote[whisper]'` 或 `pip install 'vidnote[scene]'`。
 
 > exe 运行时需要系统临时目录可写（PyInstaller 会先解压到 `%TEMP%`）。如果报 `Could not create temporary directory`，检查 `TEMP` 环境变量是否指向一个可写目录。
 
@@ -166,13 +173,21 @@ vidnote search "Rust 所有权" --json | jq -r '.[].bvid'
 ## 🖼 关键帧
 
 ```bash
-pip install 'vidnote[frames]'
 vidnote fetch BV1xx411c7mD --frames 6
 ```
 
 会把 6 张关键帧导出到笔记旁边的 `<笔记名>_frames/` 目录，并在笔记里生成「关键帧」一节，每张图都带可跳转的时间戳。
 
-原理不复杂：按每秒 2 帧采样成 64×36 的灰度缩略图，比较相邻帧的差异，差异大的地方就是「画面变了」。所以它抓到的是 PPT 翻页、代码切换、镜头切换这类真正的信息点，而不是随机截图。全程本地计算，不调用任何 AI 服务。
+默认走 B 站现成的**缩略图雪碧图**（10×10 的拼图，服务端已按时间点切好）：只下载一张几百 KB 的图片再裁开，**不下载视频、不解码、不需要系统 ffmpeg**。
+
+需要「按画面变化选帧」时加 `--scene`，这条路径会下载视频并逐帧比较，依赖更重：
+
+```bash
+pip install 'vidnote[scene]'
+vidnote fetch BV1xx411c7mD --frames 6 --scene
+```
+
+它按每秒 2 帧采样成 64×36 的灰度缩略图，比较相邻帧差异，抓 PPT 翻页、代码切换这类真正的信息点，全程本地计算，不调用任何 AI 服务。
 
 网络拿不到视频流时（B 站的视频 CDN 在部分网络下不可达），可以先自己下载，再用本地文件：
 
@@ -306,9 +321,9 @@ vidnote fetch "https://www.bilibili.com/video/BV1xx411c7mD" --whisper
 - Search first (`vidnote search "keyword"`), then archive the BV ids you care about.
 - If a video has no captions (most don't without a session), transcribe locally with
   `faster-whisper` — audio never leaves your machine.
-- `--frames N` detects scene changes locally and embeds key frames with timestamps;
-  no AI service involved.
+- `--frames N` crops N thumbnails from Bilibili's storyboard sprites (no video download,
+  no ffmpeg). Add `--scene` to pick frames by actual scene changes instead.
 - Output is plain Markdown with YAML frontmatter, ready for Obsidian or any tool.
-- Ships a CLI and an MCP server (`vidnote serve`) for coding agents.
+- Ships a CLI, an MCP server (`vidnote serve`), and a 15 MB standalone Windows exe.
 
 MIT licensed.

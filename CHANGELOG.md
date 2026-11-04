@@ -6,12 +6,31 @@
 
 ### 新增
 
-- **Windows 单文件 exe**：`scripts/build_exe.ps1` 生成 `dist-exe\vidnote.exe`（约 14 MB），包含抓取、搜索、笔记生成，不需要安装 Python。
+- **Windows 单文件 exe**：`scripts/build_exe.ps1` 生成 `dist-exe\vidnote.exe`（约 15 MB），包含抓取、搜索、笔记生成和缩略帧，不需要安装 Python。
+- **缩略帧改用 B 站雪碧图**：`--frames` 默认只下载一张拼图再裁剪，不再下载视频、不需要 PyAV 和系统 ffmpeg。
+- **`--scene`**：需要按画面变化选帧时使用，走视频解码路径，依赖 `vidnote[scene]`。
 - exe 里运行 `vidnote serve` 时，会明确提示这是核心版、MCP 需要 pip 安装的完整版。
+
+### 变更
+
+- Pillow 改为核心依赖；原来的 `[frames]` 额外依赖组更名为 `[scene]`。
 
 ### 修复
 
 - **Windows 中文乱码**：控制台默认代码页是 GBK，程序输出却是 UTF-8。现在启动时统一把控制台代码页和输出流设为 UTF-8。
+
+### 体积
+
+单文件 exe 的构成与取舍：
+
+| 组成 | 体积 |
+| --- | --- |
+| 核心（Python 运行时 + httpx/typer/rich/PyYAML） | ~13.5 MB |
+| Pillow（裁剪缩略帧） | +6.5 MB |
+| 去掉 PIL 的 AVIF / 字体 / WebP 扩展 | −5.5 MB |
+| **最终** | **15.1 MB** |
+
+转写（faster-whisper + ctranslate2 + onnxruntime）会让体积超过 300 MB，因此不进 exe。
 
 ## [0.2.0] - 2026-11-04
 

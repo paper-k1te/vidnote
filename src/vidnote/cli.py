@@ -25,6 +25,7 @@ from .frames import FrameError, KeyFrame, extract_keyframes
 from .media import MediaError, transcribe_video
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch
+from .storyboard import storyboard_frames
 
 
 def _force_utf8_output() -> None:
@@ -103,15 +104,27 @@ def _extract_frames(
     destination: Path,
     count: int,
     video_path: Path | None = None,
+    *,
+    scene: bool = False,
 ) -> list[KeyFrame]:
-    """把关键帧导出到笔记旁边的 ``<笔记名>_frames/`` 目录。"""
+    """把关键帧导出到笔记旁边的 ``<笔记名>_frames/`` 目录。
+
+    默认走雪碧图：只下载一张拼图再裁剪，不碰视频。``--scene`` 或传入本地文件时，
+    才下载视频做画面变化检测。
+    """
+    outdir = destination.parent / f"{destination.stem}_frames"
+
     if video_path is not None and not video_path.exists():
         raise FrameError(f"找不到本地视频：{video_path}")
-    outdir = destination.parent / f"{destination.stem}_frames"
-    with console.status("正在分析画面…" if video_path else "正在下载并分析画面…"):
-        return extract_keyframes(
-            meta, page_no, outdir, max_frames=count, video_path=video_path
-        )
+
+    if scene or video_path is not None:
+        with console.status("正在分析画面…" if video_path else "正在下载并分析画面…"):
+            return extract_keyframes(
+                meta, page_no, outdir, max_frames=count, video_path=video_path
+            )
+
+    with console.status("正在取缩略帧…"):
+        return storyboard_frames(meta.bvid, page_no, outdir, count=count)
 
 
 @app.command()
@@ -137,6 +150,11 @@ def fetch(
     ),
     video: Path = typer.Option(
         None, "--video", help="用本地视频文件抽帧，而不是从网上下载"
+    ),
+    scene: bool = typer.Option(
+        False,
+        "--scene",
+        help="按画面变化选帧（需下载视频，需 [scene] 依赖）；默认用 B 站现成的缩略图",
     ),
 ) -> None:
     """抓取一个视频，生成 Markdown 笔记。"""
@@ -204,10 +222,15 @@ def fetch(
     keyframes: list[tuple[float, str]] = []
     if frames:
         try:
-            shots = _extract_frames(meta, page_no, destination, frames, video)
+            shots = _extract_frames(
+                meta, page_no, destination, frames, video, scene=scene
+            )
         except FrameError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
+        except BiliError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_ERROR) from exc
         keyframes = [(shot.seconds, shot.relative_to(destination.parent)) for shot in shots]
 
     text = build_note(
