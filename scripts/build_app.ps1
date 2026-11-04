@@ -1,4 +1,4 @@
-# 构建桌面应用（原生窗口 + WebView2 外壳）
+﻿# 构建桌面应用（原生窗口 + WebView2 外壳）
 #
 # 用法：
 #   powershell -File scripts/build_app.ps1          # 轻量版（约 16 MB）

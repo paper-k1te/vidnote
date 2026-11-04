@@ -1,4 +1,4 @@
-# 构建 Windows 单文件可执行程序（核心版）。
+﻿# 构建 Windows 单文件可执行程序（核心版）。
 #
 # 用法：
 #   pwsh scripts/build_exe.ps1
