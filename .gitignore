@@ -10,3 +10,5 @@ build/
 *.tmp
 samples/
 build-env-*/
+.sandbox/
+pytest-of-*/

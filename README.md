@@ -64,7 +64,9 @@ tags:
 
 - **一条命令归档**：链接、BV 号、av 号都支持识别，自动抓标题、UP 主、时长、发布时间、简介、标签。
 - **分P 不迷路**：多P 视频会记录当前在第几集，时间戳链接自动添加 `&p=`。
+- **先搜再抓**：`vidnote search "关键词"` 直接列出候选视频，挑中 BV 号再归档。
 - **字幕优先，转写兜底**：视频有字幕就直接用；没有就在本机跑 Whisper，音频不出你的电脑。
+- **自动关键帧**：`--frames 6` 会分析画面变化，把 PPT 翻页、镜头切换这些时刻截出来，嵌进笔记。
 - **时间戳可点**：`[12:34](…?t=754)`，在 Obsidian、Logseq、浏览器里都能跳转。
 - **YAML frontmatter**：字段固定，能被 Dataview 之类的工具直接查询、筛选、聚合。
 
@@ -75,6 +77,9 @@ pip install vidnote
 ```
 
 ```bash
+# 先搜，看看有哪些视频
+vidnote search "Python 异步编程"
+
 # 链接、BV 号、av 号都行
 vidnote fetch "https://www.bilibili.com/video/BV1xx411c7mD"
 
@@ -130,6 +135,37 @@ vidnote fetch BV1xx411c7mD --whisper --model medium
 ```
 
 转写结果按 `视频 + 分P + 模型` 缓存在本地（Windows 在 `%LOCALAPPDATA%\vidnote`，其他系统在 `~/.cache/vidnote`），同一个视频第二次跑秒出。加 `--no-cache` 可跳过。
+
+## 🔍 搜索视频
+
+```bash
+vidnote search "Rust 所有权" --limit 5
+```
+
+输出一张表：BV 号、标题、UP 主、时长、播放量。加 `--json` 可以直接喂给脚本：
+
+```bash
+vidnote search "Rust 所有权" --json | jq -r '.[].bvid'
+```
+
+搜索走的是 B 站公开的 `search/all/v2` 接口，**不需要登录**。如果返回 `-352`，说明触发了风控，等一会儿或降低频率再试。
+
+## 🖼 关键帧
+
+```bash
+pip install 'vidnote[frames]'
+vidnote fetch BV1xx411c7mD --frames 6
+```
+
+会把 6 张关键帧导出到笔记旁边的 `<笔记名>_frames/` 目录，并在笔记里生成「关键帧」一节，每张图都带可跳转的时间戳。
+
+原理不复杂：按每秒 2 帧采样成 64×36 的灰度缩略图，比较相邻帧的差异，差异大的地方就是「画面变了」。所以它抓到的是 PPT 翻页、代码切换、镜头切换这类真正的信息点，而不是随机截图。全程本地计算，不调用任何 AI 服务。
+
+网络拿不到视频流时（B 站的视频 CDN 在部分网络下不可达），可以先自己下载，再用本地文件：
+
+```bash
+vidnote fetch BV1xx411c7mD --frames 6 --video ~/Downloads/lecture.mp4
+```
 
 ## 🤖 给 agent 用
 
@@ -214,6 +250,8 @@ agent 会多出一个工具 `fetch_note`：
 
 - [X] B 站单P/多P 抓取、字幕、时间戳
 - [X] 无字幕视频的本地转写
+- [X] 关键词搜索
+- [X] 画面变化检测的关键帧
 - [X] CLI + MCP
 - [ ] 按简介里的时间点自动生成章节
 - [ ] 批量：一个收藏夹 / 一个 UP 主的所有视频
@@ -252,8 +290,11 @@ vidnote fetch "https://www.bilibili.com/video/BV1xx411c7mD" --whisper
 ```
 
 - Uses Bilibili's public web API; no login, no scraping workarounds.
+- Search first (`vidnote search "keyword"`), then archive the BV ids you care about.
 - If a video has no captions (most don't without a session), transcribe locally with
   `faster-whisper` — audio never leaves your machine.
+- `--frames N` detects scene changes locally and embeds key frames with timestamps;
+  no AI service involved.
 - Output is plain Markdown with YAML frontmatter, ready for Obsidian or any tool.
 - Ships a CLI and an MCP server (`vidnote serve`) for coding agents.
 

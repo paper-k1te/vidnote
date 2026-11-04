@@ -56,6 +56,7 @@ def build_note(
     *,
     options: NoteOptions | None = None,
     subtitle_lang: str = "zh",
+    frames: list[tuple[float, str]] | None = None,
 ) -> str:
     opts = options or NoteOptions()
     url = meta.url
@@ -111,6 +112,14 @@ def build_note(
             marker = "**" if current and page.index == current.index else ""
             lines.append(f"- {marker}P{page.index} {page.title}（{fmt_ts(page.duration)}）{marker}")
         lines.append("")
+
+    if frames:
+        lines += ["## 关键帧", ""]
+        for seconds, relative in frames:
+            lines.append(f"**{ts_link(url, seconds)}**")
+            lines.append("")
+            lines.append(f"![{fmt_ts(seconds)}]({relative})")
+            lines.append("")
 
     lines += ["## 字幕", ""]
     if not cues:
