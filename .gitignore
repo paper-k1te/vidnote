@@ -21,3 +21,9 @@ vidnote-ui.log
 dist-app/
 build/
 .tools/
+dist-app-full/
+.sandbox/
+build-exe-full/
+dist-exe-full/
+tmp*
+dist-exe-full/

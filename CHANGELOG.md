@@ -6,6 +6,9 @@
 
 ### 新增
 
+- **桌面应用（原生窗口）**：`scripts/build_app.ps1` 生成 `dist-app\vidnote-app.exe`——WinForms + WebView2 外壳，双击即用，没有浏览器地址栏，退出时自动关闭后端。
+- **完整版构建**：`scripts/build_app.ps1 -Full` 把 `faster-whisper`、`yt-dlp` 一并打进去（约 101 MB），界面里勾选「在本机转写」即可处理没有字幕的视频。
+- **界面里直接转写**：后端新增 `transcribe` 能力探测，`/api/health` 返回是否支持；轻量版会把开关置灰并说明原因。
 - **Windows 单文件 exe**：`scripts/build_exe.ps1` 生成 `dist-exe\vidnote.exe`（约 15 MB），包含抓取、搜索、笔记生成和缩略帧，不需要安装 Python。
 - **缩略帧改用 B 站雪碧图**：`--frames` 默认只下载一张拼图再裁剪，不再下载视频、不需要 PyAV 和系统 ffmpeg。
 - **`--scene`**：需要按画面变化选帧时使用，走视频解码路径，依赖 `vidnote[scene]`。

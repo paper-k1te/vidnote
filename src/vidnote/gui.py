@@ -77,7 +77,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, page.encode("utf-8"), "text/html; charset=utf-8")
             return
         if parsed.path == "/api/health":
-            self._json({"ok": True, "version": __version__})
+            self._json(
+                {
+                    "ok": True,
+                    "version": __version__,
+                    "transcribe": transcription_available(),
+                }
+            )
             return
         if parsed.path == "/api/ping":
             Handler.last_ping = time.time()
@@ -126,11 +132,23 @@ def search_videos(keyword: str, limit: int = 8) -> dict[str, Any]:
     }
 
 
+def transcription_available() -> bool:
+    """后端是否装好了本地转写的依赖（faster-whisper + yt-dlp）。"""
+    try:
+        import faster_whisper  # noqa: F401, PLC0415
+        import yt_dlp  # noqa: F401, PLC0415
+    except Exception:  # noqa: BLE001
+        return False
+    return True
+
+
 def fetch_video(payload: dict[str, Any]) -> dict[str, Any]:
     target = str(payload.get("target", "")).strip()
     page = int(payload.get("page") or 1)
     frames = int(payload.get("frames") or 0)
     outdir = str(payload.get("outdir", "")).strip()
+    transcribe = bool(payload.get("transcribe"))
+    model = str(payload.get("model") or "small")
 
     try:
         video_id = parse_video_id(target)
@@ -150,6 +168,19 @@ def fetch_video(payload: dict[str, Any]) -> dict[str, Any]:
 
     cues = subtitle[1] if subtitle else None
     lang = subtitle[0] if subtitle else "none"
+
+    if cues is None and transcribe:
+        if not transcription_available():
+            return {
+                "error": "这个版本没有内置转写。请用完整版，或在命令行运行 "
+                "vidnote fetch --whisper（需 pip install 'vidnote[whisper]'）。"
+            }
+        from .media import MediaError, transcribe_video
+
+        try:
+            lang, cues = transcribe_video(meta, page, model_size=model)
+        except MediaError as exc:
+            return {"error": f"本地转写失败：{exc}"}
 
     directory = Path(outdir) if outdir else Path.cwd()
     destination = directory / filename(meta)

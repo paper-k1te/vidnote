@@ -1,15 +1,24 @@
 # 构建桌面应用（原生窗口 + WebView2 外壳）
 #
-# 产物：dist-app\vidnote-app.exe
-#   vidnote-app.exe                        C# WinForms 外壳（.NET Framework 4.8，系统自带）
-#   vidnote-server.exe                     Python 后端（PyInstaller 打包）
-#   Microsoft.Web.WebView2.*.dll           WebView2 托管库
-#   WebView2Loader.dll                     WebView2 原生加载器
+# 用法：
+#   powershell -File scripts/build_app.ps1          # 轻量版（约 16 MB）
+#   powershell -File scripts/build_app.ps1 -Full    # 完整版（含本地转写，300 MB+）
+#
+# 产物：
+#   dist-app\     或 dist-app-full\
+#     vidnote-app.exe                        C# WinForms 外壳（.NET Framework 4.8，系统自带）
+#     vidnote-server.exe                     Python 后端（PyInstaller 打包）
+#     Microsoft.Web.WebView2.*.dll           WebView2 托管库
+#     WebView2Loader.dll                     WebView2 原生加载器
 #
 # 前置条件：
 #   1. 已安装 .NET Framework 4.8（Windows 10/11 自带）
 #   2. 已安装 WebView2 运行时（Windows 11 自带；Win10 可能需要装一次）
 #   3. 首次构建需要能访问 nuget.org 下载 WebView2 SDK
+
+param(
+    [switch]$Full
+)
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path -Parent $PSScriptRoot)
@@ -17,9 +26,15 @@ Set-Location (Split-Path -Parent $PSScriptRoot)
 $python = ".\.venv\Scripts\python.exe"
 $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 
+$spec = if ($Full) { "vidnote-full.spec" } else { "vidnote.spec" }
+$exeDir = if ($Full) { "dist-exe-full" } else { "dist-exe" }
+$workDir = if ($Full) { "build-exe-full" } else { "build-exe" }
+$appDir = if ($Full) { "dist-app-full" } else { "dist-app" }
+$serverName = if ($Full) { "vidnote-server.exe" } else { "vidnote.exe" }
+
 # 1. 编译 Python 后端
-Write-Host "==> 打包后端"
-& $python -m PyInstaller vidnote.spec --noconfirm --distpath dist-exe --workpath build-exe --log-level ERROR
+Write-Host "==> 打包后端（$spec）"
+& $python -m PyInstaller $spec --noconfirm --distpath $exeDir --workpath $workDir --log-level ERROR
 
 # 2. 准备 WebView2 SDK
 $sdk = ".tools\webview2\pkg"
@@ -44,14 +59,14 @@ New-Item -ItemType Directory -Force -Path "build\shell" | Out-Null
     shell\Program.cs
 
 # 4. 组装
-Write-Host "==> 组装 dist-app"
-Remove-Item "dist-app" -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path "dist-app" | Out-Null
-Copy-Item "build\shell\vidnote-app.exe" "dist-app\"
-Copy-Item "dist-exe\vidnote.exe" "dist-app\vidnote-server.exe"
-Copy-Item "$sdk\lib\net462\Microsoft.Web.WebView2.Core.dll" "dist-app\"
-Copy-Item "$sdk\lib\net462\Microsoft.Web.WebView2.WinForms.dll" "dist-app\"
-Copy-Item "$sdk\runtimes\win-x64\native\WebView2Loader.dll" "dist-app\"
+Write-Host "==> 组装 $appDir"
+Remove-Item $appDir -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $appDir | Out-Null
+Copy-Item "build\shell\vidnote-app.exe" "$appDir\"
+Copy-Item "$exeDir\$serverName" "$appDir\vidnote-server.exe"
+Copy-Item "$sdk\lib\net462\Microsoft.Web.WebView2.Core.dll" "$appDir\"
+Copy-Item "$sdk\lib\net462\Microsoft.Web.WebView2.WinForms.dll" "$appDir\"
+Copy-Item "$sdk\runtimes\win-x64\native\WebView2Loader.dll" "$appDir\"
 
-$total = [math]::Round((Get-ChildItem "dist-app" -File | Measure-Object Length -Sum).Sum / 1MB, 2)
-Write-Host "完成：dist-app\vidnote-app.exe（整包 $total MB）"
+$total = [math]::Round((Get-ChildItem $appDir -File | Measure-Object Length -Sum).Sum / 1MB, 2)
+Write-Host "完成：$appDir\vidnote-app.exe（整包 $total MB）"

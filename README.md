@@ -117,9 +117,18 @@ vidnote gui
 ### 桌面应用（真窗口，不是浏览器）
 
 ```powershell
-powershell -File scripts/build_app.ps1
-# 产物：dist-app\vidnote-app.exe
+powershell -File scripts/build_app.ps1          # 轻量版，约 16 MB
+powershell -File scripts/build_app.ps1 -Full    # 完整版，约 101 MB（含本地转写）
 ```
+
+两个版本的外壳完全相同，区别只在后端带不带 `faster-whisper`：
+
+| | 轻量版 | 完整版 |
+| --- | --- | --- |
+| 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ | ✅ |
+| 本地转写（`faster-whisper`） | ❌（界面里会置灰开关） | ✅ |
+| 体积 | ~16 MB | ~101 MB |
+| 首次转写 | — | 自动下载模型（`small` 约 485 MB） |
 
 `vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序：
 

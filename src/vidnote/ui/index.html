@@ -170,6 +170,9 @@
   .tips p:last-child { margin-bottom: 0; }
   .tips b { color: var(--text-1); font-weight: 500; }
   .tips code { background: var(--bg-subtle); padding: 1px 4px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .check-line { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 12.5px; color: var(--text-2); cursor: pointer; }
+  .check-line input { width: 15px; height: 15px; accent-color: var(--action-bg); margin: 0; }
+  .check-line.off { color: var(--text-3); cursor: default; }
   .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hidden { display: none !important; }
@@ -220,6 +223,10 @@
           </div>
           <label>输出目录</label>
           <input id="outdir" placeholder="留空 = 当前目录">
+          <label class="check-line" id="transcribe-line">
+            <input type="checkbox" id="transcribe">
+            <span>没有字幕时，在本机转写（较慢，首次会下载模型）</span>
+          </label>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
         </div>
       </section>
@@ -238,7 +245,7 @@
         <div class="card-body tips">
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
           <p><b>关键帧</b>：填 0 不抽；大于 0 时用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>字幕</b>：有字幕直接用；没有的话这一版只输出元数据，转写要用完整版。</p>
+          <p><b>字幕</b>：有字幕直接用；勾选「在本机转写」后，没有字幕的视频会用 faster-whisper 跑一遍（完整版才有）。</p>
         </div>
       </section>
     </div>
@@ -350,6 +357,7 @@ $("go").onclick = async () => {
         page: parseInt($("page").value || "1", 10),
         frames: parseInt($("frames").value || "0", 10),
         outdir: $("outdir").value.trim(),
+        transcribe: $("transcribe").checked,
       }),
     });
     lastNote = data.note; lastPath = data.path;
@@ -400,6 +408,17 @@ $("reveal").onclick = async () => {
 };
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
+
+/* 后端有没有内置转写能力：没有就把开关置灰并说明 */
+fetch("/api/health").then((r) => r.json()).then((data) => {
+  if (data.transcribe) return;
+  const box = $("transcribe");
+  box.disabled = true;
+  box.checked = false;
+  $("transcribe-line").classList.add("off");
+  $("transcribe-line").querySelector("span").textContent =
+    "这个版本没有内置转写（完整版才有）";
+}).catch(() => {});
 </script>
 </body>
 </html>
