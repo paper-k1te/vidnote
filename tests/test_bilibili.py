@@ -143,6 +143,47 @@ DETAIL = {
             "videos": 1,
             "copyright": 1,
             "dynamic": "作者的动态",
+            "pic": "//i0.hdslb.com/bfs/archive/cover.jpg",
+            "dimension": {"width": 1920, "height": 1080},
+            "staff": [
+                {"mid": 42, "name": "某UP", "title": "UP主"},
+                {"mid": 43, "name": "合作者", "title": "参演"},
+            ],
+            "subtitle": {
+                "list": [
+                    {
+                        "lan": "zh-CN",
+                        "lan_doc": "中文（中国）",
+                        "is_lock": True,
+                        "subtitle_url": "",
+                    }
+                ]
+            },
+            "ugc_season": {
+                "id": 8971607,
+                "title": "测试合集",
+                "intro": "合集简介",
+                "mid": 42,
+                "sections": [
+                    {
+                        "title": "正片",
+                        "episodes": [
+                            {
+                                "bvid": "BV1xx411c7mD",
+                                "title": "第一集",
+                                "page": 1,
+                                "arc": {"duration": 120},
+                            },
+                            {
+                                "bvid": "BV1yy411c7mD",
+                                "title": "第二集",
+                                "page": 1,
+                                "arc": {"duration": 60},
+                            },
+                        ],
+                    }
+                ],
+            },
             "stat": {
                 "view": 123456,
                 "danmaku": 789,
@@ -178,6 +219,20 @@ def test_view_uses_detail_endpoint_and_stats() -> None:
     assert meta.owner_url == "https://space.bilibili.com/42"
     assert meta.tname == "科技区"
     assert meta.owner_face == "https://i0.hdslb.com/face.jpg"
+    assert meta.cover == "https://i0.hdslb.com/bfs/archive/cover.jpg"
+    assert meta.dimension == "1920×1080"
+    assert [(person.name, person.title) for person in meta.staff] == [
+        ("某UP", "UP主"),
+        ("合作者", "参演"),
+    ]
+    assert meta.season is not None
+    assert meta.season.title == "测试合集"
+    assert [episode.bvid for episode in meta.season.episodes] == [
+        "BV1xx411c7mD",
+        "BV1yy411c7mD",
+    ]
+    assert meta.subtitle_tracks[0].label == "中文（中国）"
+    assert meta.subtitle_tracks[0].locked is True
 
 
 def test_resolve_expands_short_link() -> None:

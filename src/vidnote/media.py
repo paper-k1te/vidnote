@@ -22,6 +22,18 @@ from .bilibili import Cue, VideoMeta
 ProgressFn = Callable[[float, float], None]
 StatusFn = Callable[[str], None]
 
+ENDPOINT_MIRROR = "https://hf-mirror.com"
+ENDPOINT_OFFICIAL = "https://huggingface.co"
+
+
+def hf_endpoint(channel: str | None) -> str | None:
+    """把界面上的下载渠道换成 Hugging Face 地址。"""
+    if channel == "mirror":
+        return ENDPOINT_MIRROR
+    if channel == "official":
+        return ENDPOINT_OFFICIAL
+    return None
+
 
 class MediaError(RuntimeError):
     """缺少依赖、下载失败或转写失败。"""
@@ -203,6 +215,7 @@ def ensure_whisper_model(
     *,
     on_progress: ProgressFn | None = None,
     on_status: StatusFn | None = None,
+    endpoint: str | None = None,
 ) -> Path:
     """确保 whisper 模型已下载，返回模型目录。
 
@@ -249,6 +262,7 @@ def ensure_whisper_model(
             local_dir=str(target),
             allow_patterns=list(_WHISPER_FILES),
             tqdm_class=ProgressTqdm,
+            endpoint=endpoint,
         )
     except Exception as exc:  # noqa: BLE001
         raise MediaError(f"下载 whisper 模型失败：{exc}") from exc
@@ -335,6 +349,7 @@ def transcribe(
     language: str | None = None,
     on_progress: ProgressFn | None = None,
     on_status: StatusFn | None = None,
+    endpoint: str | None = None,
 ) -> tuple[str, list[Cue]]:
     """在本地转写，返回 (检测到的语言, 字幕条目)。"""
     try:
@@ -346,7 +361,10 @@ def transcribe(
 
     try:
         model_dir = ensure_whisper_model(
-            model_size, on_progress=on_progress, on_status=on_status
+            model_size,
+            on_progress=on_progress,
+            on_status=on_status,
+            endpoint=endpoint,
         )
         if on_status:
             on_status("正在本地转写…")
@@ -384,6 +402,7 @@ def transcribe_video(
     use_cache: bool = True,
     on_progress: ProgressFn | None = None,
     on_status: StatusFn | None = None,
+    endpoint: str | None = None,
 ) -> tuple[str, list[Cue]]:
     """完整流程：缓存 → 下载音频 → 转写 → 写缓存。"""
     if use_cache and (cached := load_cached(meta.bvid, page, model_size)):
@@ -401,6 +420,7 @@ def transcribe_video(
             model_size=model_size,
             on_progress=on_progress,
             on_status=on_status,
+            endpoint=endpoint,
         )
 
     if use_cache:

@@ -1,6 +1,15 @@
 from datetime import date, datetime, timezone
 
-from vidnote.bilibili import Cue, Page, VideoMeta
+from vidnote.bilibili import (
+    Cue,
+    Page,
+    Season,
+    SeasonEpisode,
+    SeasonSection,
+    Staff,
+    SubtitleTrack,
+    VideoMeta,
+)
 from vidnote.note import NoteOptions, build_note, filename, fmt_ts, slugify, ts_link
 
 META = VideoMeta(
@@ -98,6 +107,53 @@ def test_keyframes_without_transcript_get_their_own_section() -> None:
     )
     assert "## 关键帧" in text
     assert "01_01-00.jpg" in text
+
+
+def test_note_includes_cover_staff_season_and_subtitle_state() -> None:
+    meta = VideoMeta(
+        bvid="BV1xx411c7mD",
+        aid=170001,
+        title="合集视频",
+        owner="某UP",
+        duration=120,
+        pubdate=datetime(2024, 5, 1, 8, 0, tzinfo=timezone.utc),
+        desc="",
+        pages=[Page(index=1, cid=111, title="第一集", duration=120)],
+        cover="https://i0.hdslb.com/cover.jpg",
+        dimension="1920×1080",
+        copyright=1,
+        staff=[
+            Staff(mid=42, name="某UP", title="UP主"),
+            Staff(mid=43, name="合作者", title="参演"),
+        ],
+        season=Season(
+            id=8971607,
+            title="测试合集",
+            intro="",
+            mid=42,
+            sections=[
+                SeasonSection(
+                    title="正片",
+                    episodes=[
+                        SeasonEpisode(bvid="BV1xx411c7mD", title="第一集", duration=120),
+                        SeasonEpisode(bvid="BV1yy411c7mD", title="第二集", duration=60),
+                    ],
+                )
+            ],
+        ),
+        subtitle_tracks=[SubtitleTrack(lan="zh-CN", label="中文（中国）", locked=True)],
+    )
+    text = build_note(meta, None, options=NoteOptions(fetched=date(2026, 11, 4)))
+
+    assert "subtitle: locked" in text
+    assert "| 封面 |" in text
+    assert "| 类型 | 原创 |" in text
+    assert "| 画质 | 1920×1080 |" in text
+    assert "| 制作团队 |" in text
+    assert "合作者（参演）" in text
+    assert "## 合集" in text
+    assert "第二集" in text
+    assert "要求登录后才能读取" in text
 
 
 def test_multipart_note_lists_pages() -> None:

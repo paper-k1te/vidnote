@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import html
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -82,6 +83,53 @@ class Stats:
 
 
 @dataclass(frozen=True)
+class Staff:
+    mid: int
+    name: str
+    title: str
+    face: str = ""
+
+
+@dataclass(frozen=True)
+class SubtitleTrack:
+    lan: str
+    label: str
+    locked: bool = False
+
+
+@dataclass(frozen=True)
+class SeasonEpisode:
+    bvid: str
+    title: str
+    duration: int
+    cover: str = ""
+    page: int = 1
+
+    @property
+    def url(self) -> str:
+        return f"https://www.bilibili.com/video/{self.bvid}"
+
+
+@dataclass(frozen=True)
+class SeasonSection:
+    title: str
+    episodes: list[SeasonEpisode] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Season:
+    id: int
+    title: str
+    intro: str
+    mid: int = 0
+    sections: list[SeasonSection] = field(default_factory=list)
+
+    @property
+    def episodes(self) -> list[SeasonEpisode]:
+        return [episode for section in self.sections for episode in section.episodes]
+
+
+@dataclass(frozen=True)
 class VideoMeta:
     bvid: str
     aid: int
@@ -100,6 +148,11 @@ class VideoMeta:
     copyright: int = 0
     dynamic: str = ""
     season_id: int = 0
+    cover: str = ""
+    dimension: str = ""
+    staff: list[Staff] = field(default_factory=list)
+    season: Season | None = None
+    subtitle_tracks: list[SubtitleTrack] = field(default_factory=list)
 
     @property
     def url(self) -> str:
@@ -139,7 +192,85 @@ def _text(value: Any) -> str:
 
 
 def _https(url: str) -> str:
-    return "https:" + url if url.startswith("//") else url
+    if url.startswith("//"):
+        return "https:" + url
+    if url.startswith("http://"):
+        return "https://" + url[len("http://") :]
+    return url
+
+
+def _parse_staff(items: Any) -> list[Staff]:
+    staff: list[Staff] = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        name = _text(item.get("name"))
+        if not name:
+            continue
+        staff.append(
+            Staff(
+                mid=_int(item.get("mid")),
+                name=name,
+                title=_text(item.get("title")),
+                face=_https(_text(item.get("face"))),
+            )
+        )
+    return staff
+
+
+def _parse_season(raw: Any) -> Season | None:
+    if not isinstance(raw, dict):
+        return None
+    sections: list[SeasonSection] = []
+    for section in raw.get("sections") or []:
+        if not isinstance(section, dict):
+            continue
+        episodes: list[SeasonEpisode] = []
+        for episode in section.get("episodes") or []:
+            if not isinstance(episode, dict):
+                continue
+            bvid = _text(episode.get("bvid"))
+            if not bvid:
+                continue
+            arc = episode.get("arc") or {}
+            episodes.append(
+                SeasonEpisode(
+                    bvid=bvid,
+                    title=_text(episode.get("title")),
+                    duration=_int(arc.get("duration") or episode.get("duration")),
+                    cover=_https(_text(arc.get("pic"))),
+                    page=_int(episode.get("page"), 1),
+                )
+            )
+        sections.append(SeasonSection(title=_text(section.get("title")), episodes=episodes))
+    if not sections:
+        return None
+    return Season(
+        id=_int(raw.get("id")),
+        title=_text(raw.get("title")),
+        intro=_text(raw.get("intro")),
+        mid=_int(raw.get("mid")),
+        sections=sections,
+    )
+
+
+def _parse_subtitle_tracks(raw: Any) -> list[SubtitleTrack]:
+    tracks: list[SubtitleTrack] = []
+    for item in raw or []:
+        if not isinstance(item, dict):
+            continue
+        lan = _text(item.get("lan"))
+        label = _text(item.get("lan_doc")) or lan
+        if not label:
+            continue
+        tracks.append(
+            SubtitleTrack(
+                lan=lan,
+                label=label,
+                locked=bool(item.get("is_lock")) or not _text(item.get("subtitle_url")),
+            )
+        )
+    return tracks
 
 
 class BilibiliClient:
@@ -148,9 +279,15 @@ class BilibiliClient:
         *,
         timeout: float = 15.0,
         transport: httpx.BaseTransport | None = None,
+        cookie: str | None = None,
     ) -> None:
+        cookie = cookie or os.environ.get("VIDNOTE_COOKIE")
+        headers = dict(HEADERS)
+        if cookie:
+            # 只用于读取登录后才开放的字幕，不写进任何笔记或日志。
+            headers["Cookie"] = cookie
         self._http = httpx.Client(
-            timeout=timeout, headers=HEADERS, transport=transport, follow_redirects=True
+            timeout=timeout, headers=headers, transport=transport, follow_redirects=True
         )
 
     def close(self) -> None:
@@ -254,6 +391,10 @@ class BilibiliClient:
 
         owner = data.get("owner") or {}
         stat = data.get("stat") or {}
+        dimension = data.get("dimension") or {}
+        cover = _https(_text(data.get("pic")))
+        width, height = _int(dimension.get("width")), _int(dimension.get("height"))
+        resolution = f"{width}×{height}" if width and height else ""
         return VideoMeta(
             bvid=_text(data.get("bvid")),
             aid=_int(data.get("aid")),
@@ -284,6 +425,13 @@ class BilibiliClient:
             copyright=_int(data.get("copyright")),
             dynamic=_text(data.get("dynamic")),
             season_id=_int(data.get("season_id")),
+            cover=cover,
+            dimension=resolution,
+            staff=_parse_staff(data.get("staff")),
+            season=_parse_season(data.get("ugc_season")),
+            subtitle_tracks=_parse_subtitle_tracks(
+                (data.get("subtitle") or {}).get("list")
+            ),
         )
 
     def subtitles(

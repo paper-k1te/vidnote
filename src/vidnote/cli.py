@@ -22,7 +22,7 @@ from rich.table import Table
 from . import __version__
 from .bilibili import BilibiliClient, BiliError, VideoMeta
 from .frames import FrameError, KeyFrame, extract_keyframes
-from .media import MediaError, transcribe_video
+from .media import MediaError, hf_endpoint, transcribe_video
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch
 from .storyboard import storyboard_frames
@@ -71,7 +71,15 @@ def version() -> None:
     console.print(f"vidnote {__version__}")
 
 
-def _progress_runner(engine: str, meta: VideoMeta, page_no: int, model: str, *, use_cache: bool):
+def _progress_runner(
+    engine: str,
+    meta: VideoMeta,
+    page_no: int,
+    model: str,
+    *,
+    use_cache: bool,
+    endpoint: str | None = None,
+):
     """带进度条地跑一遍「下载音频 → 下载模型 → 本地转写」。"""
     with Progress(
         SpinnerColumn(),
@@ -109,6 +117,7 @@ def _progress_runner(engine: str, meta: VideoMeta, page_no: int, model: str, *, 
             use_cache=use_cache,
             on_progress=on_progress,
             on_status=on_status,
+            endpoint=endpoint,
         )
 
 
@@ -160,7 +169,17 @@ def fetch(
     model: str = typer.Option(
         "small", "--model", help="whisper 模型：tiny/base/small/medium/large-v3"
     ),
+    channel: str = typer.Option(
+        "auto",
+        "--channel",
+        help="whisper 模型下载渠道：auto / official / mirror",
+    ),
     no_cache: bool = typer.Option(False, "--no-cache", help="不读也不写转写缓存"),
+    cookie: str = typer.Option(
+        None,
+        "--cookie",
+        help="B 站 Cookie（SESSDATA=...），用于读取登录后才能拿到的字幕；也可设 VIDNOTE_COOKIE",
+    ),
     delay: float = typer.Option(
         0.0, "--delay", min=0.0, help="两次接口请求之间等待的秒数，批量处理时降低频率"
     ),
@@ -179,7 +198,7 @@ def fetch(
     """抓取一个视频，生成 Markdown 笔记。"""
     page_no = page
     try:
-        with BilibiliClient() as client:
+        with BilibiliClient(cookie=cookie) as client:
             video_id = client.resolve(target)
             page_no = page or video_id.page
             meta = client.view(video_id)
@@ -217,7 +236,12 @@ def fetch(
     if cues is None and whisper:
         try:
             lang, cues = _progress_runner(
-                "whisper", meta, page_no, model, use_cache=not no_cache
+                "whisper",
+                meta,
+                page_no,
+                model,
+                use_cache=not no_cache,
+                endpoint=hf_endpoint(channel),
             )
             transcribed = True
         except MediaError as exc:

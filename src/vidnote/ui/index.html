@@ -121,6 +121,9 @@
   input::placeholder { color: var(--text-3); }
   input:focus, select:focus { outline: none; border-color: var(--action-bg); box-shadow: 0 0 0 3px var(--action-soft); }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-row { display: flex; gap: 8px; }
+  .input-row input { flex: 1; min-width: 0; }
+  .input-row button { flex: none; }
   .actions { display: flex; gap: 8px; margin-top: 16px; }
 
   button {
@@ -173,6 +176,12 @@
   .check-line { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 12.5px; color: var(--text-2); cursor: pointer; }
   .check-line input { width: 15px; height: 15px; accent-color: var(--action-bg); margin: 0; }
   .check-line.off { color: var(--text-3); cursor: default; }
+  .field-hint { margin: 6px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 16px; }
+  .collapse-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 12px; cursor: pointer; user-select: none; }
+  .collapse-head.first { margin-top: 0; margin-bottom: 12px; padding-top: 0; border-top: 0; }
+  .collapse-head:hover { color: var(--text-1); }
+  .collapse-head .chev { color: var(--text-3); transition: transform .15s; }
+  .collapse-head.open .chev { transform: rotate(180deg); }
   .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .progress { margin-top: 14px; }
@@ -212,6 +221,7 @@
     <span class="sub" id="page-sub">把 B 站视频变成带时间戳的 Markdown 笔记</span>
     <span class="spacer"></span>
     <button class="btn-link" id="reveal" disabled>打开文件</button>
+    <button class="btn-link" id="reveal-folder" disabled>打开文件夹</button>
     <button class="btn-link" id="copy" disabled>复制 Markdown</button>
   </div>
 
@@ -221,6 +231,14 @@
       <section class="card" id="view-fetch">
         <div class="card-head"><h2>视频</h2><span class="hint">支持链接 / BV 号 / av 号</span></div>
         <div class="card-body">
+          <div class="collapse-head first" id="cookie-toggle">
+            <span>登录 B 站（可选）</span>
+            <span class="chev" id="cookie-chev">⌄</span>
+          </div>
+          <div id="cookie-box" class="hidden">
+            <input id="cookie" type="password" placeholder="SESSDATA=...">
+            <p class="field-hint">只用于读取登录后才能拿到的字幕，不保存。</p>
+          </div>
           <label>链接或编号</label>
           <input id="target" placeholder="BV1xx411c7mD 或 https://www.bilibili.com/video/...">
           <div class="grid2">
@@ -228,15 +246,25 @@
             <div><label>关键帧</label><input id="frames" type="number" min="0" max="30" value="6"></div>
           </div>
           <label>输出目录</label>
-          <input id="outdir" placeholder="留空 = 当前目录">
-          <label>没有字幕时</label>
+          <div class="input-row">
+            <input id="outdir" placeholder="留空 = 当前目录">
+            <button class="btn-ghost" id="pick-folder" type="button">选择</button>
+          </div>
+          <label>解析方案</label>
           <select id="transcribe">
-            <option value="" selected>不转写（只输出元数据）</option>
-            <option value="vosk-cn">Vosk 小模型 · 下载 42 MB · 轻量、速度快</option>
-            <option value="tiny">whisper tiny · 下载 75 MB · 最快，质量一般</option>
-            <option value="base">whisper base · 下载 145 MB · 平衡</option>
-            <option value="small">whisper small · 下载 485 MB · 中文最好</option>
+            <option value="" selected>不转写 · 只输出元数据</option>
+            <option value="vosk-cn">Vosk 小模型 · 快、占用小、无标点</option>
+            <option value="tiny">whisper tiny · 最快，质量一般</option>
+            <option value="base">whisper base · 速度与质量平衡</option>
+            <option value="small">whisper small · 中文质量最好</option>
           </select>
+          <label>下载渠道</label>
+          <select id="channel">
+            <option value="auto" selected>自动（完整版内置优先）</option>
+            <option value="official">HuggingFace 官方</option>
+            <option value="mirror">hf-mirror 国内镜像</option>
+          </select>
+          <p class="field-hint">Vosk 模型完整版已内置；whisper 首次使用会按这里的渠道下载。</p>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
           <div class="progress hidden" id="progress">
             <div class="progress-label"><span id="phase">准备中…</span><span id="pct"></span></div>
@@ -261,6 +289,7 @@
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
           <p><b>关键帧</b>：默认 6 张，会插在对应字幕的后面；填 0 不抽。用 B 站现成的缩略图，不下载视频。</p>
           <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、无标点），whisper 75/145/485 MB（质量更好）。模型只在第一次使用时下载，进度会显示在按钮下方。</p>
+          <p><b>Cookie</b>：大部分字幕需要登录态，填 SESSDATA 后能抓到。Cookie 只用于本次请求，不写进笔记，也不保存。</p>
         </div>
       </section>
     </div>
@@ -313,6 +342,42 @@ function busy(btn, on, label) {
   btn.disabled = on;
   btn.innerHTML = on ? '<span class="spin"></span> ' + label : label;
 }
+
+/* 解析方案决定下载渠道是否可用：Vosk 用内置模型，不涉及渠道。 */
+function syncChannel() {
+  const scheme = $("transcribe").value;
+  const whisper = scheme && !scheme.startsWith("vosk");
+  $("channel").disabled = !whisper;
+  if (!whisper) $("channel").value = "auto";
+}
+$("transcribe").addEventListener("change", syncChannel);
+syncChannel();
+
+$("cookie-toggle").onclick = () => {
+  const box = $("cookie-box");
+  const open = box.classList.toggle("hidden") === false;
+  $("cookie-toggle").classList.toggle("open", open);
+};
+
+$("pick-folder").onclick = async () => {
+  const btn = $("pick-folder");
+  btn.disabled = true;
+  try {
+    const data = await api("/api/pick-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (data.path) {
+      $("outdir").value = data.path;
+      toast("已选择输出目录", "ok");
+    }
+  } catch (e) {
+    toast(e.message, "err");
+  } finally {
+    btn.disabled = false;
+  }
+};
 
 /* ---- 视图切换 ---- */
 const VIEWS = { fetch: { title: "抓取视频", sub: "把 B 站视频变成带时间戳的 Markdown 笔记" },
@@ -431,6 +496,8 @@ $("go").onclick = async () => {
         outdir: $("outdir").value.trim(),
         transcribe: $("transcribe").value !== "",
         model: $("transcribe").value,
+        channel: $("channel").value,
+        cookie: $("cookie").value.trim(),
       }),
     });
     pollJob(data.job);
@@ -462,7 +529,7 @@ async function pollJob(jobId) {
         + "&src=" + encodeURIComponent(src);
     });
     $("path").textContent = lastPath;
-    $("copy").disabled = !lastNote; $("reveal").disabled = !lastPath;
+    $("copy").disabled = !lastNote; $("reveal").disabled = !lastPath; $("reveal-folder").disabled = !lastPath;
     $("phase").textContent = "完成"; $("pct").textContent = "100%";
     $("bar-track").classList.remove("indet"); $("bar").style.width = "100%";
     if (result.warning) toast(result.warning, "err");
@@ -517,6 +584,16 @@ $("reveal").onclick = async () => {
   } catch (e) { toast(e.message, "err"); }
 };
 
+$("reveal-folder").onclick = async () => {
+  if (!lastPath) return;
+  try {
+    await api("/api/reveal-folder", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: lastPath }),
+    });
+  } catch (e) { toast(e.message, "err"); }
+};
+
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
 
 /* 后端有哪些引擎：没有的选项标灰并说明，一个都没有就禁用整个下拉框 */
@@ -537,6 +614,7 @@ fetch("/api/health").then((r) => r.json()).then((data) => {
     box.value = "";
     box.disabled = true;
   }
+  syncChannel();
 }).catch(() => {});
 </script>
 </body>

@@ -2,13 +2,52 @@
 
 from pathlib import Path
 
-from vidnote.gui import fetch_video, index_html, job_state, read_frame, reveal
+from vidnote.gui import (
+    fetch_video,
+    index_html,
+    job_state,
+    read_frame,
+    reveal,
+    reveal_folder,
+)
+from vidnote.media import hf_endpoint
 
 
 def test_index_has_core_controls() -> None:
     html = index_html()
-    for needle in ("生成笔记", "搜索视频", "预览", "/api/fetch", "/api/search"):
+    for needle in (
+        "生成笔记",
+        "搜索视频",
+        "预览",
+        "/api/fetch",
+        "/api/search",
+        "解析方案",
+        "下载渠道",
+        "登录 B 站",
+        "hf-mirror",
+        "pick-folder",
+        "/api/pick-folder",
+        "打开文件夹",
+        "/api/reveal-folder",
+    ):
         assert needle in html
+
+
+def test_cookie_box_is_collapsed_by_default() -> None:
+    html = index_html()
+    assert 'id="cookie-box" class="hidden"' in html
+
+
+def test_cookie_box_sits_above_resolution_options() -> None:
+    """登录 B 站的折叠块放在表单顶部，解析方案在其后。"""
+    html = index_html()
+    assert html.index("登录 B 站") < html.index("解析方案")
+
+
+def test_hf_endpoint_maps_channels() -> None:
+    assert hf_endpoint("mirror") == "https://hf-mirror.com"
+    assert hf_endpoint("official") == "https://huggingface.co"
+    assert hf_endpoint("auto") is None
 
 
 def test_index_is_standalone_html() -> None:
@@ -48,6 +87,15 @@ def test_reveal_rejects_missing_file(tmp_path: Path) -> None:
 
 def test_reveal_rejects_empty() -> None:
     assert "error" in reveal("")
+
+
+def test_reveal_folder_rejects_empty() -> None:
+    assert "error" in reveal_folder("")
+
+
+def test_reveal_folder_rejects_missing_folder(tmp_path: Path) -> None:
+    result = reveal_folder(str(tmp_path / "missing" / "note.md"))
+    assert "error" in result
 
 
 def test_read_frame_serves_image_next_to_note(tmp_path: Path) -> None:

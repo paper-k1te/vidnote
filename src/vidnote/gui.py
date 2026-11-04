@@ -30,7 +30,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import __version__
 from .bilibili import BilibiliClient, BiliError
-from .media import ProgressFn, StatusFn
+from .media import ProgressFn, StatusFn, hf_endpoint
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch
 from .storyboard import storyboard_frames
@@ -140,6 +140,13 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/fetch":
             Handler.last_ping = time.time()
             self._json({"job": start_fetch(self._body())})
+            return
+        if parsed.path == "/api/pick-folder":
+            Handler.last_ping = time.time()
+            self._json(pick_folder())
+            return
+        if parsed.path == "/api/reveal-folder":
+            self._json(reveal_folder(self._body().get("path", "")))
             return
         if parsed.path == "/api/reveal":
             self._json(reveal(self._body().get("path", "")))
@@ -272,11 +279,13 @@ def fetch_video(
     transcribe = bool(payload.get("transcribe"))
     # 空字符串表示不转写；给了值就按这个模型转写。
     model = str(payload.get("model") or "").strip() or ("small" if transcribe else "")
+    cookie = str(payload.get("cookie") or "").strip()
+    channel = str(payload.get("channel") or "auto").strip()
 
     if on_status:
         on_status("正在获取视频信息…")
     try:
-        with BilibiliClient() as client:
+        with BilibiliClient(cookie=cookie or None) as client:
             video_id = client.resolve(target)
             meta = client.view(video_id)
             page = min(max(page, 1), len(meta.pages))
@@ -330,6 +339,7 @@ def fetch_video(
                     model_size=model,
                     on_progress=on_progress,
                     on_status=on_status,
+                    endpoint=hf_endpoint(channel),
                 )
             except MediaError as exc:
                 return {"error": f"本地转写失败：{exc}"}
@@ -405,6 +415,92 @@ def read_frame(note_path: str, src: str) -> tuple[bytes, str] | None:
         return target.read_bytes(), content_type
     except OSError:
         return None
+
+
+def pick_folder() -> dict[str, Any]:
+    """弹出系统文件夹选择器，返回用户选中的绝对路径。"""
+    if os.name != "nt":
+        return {"error": "当前系统不支持选择文件夹，请手动填写路径。"}
+
+    import ctypes  # noqa: PLC0415
+    from ctypes import wintypes  # noqa: PLC0415
+
+    class BrowseInfo(ctypes.Structure):
+        _fields_ = [
+            ("hwndOwner", wintypes.HWND),
+            ("pidlRoot", ctypes.c_void_p),
+            ("pszDisplayName", wintypes.LPWSTR),
+            ("lpszTitle", wintypes.LPCWSTR),
+            ("ulFlags", wintypes.UINT),
+            ("lpfn", ctypes.c_void_p),
+            ("lParam", wintypes.LPARAM),
+            ("iImage", ctypes.c_int),
+        ]
+
+    try:
+        shell32 = ctypes.windll.shell32
+        ole32 = ctypes.windll.ole32
+        user32 = ctypes.windll.user32
+
+        shell32.SHBrowseForFolderW.argtypes = [ctypes.POINTER(BrowseInfo)]
+        shell32.SHBrowseForFolderW.restype = ctypes.c_void_p
+        shell32.SHGetPathFromIDListW.argtypes = [
+            ctypes.c_void_p,
+            wintypes.LPWSTR,
+        ]
+        shell32.SHGetPathFromIDListW.restype = wintypes.BOOL
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+
+        initialized = ole32.CoInitialize(None) == 0
+        try:
+            buffer = ctypes.create_unicode_buffer(32768)
+            info = BrowseInfo()
+            info.hwndOwner = user32.GetForegroundWindow()
+            info.pszDisplayName = buffer
+            info.lpszTitle = "选择 vidnote 输出目录"
+            # 只允许真实文件夹，带编辑框和“新建文件夹”按钮。
+            info.ulFlags = 0x0001 | 0x0010 | 0x0040
+
+            pidl = shell32.SHBrowseForFolderW(ctypes.byref(info))
+            if not pidl:
+                return {"cancelled": True}
+            try:
+                path_buffer = ctypes.create_unicode_buffer(32768)
+                if not shell32.SHGetPathFromIDListW(pidl, path_buffer):
+                    return {"cancelled": True}
+                return {"path": path_buffer.value}
+            finally:
+                ole32.CoTaskMemFree(pidl)
+        finally:
+            if initialized:
+                ole32.CoUninitialize()
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"打开文件夹选择器失败：{exc}"}
+
+
+def reveal_folder(path: str) -> dict[str, Any]:
+    """打开笔记所在的文件夹；如果是文件，就在资源管理器里选中它。"""
+    if not path:
+        return {"error": "没有可打开的文件夹"}
+    target = Path(path)
+    folder = target if target.is_dir() else target.parent
+    if not folder.exists():
+        return {"error": f"文件夹不存在：{folder}"}
+    try:
+        if os.name == "nt":
+            if target.is_file():
+                subprocess.Popen(  # noqa: S603
+                    ["explorer.exe", f"/select,{target}"]
+                )
+            else:
+                os.startfile(folder)  # type: ignore[attr-defined]  # noqa: S606
+        else:
+            opener = "open" if sys.platform == "darwin" else "xdg-open"
+            subprocess.Popen([opener, str(folder)])  # noqa: S603
+    except OSError as exc:
+        return {"error": f"打开文件夹失败：{exc}"}
+    return {"ok": True}
 
 
 def reveal(path: str) -> dict[str, Any]:

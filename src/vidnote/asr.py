@@ -11,6 +11,7 @@ Vosk 的中文小模型只有 42 MB，运行库 13 MB，适合「只想有个大
 from __future__ import annotations
 
 import json
+import sys
 import zipfile
 from pathlib import Path
 
@@ -37,11 +38,21 @@ def _model_dir(name: str) -> Path:
     return cache_dir() / "vosk" / name
 
 
+def _bundled_model_dir(name: str) -> Path | None:
+    """完整版 exe 把模型一起打包，直接从解压目录读取，不再下载。"""
+    if not getattr(sys, "frozen", False):
+        return None
+    root = Path(getattr(sys, "_MEIPASS", "")) / "vidnote" / "models" / name
+    return root if root.is_dir() else None
+
+
 def ensure_model(key: str = "vosk-cn", on_progress: ProgressFn | None = None) -> Path:
-    """确保模型已下载，返回模型目录。"""
+    """确保模型已可用，返回模型目录。"""
     if key not in MODELS:
         raise AsrError(f"未知的 Vosk 模型：{key}")
     folder, url = MODELS[key]
+    if bundled := _bundled_model_dir(folder):
+        return bundled
     target = _model_dir(folder)
     if target.exists() and any(target.iterdir()):
         return target

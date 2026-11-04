@@ -1,16 +1,26 @@
 # -*- mode: python ; coding: utf-8 -*-
 """完整版打包配置：核心功能 + 本地转写（Vosk + whisper + yt-dlp）。
 
-Vosk 是小引擎（运行库 13 MB、中文模型 42 MB），随后端一起分发；
-faster-whisper 及 ctranslate2 / onnxruntime 也一并打包，所以完整版能直接选
-whisper 模型。模型文件本身不放进安装包，第一次使用才下载到缓存目录，
-下载进度会显示在界面和命令行里。
+Vosk 小引擎和中文模型（约 65 MB）直接打进 exe，第一次转写不用再下载；
+faster-whisper 及 ctranslate2 / onnxruntime 也一并打包，whisper 模型仍按需
+下载到缓存目录，下载进度会显示在界面和命令行里。
 
 用法：
     pyinstaller vidnote-full.spec --noconfirm --distpath dist-exe-full --workpath build-exe-full
 """
 
+import os
+
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+
+# Vosk 小模型直接打进 exe，第一次转写不用再下载。
+_MODEL_FOLDER = "vosk-model-small-cn-0.22"
+_MODEL_DIR = os.path.join("assets", _MODEL_FOLDER)
+if not os.path.isdir(_MODEL_DIR):
+    raise SystemExit(
+        f"找不到 Vosk 模型：{_MODEL_DIR}\n"
+        "先运行 scripts/build_app.ps1 -Full，脚本会自动复制或下载模型。"
+    )
 
 a = Analysis(
     ["packaging/entry.py"],
@@ -20,7 +30,10 @@ a = Analysis(
     binaries=collect_dynamic_libs("vosk")
     + collect_dynamic_libs("ctranslate2")
     + collect_dynamic_libs("onnxruntime"),
-    datas=[("src/vidnote/ui/index.html", "vidnote/ui")]
+    datas=[
+        ("src/vidnote/ui/index.html", "vidnote/ui"),
+        (_MODEL_DIR, f"vidnote/models/{_MODEL_FOLDER}"),
+    ]
     + collect_data_files("vosk")
     + collect_data_files("srt")
     + collect_data_files("faster_whisper")
