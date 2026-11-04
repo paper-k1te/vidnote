@@ -223,10 +223,13 @@
           </div>
           <label>输出目录</label>
           <input id="outdir" placeholder="留空 = 当前目录">
-          <label class="check-line" id="transcribe-line">
-            <input type="checkbox" id="transcribe">
-            <span>没有字幕时，在本机转写（较慢，首次会下载模型）</span>
-          </label>
+          <label>没有字幕时</label>
+          <select id="transcribe">
+            <option value="" selected>不转写（只输出元数据）</option>
+            <option value="tiny">tiny · 首次下载 75 MB · 最快，质量一般</option>
+            <option value="base">base · 首次下载 145 MB · 平衡（推荐）</option>
+            <option value="small">small · 首次下载 485 MB · 中文质量最好</option>
+          </select>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
         </div>
       </section>
@@ -245,7 +248,7 @@
         <div class="card-body tips">
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
           <p><b>关键帧</b>：填 0 不抽；大于 0 时用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>字幕</b>：有字幕直接用；勾选「在本机转写」后，没有字幕的视频会用 faster-whisper 跑一遍（完整版才有）。</p>
+          <p><b>字幕</b>：有字幕直接用；没字幕时可选转写模型——<code>tiny</code> 75 MB / <code>base</code> 145 MB / <code>small</code> 485 MB（中文最好），只在第一次使用时下载。</p>
         </div>
       </section>
     </div>
@@ -357,7 +360,8 @@ $("go").onclick = async () => {
         page: parseInt($("page").value || "1", 10),
         frames: parseInt($("frames").value || "0", 10),
         outdir: $("outdir").value.trim(),
-        transcribe: $("transcribe").checked,
+        transcribe: $("transcribe").value !== "",
+        model: $("transcribe").value,
       }),
     });
     lastNote = data.note; lastPath = data.path;
@@ -409,15 +413,13 @@ $("reveal").onclick = async () => {
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
 
-/* 后端有没有内置转写能力：没有就把开关置灰并说明 */
+/* 后端有没有内置转写能力：没有就禁用选择并说明 */
 fetch("/api/health").then((r) => r.json()).then((data) => {
   if (data.transcribe) return;
   const box = $("transcribe");
   box.disabled = true;
-  box.checked = false;
-  $("transcribe-line").classList.add("off");
-  $("transcribe-line").querySelector("span").textContent =
-    "这个版本没有内置转写（完整版才有）";
+  box.value = "";
+  box.innerHTML = '<option value="">这个版本没有内置转写（完整版才有）</option>';
 }).catch(() => {});
 </script>
 </body>

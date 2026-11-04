@@ -148,7 +148,8 @@ def fetch_video(payload: dict[str, Any]) -> dict[str, Any]:
     frames = int(payload.get("frames") or 0)
     outdir = str(payload.get("outdir", "")).strip()
     transcribe = bool(payload.get("transcribe"))
-    model = str(payload.get("model") or "small")
+    # 空字符串表示不转写；给了值就按这个模型转写（tiny / base / small）。
+    model = str(payload.get("model") or "").strip() or ("small" if transcribe else "")
 
     try:
         video_id = parse_video_id(target)
@@ -169,7 +170,7 @@ def fetch_video(payload: dict[str, Any]) -> dict[str, Any]:
     cues = subtitle[1] if subtitle else None
     lang = subtitle[0] if subtitle else "none"
 
-    if cues is None and transcribe:
+    if cues is None and model:
         if not transcription_available():
             return {
                 "error": "这个版本没有内置转写。请用完整版，或在命令行运行 "
