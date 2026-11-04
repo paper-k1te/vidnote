@@ -16,3 +16,5 @@ dist-exe/
 build-exe/
 .tools/
 vidnote-ui-*/
+docs/screenshots/*.tmp
+vidnote-ui.log

@@ -2,18 +2,27 @@
 
 from pathlib import Path
 
-from vidnote.gui import INDEX_HTML, fetch_video, reveal
+from vidnote.gui import fetch_video, index_html, reveal
 
 
 def test_index_has_core_controls() -> None:
-    for needle in ("生成笔记", "搜索", "预览", "/api/fetch", "/api/search"):
-        assert needle in INDEX_HTML
+    html = index_html()
+    for needle in ("生成笔记", "搜索视频", "预览", "/api/fetch", "/api/search"):
+        assert needle in html
 
 
 def test_index_is_standalone_html() -> None:
-    assert INDEX_HTML.lstrip().startswith("<!doctype html>")
-    assert "<script>" in INDEX_HTML
-    assert "http://" not in INDEX_HTML  # 不引用外部资源
+    html = index_html()
+    assert html.lstrip().startswith("<!doctype html>")
+    assert "<script>" in html
+    assert "http://" not in html  # 不引用外部资源
+
+
+def test_index_uses_design_tokens() -> None:
+    """界面沿用 cc-switch 的设计 token：浅底灰阶 + 单一强调色。"""
+    html = index_html()
+    assert "--bg-sidebar: #f5f5f7" in html
+    assert "--action-bg: #f97316" in html
 
 
 def test_fetch_rejects_bad_target() -> None:

@@ -99,13 +99,29 @@ vidnote fetch BV1xx411c7mD --dir ~/Notes/videos --source my-blog
 uvx vidnote fetch BV1xx411c7mD
 ```
 
+### 图形界面
+
+```bash
+vidnote gui
+```
+
+会起一个只监听 `127.0.0.1` 的本地服务，用浏览器打开界面：左边抓取/搜索，右边实时预览渲染后的笔记，支持复制 Markdown、打开文件、深浅色切换。
+
+<p align="center">
+  <img src="docs/screenshots/light.png" alt="浅色界面" width="49%">
+  <img src="docs/screenshots/dark.png" alt="深色界面" width="49%">
+</p>
+
+界面沿用 cc-switch 的设计语言（浅底灰阶 + 单一橙色强调色 + 13px 字号）。想用独立窗口而不是浏览器标签页，加 `--app`（Edge 未运行时更可靠）。
+
 ### Windows 免安装 exe
 
-不想装 Python 的话，可以自己构建一个单文件 `vidnote.exe`（约 15 MB）：
+不想装 Python 的话，可以自己构建单文件可执行程序（约 15 MB）：
 
 ```powershell
 powershell -File scripts/build_exe.ps1
-# 产物：dist-exe\vidnote.exe，双击或命令行都能用
+# 产物：dist-exe\vidnote-ui.exe（双击开界面，无命令行窗口）
+#       dist-exe\vidnote.exe（命令行版）
 ```
 
 这个 exe 是**核心版**：抓取、搜索、笔记生成、缩略帧（`--frames`）都在里面。不含两项重型能力：

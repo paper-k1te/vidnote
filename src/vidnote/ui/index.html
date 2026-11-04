@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>vidnote</title>
+<style>
+  :root {
+    --bg-app: #ffffff;
+    --bg-sidebar: #f5f5f7;
+    --bg-subtle: #efeff2;
+    --bg-selected: #e4e4ea;
+    --bg-card: #ffffff;
+    --border: #e4e4e7;
+    --border-strong: #cfcfd6;
+    --text-1: #18181b;
+    --text-2: #52525b;
+    --text-3: #65656e;
+    --action-bg: #f97316;
+    --action-fg: #ffffff;
+    --action-hover: #ea620a;
+    --action-text: #c2410c;
+    --action-soft: #fff1e6;
+    --success: #16a34a;
+    --success-text: #007634;
+    --success-soft: #e8f7ee;
+    --danger: #dc2626;
+    --danger-text: #b91c1c;
+    --danger-soft: #fee2e2;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
+    --shadow-md: 0 4px 12px rgba(16,24,40,.08), 0 1px 3px rgba(16,24,40,.06);
+    --control: 6px;
+    --panel: 10px;
+  }
+  html[data-theme="dark"] {
+    --bg-app: #1c1c1e;
+    --bg-sidebar: #161618;
+    --bg-subtle: #26262a;
+    --bg-selected: #313136;
+    --bg-card: #2e2e33;
+    --border: #3a3a40;
+    --border-strong: #4a4a52;
+    --text-1: #e4e4e7;
+    --text-2: #ababb3;
+    --text-3: #9a9aa2;
+    --action-bg: #ea580c;
+    --action-fg: #ffffff;
+    --action-hover: #f06d1f;
+    --action-text: #fb923c;
+    --action-soft: rgba(249,115,21,.12);
+    --success: #4ade80;
+    --success-text: #4ade80;
+    --success-soft: #0f2b1a;
+    --danger: #f87171;
+    --danger-text: #fca5a5;
+    --danger-soft: #3a1414;
+    --shadow-sm: 0 0 0 1px rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg-app); color: var(--text-1);
+    font: 13px/20px -apple-system, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", Roboto, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; display: flex; overflow: hidden;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 9999px; background-clip: padding-box; background-color: var(--border-strong); }
+
+  /* ---------- 侧栏 ---------- */
+  aside {
+    width: 212px; flex: none; background: var(--bg-sidebar); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 12px 10px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; padding: 6px 8px 14px; }
+  .brand .mark {
+    width: 22px; height: 22px; border-radius: var(--control); background: var(--action-bg);
+    display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700;
+  }
+  .brand b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: var(--control);
+    color: var(--text-2); cursor: pointer; user-select: none; font-size: 13px;
+  }
+  .nav-item:hover { background: var(--bg-subtle); color: var(--text-1); }
+  .nav-item.active { background: var(--bg-selected); color: var(--text-1); font-weight: 500; }
+  .nav-item svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+  .meta { padding: 8px 9px; color: var(--text-3); font-size: 11px; }
+
+  /* ---------- 主区 ---------- */
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    height: 52px; flex: none; display: flex; align-items: center; gap: 10px;
+    padding: 0 20px; border-bottom: 1px solid var(--border);
+  }
+  .topbar h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+  .topbar .sub { color: var(--text-3); font-size: 12px; }
+  .topbar .spacer { flex: 1; }
+  .content { flex: 1; min-height: 0; display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 16px 20px 20px; }
+  @media (max-width: 900px) { .content { grid-template-columns: 1fr; overflow: auto; } aside { width: 64px; } .brand b, .nav-item span, .meta { display: none; } }
+
+  .col { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--panel); box-shadow: var(--shadow-sm); }
+  .card-head { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .card-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+  .card-head .hint { margin-left: auto; color: var(--text-3); font-size: 11px; }
+  .card-body { padding: 14px; }
+  .card.grow { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .card.grow .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  label { display: block; font-size: 12px; color: var(--text-2); margin: 12px 0 6px; }
+  label:first-child { margin-top: 0; }
+  input, select {
+    width: 100%; height: 32px; padding: 0 10px; border-radius: var(--control);
+    border: 1px solid var(--border-strong); background: var(--bg-app); color: var(--text-1); font-size: 13px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input::placeholder { color: var(--text-3); }
+  input:focus, select:focus { outline: none; border-color: var(--action-bg); box-shadow: 0 0 0 3px var(--action-soft); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  button {
+    height: 32px; padding: 0 14px; border-radius: var(--control); border: 1px solid transparent;
+    font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  .btn-primary { background: var(--action-bg); color: var(--action-fg); }
+  .btn-primary:hover:not(:disabled) { background: var(--action-hover); }
+  .btn-ghost { background: var(--bg-card); border-color: var(--border-strong); color: var(--text-1); }
+  .btn-ghost:hover:not(:disabled) { background: var(--bg-subtle); }
+  .btn-link { background: none; color: var(--text-2); padding: 0 8px; }
+  .btn-link:hover { color: var(--text-1); background: var(--bg-subtle); }
+
+  ul.results { list-style: none; margin: 0; padding: 0; overflow: auto; min-height: 0; flex: 1; }
+  ul.results li { padding: 8px 10px; border-radius: var(--control); cursor: pointer; }
+  ul.results li:hover { background: var(--bg-subtle); }
+  ul.results li b { display: block; font-size: 13px; font-weight: 500; color: var(--text-1); }
+  ul.results li small { color: var(--text-3); font-size: 11.5px; }
+  .empty { color: var(--text-3); font-size: 12px; padding: 10px; }
+
+  .preview-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .path { color: var(--text-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .doc { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px; }
+  .doc h1 { font-size: 18px; margin: 0 0 12px; }
+  .doc h2 { font-size: 15px; margin: 20px 0 8px; }
+  .doc p { margin: 0 0 10px; color: var(--text-2); }
+  .doc table { border-collapse: collapse; width: 100%; margin: 0 0 12px; font-size: 12px; }
+  .doc th, .doc td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+  .doc th { background: var(--bg-subtle); color: var(--text-2); font-weight: 500; }
+  .doc a { color: var(--action-text); text-decoration: none; }
+  .doc a:hover { text-decoration: underline; }
+  .doc code { background: var(--bg-subtle); padding: 1px 4px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .doc img { max-width: 100%; border-radius: var(--control); }
+
+  .toast {
+    position: fixed; right: 18px; bottom: 18px; padding: 9px 14px; border-radius: var(--control);
+    background: var(--bg-card); border: 1px solid var(--border-strong); box-shadow: var(--shadow-md);
+    font-size: 12.5px; color: var(--text-1); opacity: 0; transform: translateY(6px);
+    transition: opacity .18s, transform .18s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: none; }
+  .toast.ok { border-color: var(--success); color: var(--success-text); }
+  .toast.err { border-color: var(--danger); color: var(--danger-text); }
+  .tips p { margin: 0 0 8px; color: var(--text-2); font-size: 12px; line-height: 18px; }
+  .tips p:last-child { margin-bottom: 0; }
+  .tips b { color: var(--text-1); font-weight: 500; }
+  .tips code { background: var(--bg-subtle); padding: 1px 4px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><div class="mark">v</div><b>vidnote</b></div>
+  <div class="nav">
+    <div class="nav-item active" data-view="fetch">
+      <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <span>抓取</span>
+    </div>
+    <div class="nav-item" data-view="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <span>搜索</span>
+    </div>
+  </div>
+  <div class="side-foot">
+    <div class="nav-item" id="theme">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+      <span id="theme-label">深色模式</span>
+    </div>
+    <div class="meta">v__VERSION__</div>
+  </div>
+</aside>
+
+<main>
+  <div class="topbar">
+    <h1 id="page-title">抓取视频</h1>
+    <span class="sub" id="page-sub">把 B 站视频变成带时间戳的 Markdown 笔记</span>
+    <span class="spacer"></span>
+    <button class="btn-link" id="reveal" disabled>打开文件</button>
+    <button class="btn-link" id="copy" disabled>复制 Markdown</button>
+  </div>
+
+  <div class="content">
+    <div class="col">
+      <!-- 抓取 -->
+      <section class="card" id="view-fetch">
+        <div class="card-head"><h2>视频</h2><span class="hint">支持链接 / BV 号 / av 号</span></div>
+        <div class="card-body">
+          <label>链接或编号</label>
+          <input id="target" placeholder="BV1xx411c7mD 或 https://www.bilibili.com/video/...">
+          <div class="grid2">
+            <div><label>分P</label><input id="page" type="number" min="1" value="1"></div>
+            <div><label>关键帧</label><input id="frames" type="number" min="0" max="30" value="0"></div>
+          </div>
+          <label>输出目录</label>
+          <input id="outdir" placeholder="留空 = 当前目录">
+          <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
+        </div>
+      </section>
+
+      <!-- 搜索 -->
+      <section class="card grow hidden" id="view-search">
+        <div class="card-head"><h2>搜索视频</h2><span class="hint">点击结果填入编号</span></div>
+        <div class="card-body">
+          <input id="q" placeholder="输入关键词后回车，例如：Python 异步">
+          <ul class="results" id="results"><li class="empty">还没有搜索结果</li></ul>
+        </div>
+      </section>
+
+      <section class="card" id="tips">
+        <div class="card-head"><h2>说明</h2></div>
+        <div class="card-body tips">
+          <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
+          <p><b>关键帧</b>：填 0 不抽；大于 0 时用 B 站现成的缩略图，不下载视频。</p>
+          <p><b>字幕</b>：有字幕直接用；没有的话这一版只输出元数据，转写要用完整版。</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="card grow">
+      <div class="preview-head">
+        <h2 style="margin:0;font-size:13px;font-weight:600">预览</h2>
+        <span class="path" id="path">生成后显示文件位置</span>
+      </div>
+      <div class="doc" id="preview"><p class="empty">填入链接并点击「生成笔记」，这里会显示渲染后的结果。</p></div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastNote = "", lastPath = "";
+
+function toast(message, kind) {
+  const el = $("toast");
+  el.textContent = message;
+  el.className = "toast show " + (kind || "");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = "toast " + (kind || ""); }, 3000);
+}
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+  return data;
+}
+
+function busy(btn, on, label) {
+  btn.disabled = on;
+  btn.innerHTML = on ? '<span class="spin"></span> ' + label : label;
+}
+
+/* ---- 视图切换 ---- */
+const VIEWS = { fetch: { title: "抓取视频", sub: "把 B 站视频变成带时间戳的 Markdown 笔记" },
+                search: { title: "搜索视频", sub: "先搜到 BV 号，再去抓取" } };
+document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
+  item.onclick = () => {
+    document.querySelectorAll(".nav-item[data-view]").forEach((i) => i.classList.remove("active"));
+    item.classList.add("active");
+    const view = item.dataset.view;
+    $("view-fetch").classList.toggle("hidden", view !== "fetch");
+    $("view-search").classList.toggle("hidden", view !== "search");
+    $("page-title").textContent = VIEWS[view].title;
+    $("page-sub").textContent = VIEWS[view].sub;
+  };
+});
+
+/* ---- 主题 ---- */
+const root = document.documentElement;
+function applyTheme(theme) {
+  root.dataset.theme = theme;
+  $("theme-label").textContent = theme === "dark" ? "浅色模式" : "深色模式";
+  try { localStorage.setItem("vidnote-theme", theme); } catch (e) {}
+}
+applyTheme((() => {
+  const qs = new URLSearchParams(location.search).get("theme");
+  if (qs === "dark" || qs === "light") return qs;
+  try { return localStorage.getItem("vidnote-theme") || "light"; } catch (e) { return "light"; }
+})());
+$("theme").onclick = () => applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+
+/* ---- Markdown 渲染 ---- */
+function renderMarkdown(md) {
+  const lines = md.split("\n"); let html = "", inTable = false, inList = false;
+  const inline = (s) => s
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (/^\|/.test(line)) {
+      const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+      if (/^[-: ]+$/.test(cells.join(""))) continue;
+      if (!inTable) { html += "<table>"; inTable = true; }
+      const tag = html.endsWith("<table>") ? "th" : "td";
+      html += "<tr>" + cells.map((c) => `<${tag}>${inline(c)}</${tag}>`).join("") + "</tr>";
+      continue;
+    } else if (inTable) { html += "</table>"; inTable = false; }
+    if (/^### /.test(line)) html += "<h3>" + inline(line.slice(4)) + "</h3>";
+    else if (/^## /.test(line)) html += "<h2>" + inline(line.slice(3)) + "</h2>";
+    else if (/^# /.test(line)) html += "<h1>" + inline(line.slice(2)) + "</h1>";
+    else if (/^---$/.test(line)) html += "<hr>";
+    else if (line) html += "<p>" + inline(line) + "</p>";
+  }
+  if (inTable) html += "</table>";
+  return html;
+}
+
+/* ---- 交互 ---- */
+$("go").onclick = async () => {
+  const target = $("target").value.trim();
+  if (!target) return toast("先填一个视频链接或 BV 号", "err");
+  busy($("go"), true, "抓取中…");
+  try {
+    const data = await api("/api/fetch", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target,
+        page: parseInt($("page").value || "1", 10),
+        frames: parseInt($("frames").value || "0", 10),
+        outdir: $("outdir").value.trim(),
+      }),
+    });
+    lastNote = data.note; lastPath = data.path;
+    $("preview").innerHTML = renderMarkdown(data.note);
+    $("path").textContent = data.path;
+    $("copy").disabled = false; $("reveal").disabled = false;
+    toast(data.frames ? `完成，含 ${data.frames} 张关键帧` : "完成", "ok");
+  } catch (e) { toast(e.message, "err"); }
+  finally { busy($("go"), false, "生成笔记"); }
+};
+
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+
+async function doSearch() {
+  const q = $("q").value.trim();
+  if (!q) return toast("先输入关键词", "err");
+  const list = $("results");
+  list.innerHTML = '<li class="empty">搜索中…</li>';
+  try {
+    const data = await api("/api/search?q=" + encodeURIComponent(q) + "&limit=10");
+    list.innerHTML = "";
+    if (!data.results.length) list.innerHTML = '<li class="empty">没有找到结果</li>';
+    for (const item of data.results) {
+      const li = document.createElement("li");
+      li.innerHTML = "<b></b><small></small>";
+      li.querySelector("b").textContent = item.title;
+      li.querySelector("small").textContent = `${item.author} · ${item.duration} · ${item.play.toLocaleString()} 播放`;
+      li.onclick = () => { $("target").value = item.bvid; toast("已填入 " + item.bvid, "ok"); document.querySelector('[data-view="fetch"]').click(); };
+      list.appendChild(li);
+    }
+  } catch (e) { list.innerHTML = '<li class="empty">' + e.message + "</li>"; toast(e.message, "err"); }
+}
+
+$("copy").onclick = async () => {
+  if (!lastNote) return;
+  try { await navigator.clipboard.writeText(lastNote); toast("已复制", "ok"); }
+  catch (e) { toast("复制失败", "err"); }
+};
+
+$("reveal").onclick = async () => {
+  if (!lastPath) return;
+  try {
+    await api("/api/reveal", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: lastPath }),
+    });
+  } catch (e) { toast(e.message, "err"); }
+};
+
+setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
+</script>
+</body>
+</html>

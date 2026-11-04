@@ -13,7 +13,7 @@ a = Analysis(
     ["packaging/entry.py"],
     pathex=["src"],
     binaries=[],
-    datas=[],
+    datas=[("src/vidnote/ui/index.html", "vidnote/ui")],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
