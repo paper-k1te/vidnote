@@ -15,3 +15,4 @@ pytest-of-*/
 dist-exe/
 build-exe/
 .tools/
+vidnote-ui-*/

@@ -314,6 +314,26 @@ def search(
 
 
 @app.command()
+def gui(
+    app_window: bool = typer.Option(
+        False, "--app", help="用 Edge 的应用窗口打开（浏览器已在运行时可能失效）"
+    ),
+    native: bool = typer.Option(False, "--native", help="用 tkinter 原生窗口（备选）"),
+    port: int = typer.Option(0, "--port", help="监听端口，0 表示自动选择"),
+) -> None:
+    """打开图形界面。默认在浏览器标签页里打开，最稳定。"""
+    if native:
+        from .gui_native import main as native_main
+
+        native_main()
+        return
+
+    from .gui import serve as serve_web
+
+    serve_web(port=port, app_window=app_window)
+
+
+@app.command()
 def serve() -> None:
     """以 MCP server 模式运行（stdio），给 Claude Code / Codex / Cursor 用。"""
     try:
