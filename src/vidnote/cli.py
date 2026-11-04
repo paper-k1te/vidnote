@@ -138,9 +138,14 @@ def fetch(
     stdout: bool = typer.Option(False, "--stdout", help="打印到终端，不写文件"),
     force: bool = typer.Option(False, "--force", "-f", help="覆盖已存在的文件"),
     whisper: bool = typer.Option(
-        False, "--whisper", "-w", help="没有字幕时，在本机转写音频（需要 [whisper] 依赖）"
+        False, "--whisper", "-w", help="没有字幕时用 whisper 在本机转写（需要 [whisper] 依赖）"
     ),
-    model: str = typer.Option("small", "--model", help="转写模型：tiny/base/small/medium/large-v3"),
+    vosk: bool = typer.Option(
+        False, "--vosk", help="没有字幕时用 Vosk 小模型转写（42 MB，需要 [vosk] 依赖）"
+    ),
+    model: str = typer.Option(
+        "small", "--model", help="whisper 模型：tiny/base/small/medium/large-v3"
+    ),
     no_cache: bool = typer.Option(False, "--no-cache", help="不读也不写转写缓存"),
     delay: float = typer.Option(
         0.0, "--delay", min=0.0, help="两次接口请求之间等待的秒数，批量处理时降低频率"
@@ -187,6 +192,18 @@ def fetch(
     cues = subtitle[1] if subtitle else None
     lang = subtitle[0] if subtitle else "none"
     transcribed = False
+
+    if cues is None and vosk:
+        from .asr import AsrError
+        from .asr import transcribe_video as vosk_transcribe
+
+        try:
+            with console.status("正在用 Vosk 转写…"):
+                lang, cues = vosk_transcribe(meta, page_no)
+            transcribed = True
+        except AsrError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_MISSING_DEPS) from exc
 
     if cues is None and whisper:
         try:

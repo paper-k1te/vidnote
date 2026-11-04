@@ -1,34 +1,36 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""完整版打包配置：核心功能 + 本地转写（faster-whisper / yt-dlp）。
+"""完整版打包配置：核心功能 + 本地转写（Vosk 小引擎 + yt-dlp）。
 
-体积会到 300 MB 以上，因为 ctranslate2、onnxruntime、PyAV 都带原生库。
-第一次转写时仍会从 HuggingFace 下载模型（small 约 485 MB），这一步无法预打包进 exe。
+为什么用 Vosk 而不是 faster-whisper：whisper 的模型最小 145 MB、常用 485 MB，
+加上 ctranslate2 / onnxruntime 会让包到 100 MB 以上。Vosk 运行库 13 MB、中文模型
+42 MB，整包能控制在 50 MB 左右，模型第一次用时才下载。
+
+想要更好的中文质量，仍可以用 pip 安装的 whisper 版本。
 
 用法：
     pyinstaller vidnote-full.spec --noconfirm --distpath dist-exe-full --workpath build-exe-full
 """
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 
 a = Analysis(
     ["packaging/entry.py"],
     pathex=["src"],
-    binaries=[],
-    # faster-whisper 自带 VAD 模型（silero_vad_v6.onnx），不显式收集会报 NO_SUCHFILE。
+    # vosk 用 ctypes 加载自带的 libvosk.dll，默认不会被收集。
+    binaries=collect_dynamic_libs("vosk"),
     datas=[("src/vidnote/ui/index.html", "vidnote/ui")]
-    + collect_data_files("faster_whisper"),
-    hiddenimports=[
+    + collect_data_files("vosk")
+    + collect_data_files("srt"),
+    hiddenimports=["vosk", "srt", "requests", "websockets", "av", "yt_dlp"],
+    hookspath=[],
+    runtime_hooks=[],
+    excludes=[
+        # 不打包 whisper 那一套（用户要的话走 pip 安装）
         "faster_whisper",
         "ctranslate2",
         "onnxruntime",
         "tokenizers",
         "huggingface_hub",
-        "av",
-        "yt_dlp",
-    ],
-    hookspath=[],
-    runtime_hooks=[],
-    excludes=[
         # 与运行无关的东西
         "mcp",
         "tkinter",

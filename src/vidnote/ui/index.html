@@ -226,9 +226,10 @@
           <label>没有字幕时</label>
           <select id="transcribe">
             <option value="" selected>不转写（只输出元数据）</option>
-            <option value="tiny">tiny · 首次下载 75 MB · 最快，质量一般</option>
-            <option value="base">base · 首次下载 145 MB · 平衡（推荐）</option>
-            <option value="small">small · 首次下载 485 MB · 中文质量最好</option>
+            <option value="vosk-cn">Vosk 小模型 · 下载 42 MB · 轻量、速度快</option>
+            <option value="tiny">whisper tiny · 下载 75 MB · 最快，质量一般</option>
+            <option value="base">whisper base · 下载 145 MB · 平衡</option>
+            <option value="small">whisper small · 下载 485 MB · 中文最好</option>
           </select>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
         </div>
@@ -248,7 +249,7 @@
         <div class="card-body tips">
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
           <p><b>关键帧</b>：填 0 不抽；大于 0 时用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>字幕</b>：有字幕直接用；没字幕时可选转写模型——<code>tiny</code> 75 MB / <code>base</code> 145 MB / <code>small</code> 485 MB（中文最好），只在第一次使用时下载。</p>
+          <p><b>字幕</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、无标点），whisper 75/145/485 MB（质量更好），只在第一次使用时下载。</p>
         </div>
       </section>
     </div>
@@ -413,13 +414,19 @@ $("reveal").onclick = async () => {
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
 
-/* 后端有没有内置转写能力：没有就禁用选择并说明 */
+/* 后端有哪些引擎：没有的选项直接移除，一个都没有就禁用整个下拉框 */
 fetch("/api/health").then((r) => r.json()).then((data) => {
-  if (data.transcribe) return;
+  const engines = data.engines || {};
   const box = $("transcribe");
-  box.disabled = true;
-  box.value = "";
-  box.innerHTML = '<option value="">这个版本没有内置转写（完整版才有）</option>';
+  [...box.options].forEach((option) => {
+    if (!option.value) return;
+    const needsVosk = option.value.startsWith("vosk");
+    if (needsVosk ? !engines.vosk : !engines.whisper) option.remove();
+  });
+  if (box.options.length <= 1) {
+    box.disabled = true;
+    box.innerHTML = '<option value="">这个版本没有内置转写（完整版才有）</option>';
+  }
 }).catch(() => {});
 </script>
 </body>

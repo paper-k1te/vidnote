@@ -37,15 +37,44 @@ class _QuietLogger:
         pass
 
 
+def _writable(path: Path) -> bool:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".write-test"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink()
+    except OSError:
+        return False
+    return True
+
+
 def cache_dir() -> Path:
+    """找一个可写的缓存目录。
+
+    Windows 上优先 ``%LOCALAPPDATA%``，但有些机器（或受限账户）那里不可写，
+    所以依次回退到 ``~/.cache`` 和系统临时目录——缓存写不进去不该让功能直接挂掉。
+    """
     override = os.environ.get("VIDNOTE_CACHE")
     if override:
         return Path(override)
+
     if os.name == "nt":
-        base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+        candidates = [
+            Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+            / "vidnote",
+            Path.home() / ".cache" / "vidnote",
+        ]
     else:
-        base = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
-    return base / "vidnote"
+        candidates = [
+            Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "vidnote",
+            Path(tempfile.gettempdir()) / "vidnote",
+        ]
+    candidates.append(Path(tempfile.gettempdir()) / "vidnote")
+
+    for candidate in candidates:
+        if _writable(candidate):
+            return candidate
+    return Path(tempfile.gettempdir()) / "vidnote"
 
 
 def _cache_file(bvid: str, page: int, model: str) -> Path:

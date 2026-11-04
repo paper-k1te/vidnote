@@ -118,17 +118,28 @@ vidnote gui
 
 ```powershell
 powershell -File scripts/build_app.ps1          # 轻量版，约 16 MB
-powershell -File scripts/build_app.ps1 -Full    # 完整版，约 101 MB（含本地转写）
+powershell -File scripts/build_app.ps1 -Full    # 完整版，约 55 MB（含 Vosk 转写）
 ```
 
-两个版本的外壳完全相同，区别只在后端带不带 `faster-whisper`：
+两个版本的外壳完全相同，区别只在后端带不带本地转写引擎：
 
 | | 轻量版 | 完整版 |
 | --- | --- | --- |
 | 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ | ✅ |
-| 本地转写（`faster-whisper`） | ❌（界面里会置灰开关） | ✅ |
-| 体积 | ~16 MB | ~101 MB |
-| 首次转写 | — | 自动下载模型（`small` 约 485 MB） |
+| 本地转写 | ❌（界面里会置灰） | ✅ Vosk 小引擎 |
+| 体积 | ~16 MB | ~55 MB |
+| 首次转写 | — | 下载 Vosk 中文模型（42 MB） |
+
+转写引擎可选：
+
+| 引擎 | 首次下载 | 说明 |
+| --- | --- | --- |
+| Vosk `vosk-cn` | 42 MB | 默认，快、无标点，清晰语音可用 |
+| whisper `tiny` | 75 MB | 最快，质量一般 |
+| whisper `base` | 145 MB | 平衡 |
+| whisper `small` | 485 MB | 中文最好 |
+
+whisper 系列需要 `pip install 'vidnote[whisper]'`，不随桌面版分发。
 
 `vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序：
 

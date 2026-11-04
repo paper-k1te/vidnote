@@ -24,6 +24,8 @@ a = Analysis(
         "onnxruntime",
         "tokenizers",
         "huggingface_hub",
+        "vosk",
+        "srt",
         "av",
         "yt_dlp",
         "numpy",

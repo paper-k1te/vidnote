@@ -27,3 +27,4 @@ build-exe-full/
 dist-exe-full/
 tmp*
 dist-exe-full/
+/vidnote/

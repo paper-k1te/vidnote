@@ -82,6 +82,7 @@ class Handler(BaseHTTPRequestHandler):
                     "ok": True,
                     "version": __version__,
                     "transcribe": transcription_available(),
+                    "engines": transcribe_engines(),
                 }
             )
             return
@@ -132,14 +133,27 @@ def search_videos(keyword: str, limit: int = 8) -> dict[str, Any]:
     }
 
 
-def transcription_available() -> bool:
-    """后端是否装好了本地转写的依赖（faster-whisper + yt-dlp）。"""
+def transcribe_engines() -> dict[str, bool]:
+    """后端可用的转写引擎。"""
+    engines = {"vosk": False, "whisper": False}
+    try:
+        import vosk  # noqa: F401, PLC0415
+
+        engines["vosk"] = True
+    except Exception:  # noqa: BLE001
+        pass
     try:
         import faster_whisper  # noqa: F401, PLC0415
-        import yt_dlp  # noqa: F401, PLC0415
+
+        engines["whisper"] = True
     except Exception:  # noqa: BLE001
-        return False
-    return True
+        pass
+    return engines
+
+
+def transcription_available() -> bool:
+    """任意一个引擎可用即可。"""
+    return any(transcribe_engines().values())
 
 
 def fetch_video(payload: dict[str, Any]) -> dict[str, Any]:
@@ -171,17 +185,32 @@ def fetch_video(payload: dict[str, Any]) -> dict[str, Any]:
     lang = subtitle[0] if subtitle else "none"
 
     if cues is None and model:
-        if not transcription_available():
-            return {
-                "error": "这个版本没有内置转写。请用完整版，或在命令行运行 "
-                "vidnote fetch --whisper（需 pip install 'vidnote[whisper]'）。"
-            }
-        from .media import MediaError, transcribe_video
+        engines = transcribe_engines()
+        if model.startswith("vosk"):
+            if not engines["vosk"]:
+                return {
+                    "error": "这个版本没有内置 Vosk 转写。请用完整版（vidnote-app-full），"
+                    "或在命令行 pip install 'vidnote[vosk]' 后运行 vidnote fetch --engine vosk。"
+                }
+            from .asr import AsrError
+            from .asr import transcribe_video as vosk_transcribe
 
-        try:
-            lang, cues = transcribe_video(meta, page, model_size=model)
-        except MediaError as exc:
-            return {"error": f"本地转写失败：{exc}"}
+            try:
+                lang, cues = vosk_transcribe(meta, page, model=model)
+            except AsrError as exc:
+                return {"error": f"本地转写失败：{exc}"}
+        else:
+            if not engines["whisper"]:
+                return {
+                    "error": "这个版本没有内置 whisper。用 Vosk 小模型（42 MB）即可，"
+                    "或 pip install 'vidnote[whisper]' 后用命令行转写。"
+                }
+            from .media import MediaError, transcribe_video
+
+            try:
+                lang, cues = transcribe_video(meta, page, model_size=model)
+            except MediaError as exc:
+                return {"error": f"本地转写失败：{exc}"}
 
     directory = Path(outdir) if outdir else Path.cwd()
     destination = directory / filename(meta)

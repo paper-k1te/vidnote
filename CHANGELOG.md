@@ -2,7 +2,21 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.3] - 2026-11-04
+
+### 变更
+
+- **转写换成 Vosk 小引擎**：完整版不再打包 `faster-whisper`，改为 Vosk——运行库 13 MB，中文模型 42 MB（首次使用才下载）。完整版从 101 MB 降到 74 MB，模型从 485 MB 降到 42 MB。
+- 界面里可选引擎：Vosk（42 MB，快、无标点）或 whisper 的 tiny/base/small（需 `pip install 'vidnote[whisper]'`，不随桌面版分发）。
+- 命令行新增 `--vosk`；`--whisper` 保留给 pip 安装的用户。
+
+### 修复
+
+- PyInstaller 没有收集 Vosk 的原生 `libvosk.dll`，exe 里引擎显示为不可用——在 spec 里补 `collect_dynamic_libs("vosk")`。
+- 缓存目录在受限账户下不可写（`%LOCALAPPDATA%` 被拒绝）时，依次回退到 `~/.cache` 和临时目录，不再直接报错。
+
 ## [0.2.2] - 2026-11-04
+
 
 ### 变更
 
