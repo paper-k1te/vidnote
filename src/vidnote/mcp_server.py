@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from .bilibili import BilibiliClient, BiliError, parse_video_id
+from .bilibili import BilibiliClient, BiliError
 from .media import MediaError, transcribe_video
 from .note import NoteOptions, build_note
 
@@ -26,15 +26,13 @@ def fetch_note(
     transcribe=True 时，如果没有现成字幕，会在本机用 whisper 转写（较慢）。
     """
     try:
-        video_id = parse_video_id(target)
-    except BiliError as exc:
-        return f"输入无法解析：{exc}"
-
-    try:
         with BilibiliClient() as client:
+            video_id = client.resolve(target)
             meta = client.view(video_id)
             index = min(max(page, 1), len(meta.pages))
-            subtitle = client.subtitles(meta.bvid, meta.pages[index - 1].cid)
+            subtitle = client.subtitles(
+                meta.bvid, meta.pages[index - 1].cid, meta.aid
+            )
     except BiliError as exc:
         return f"抓取失败：{exc}"
     except Exception as exc:  # 网络层

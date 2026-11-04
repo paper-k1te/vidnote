@@ -62,11 +62,11 @@ tags:
 
 ## ✨ 它能做什么
 
-- **一条命令归档**：链接、BV 号、av 号都支持识别，自动抓标题、UP 主、时长、发布时间、简介、标签。
+- **一条命令归档**：链接、BV 号、av 号、b23.tv 短链都支持识别，自动抓标题、UP 主、分区、时长、发布时间、简介、标签，以及播放 / 点赞 / 投币 / 收藏 / 弹幕 / 评论数据。
 - **分P 不迷路**：多P 视频会记录当前在第几集，时间戳链接自动添加 `&p=`。
 - **先搜再抓**：`vidnote search "关键词"` 直接列出候选视频，挑中 BV 号再归档。
-- **字幕优先，转写兜底**：视频有字幕就直接用；没有就在本机跑 Whisper，音频不出你的电脑。
-- **自动关键帧**：`--frames 6` 用 B 站现成的缩略图切出 6 张画面，带时间戳嵌进笔记；加 `--scene` 则按画面变化重新选帧。
+- **字幕优先，转写兜底**：视频有字幕就直接用；没有就在本机跑 Vosk 或 Whisper，音频不出你的电脑。
+- **自动关键帧**：默认取 6 张，用 B 站现成的缩略图切出画面，按时间插在对应字幕后面；`--frames 0` 关闭，加 `--scene` 则按画面变化重新选帧。
 - **时间戳可点**：`[12:34](…?t=754)`，在 Obsidian、Logseq、浏览器里都能跳转。
 - **YAML frontmatter**：字段固定，能被 Dataview 之类的工具直接查询、筛选、聚合。
 
@@ -118,7 +118,7 @@ vidnote gui
 
 ```powershell
 powershell -File scripts/build_app.ps1          # 轻量版，约 16 MB
-powershell -File scripts/build_app.ps1 -Full    # 完整版，约 55 MB（含 Vosk 转写）
+powershell -File scripts/build_app.ps1 -Full    # 完整版，含 Vosk + whisper
 ```
 
 两个版本的外壳完全相同，区别只在后端带不带本地转写引擎：
@@ -126,9 +126,9 @@ powershell -File scripts/build_app.ps1 -Full    # 完整版，约 55 MB（含 Vo
 | | 轻量版 | 完整版 |
 | --- | --- | --- |
 | 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ | ✅ |
-| 本地转写 | ❌（界面里会置灰） | ✅ Vosk 小引擎 |
-| 体积 | ~16 MB | ~55 MB |
-| 首次转写 | — | 下载 Vosk 中文模型（42 MB） |
+| 本地转写 | ❌（界面里会置灰） | ✅ Vosk + whisper |
+| 体积 | ~16 MB | 包含两个转写运行库，明显更大 |
+| 首次转写 | — | 下载所选模型（Vosk 42 MB / whisper 75 MB 起），界面显示进度 |
 
 转写引擎可选：
 
@@ -139,7 +139,7 @@ powershell -File scripts/build_app.ps1 -Full    # 完整版，约 55 MB（含 Vo
 | whisper `base` | 145 MB | 平衡 |
 | whisper `small` | 485 MB | 中文最好 |
 
-whisper 系列需要 `pip install 'vidnote[whisper]'`，不随桌面版分发。
+完整版内置 whisper。命令行版仍需要 `pip install 'vidnote[whisper]'` 才能用 whisper。
 
 `vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序：
 
@@ -150,7 +150,7 @@ whisper 系列需要 `pip install 'vidnote[whisper]'`，不随桌面版分发。
 | `Microsoft.Web.WebView2.*.dll` | WebView2 托管库 |
 | `WebView2Loader.dll` | WebView2 原生加载器 |
 
-整包约 15 MB，双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
+轻量版整包约 15 MB，完整版包含本地转写运行库，体积更大。双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
 
 ### Windows 免安装 exe
 
@@ -186,16 +186,19 @@ powershell -File scripts/build_exe.ps1
 
 ## 🔊 没有字幕怎么办
 
-B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以真正的主力是本地转写：
+B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以真正的主力是本地转写。完整版桌面应用已经内置 Vosk 和 whisper，界面里直接选；命令行按需安装：
 
 ```bash
-pip install 'vidnote[whisper]'
-vidnote fetch BV1xx411c7mD --whisper
+pip install 'vidnote[vosk]'     # Vosk，42 MB 模型
+pip install 'vidnote[whisper]'  # whisper
+vidnote fetch BV1xx411c7mD --vosk
 ```
 
-流程：`yt-dlp` 取音频 → `faster-whisper` 在本机转写 → 生成带时间戳的笔记。**音频不会上传到任何服务器。**
+流程：`yt-dlp` 取音频 → 在本机转写 → 生成带时间戳的笔记。**音频不会上传到任何服务器。**
 
-首次运行会下载模型：
+模型第一次使用时才下载。命令行进度条会依次显示「下载音频 → 下载模型 → 本地转写」，网页界面在按钮下方显示阶段和百分比。
+
+whisper 的模型大小：
 
 | 模型              |   大小 | 速度 | 建议                           |
 | ----------------- | -----: | ---- | ------------------------------ |
@@ -227,12 +230,13 @@ vidnote search "Rust 所有权" --json | jq -r '.[].bvid'
 ## 🖼 关键帧
 
 ```bash
-vidnote fetch BV1xx411c7mD --frames 6
+vidnote fetch BV1xx411c7mD           # 默认 6 张
+vidnote fetch BV1xx411c7mD --frames 0  # 关闭关键帧
 ```
 
-会把 6 张关键帧导出到笔记旁边的 `<笔记名>_frames/` 目录，并在笔记里生成「关键帧」一节，每张图都带可跳转的时间戳。
+关键帧导出到笔记旁边的 `<笔记名>_frames/` 目录。有字幕时，每张图会插在它前面最近的那句字幕后面——读到哪里，画面就在哪里；没有字幕时才单独成「关键帧」一节。
 
-默认走 B 站现成的**缩略图雪碧图**（10×10 的拼图，服务端已按时间点切好）：只下载一张几百 KB 的图片再裁开，**不下载视频、不解码、不需要系统 ffmpeg**。
+默认走 B 站现成的**缩略图雪碧图**（10×10 的拼图，服务端已按时间点切好）：只下载一张几百 KB 的图片再裁开，**不下载视频、不解码、不需要系统 ffmpeg**。拿不到缩略图时会跳过并提示，不影响笔记生成。
 
 需要「按画面变化选帧」时加 `--scene`，这条路径会下载视频并逐帧比较，依赖更重：
 

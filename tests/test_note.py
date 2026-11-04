@@ -73,6 +73,33 @@ def test_build_note_records_source() -> None:
     assert "source_project: my-blog" in text
 
 
+def test_keyframes_are_placed_next_to_matching_cue() -> None:
+    frames = [(0.0, "x_frames/01_00-00.jpg"), (754.0, "x_frames/02_12-34.jpg")]
+    text = build_note(
+        META,
+        CUES,
+        options=NoteOptions(fetched=date(2026, 11, 4)),
+        frames=frames,
+    )
+    # 第一张帧跟在 00:00 那句后面，第二张跟在 12:34 后面。
+    first = text.index("大家好")
+    second = text.index("这里是重点")
+    assert first < text.index("01_00-00.jpg") < second
+    assert second < text.index("02_12-34.jpg")
+    assert "## 关键帧" not in text
+
+
+def test_keyframes_without_transcript_get_their_own_section() -> None:
+    text = build_note(
+        META,
+        None,
+        options=NoteOptions(fetched=date(2026, 11, 4)),
+        frames=[(60.0, "x_frames/01_01-00.jpg")],
+    )
+    assert "## 关键帧" in text
+    assert "01_01-00.jpg" in text
+
+
 def test_multipart_note_lists_pages() -> None:
     meta = VideoMeta(
         bvid="BV1",

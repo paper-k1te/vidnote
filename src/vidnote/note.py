@@ -1,12 +1,15 @@
 """把抓到的元数据和字幕组装成一篇 Markdown 笔记。
 
-笔记的目标是「归档」而不是「摘要」：保留原始字幕、来源链接、抓取时间，
-让它可以被 Dataview 之类的工具检索，也能脱离任何软件直接读。
+笔记的目标是「归档」而不是「摘要」：保留原始字幕、来源链接、抓取时间、
+关键帧，让它可以被 Dataview 之类的工具检索，也能脱离任何软件直接读。
+
+关键帧不单独堆在文末，而是插在对应时间段的字幕后面——读到哪里，画面就在哪里。
 """
 
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import date
 
@@ -24,6 +27,14 @@ def fmt_ts(seconds: float) -> str:
     if hours:
         return f"{hours}:{minutes:02d}:{secs:02d}"
     return f"{minutes:02d}:{secs:02d}"
+
+
+def fmt_count(value: int) -> str:
+    if value >= 100_000_000:
+        return f"{value / 100_000_000:.1f} 亿"
+    if value >= 10_000:
+        return f"{value / 10_000:.1f} 万"
+    return f"{value:,}"
 
 
 def ts_link(url: str, seconds: float) -> str:
@@ -50,6 +61,31 @@ class NoteOptions:
     fetched: date | None = None
 
 
+def _frame_image(seconds: float, relative: str) -> list[str]:
+    # 标题里的括号会出现在目录名里，用尖括号包住路径，Markdown 才不会被截断。
+    return [f"![关键帧 {fmt_ts(seconds)}](<{relative}>)", ""]
+
+
+def _frames_by_cue(
+    cues: list[Cue], frames: list[tuple[float, str]]
+) -> dict[int, list[tuple[float, str]]]:
+    """把每张关键帧归到它前面最近的那条字幕。
+
+    关键帧时间落在两条字幕之间时，属于正在讲的那一段；早于第一条的归给第一条，
+    晚于最后一条的归给最后一条，保证不会有帧被丢掉。
+    """
+    starts = [cue.start for cue in cues]
+    buckets: dict[int, list[tuple[float, str]]] = {}
+    for seconds, relative in sorted(frames):
+        index = clamp(bisect_right(starts, seconds) - 1, 0, len(cues) - 1)
+        buckets.setdefault(index, []).append((seconds, relative))
+    return buckets
+
+
+def clamp(value: int, low: int, high: int) -> int:
+    return max(low, min(high, value))
+
+
 def build_note(
     meta: VideoMeta,
     cues: list[Cue] | None,
@@ -61,14 +97,17 @@ def build_note(
     opts = options or NoteOptions()
     url = meta.url
     current = meta.pages[min(opts.page, len(meta.pages)) - 1] if meta.pages else None
+    stats = meta.stats
 
     front: dict[str, object] = {
         "title": meta.title,
         "platform": "bilibili",
         "bvid": meta.bvid,
+        "aid": meta.aid,
         "url": url,
         "owner": meta.owner,
         "duration": fmt_ts(meta.duration),
+        "duration_seconds": meta.duration,
         "published": meta.pubdate.date().isoformat(),
         "fetched": (opts.fetched or date.today()).isoformat(),
         "language": subtitle_lang,
@@ -80,8 +119,35 @@ def build_note(
     if opts.source:
         front["source_project"] = opts.source
     if meta.tags:
-        front["bili_tags"] = meta.tags[:8]
+        front["bili_tags"] = meta.tags[:12]
+    if meta.owner_mid:
+        front["owner_mid"] = meta.owner_mid
+    if meta.tname:
+        front["category"] = meta.tname
+    if frames:
+        front["keyframes"] = len(frames)
+    if any(
+        (
+            stats.view,
+            stats.danmaku,
+            stats.reply,
+            stats.favorite,
+            stats.coin,
+            stats.share,
+            stats.like,
+        )
+    ):
+        front["stats"] = {
+            "view": stats.view,
+            "danmaku": stats.danmaku,
+            "reply": stats.reply,
+            "favorite": stats.favorite,
+            "coin": stats.coin,
+            "share": stats.share,
+            "like": stats.like,
+        }
 
+    owner_cell = f"[{meta.owner}]({meta.owner_url})" if meta.owner_url else meta.owner
     lines: list[str] = [
         "---",
         yaml.safe_dump(front, allow_unicode=True, sort_keys=False).strip(),
@@ -94,13 +160,29 @@ def build_note(
         "| 项目 | 内容 |",
         "| --- | --- |",
         f"| 链接 | {url} |",
-        f"| UP 主 | {meta.owner} |",
+        f"| UP 主 | {owner_cell} |",
         f"| 时长 | {fmt_ts(meta.duration)} |",
         f"| 发布 | {meta.pubdate.date().isoformat()} |",
         f"| 抓取 | {(opts.fetched or date.today()).isoformat()} |",
     ]
+    if meta.tname:
+        lines.append(f"| 分区 | {meta.tname} |")
     if current and len(meta.pages) > 1:
         lines.append(f"| 分P | P{current.index} {current.title} |")
+    if stats.view:
+        lines.append(f"| 播放 | {fmt_count(stats.view)} |")
+    if stats.like:
+        lines.append(f"| 点赞 | {fmt_count(stats.like)} |")
+    if stats.coin:
+        lines.append(f"| 投币 | {fmt_count(stats.coin)} |")
+    if stats.favorite:
+        lines.append(f"| 收藏 | {fmt_count(stats.favorite)} |")
+    if stats.danmaku:
+        lines.append(f"| 弹幕 | {fmt_count(stats.danmaku)} |")
+    if stats.reply:
+        lines.append(f"| 评论 | {fmt_count(stats.reply)} |")
+    if meta.tags:
+        lines.append(f"| 标签 | {'、'.join(meta.tags[:12])} |")
     lines.append("")
 
     if opts.include_desc and meta.desc:
@@ -113,24 +195,39 @@ def build_note(
             lines.append(f"- {marker}P{page.index} {page.title}（{fmt_ts(page.duration)}）{marker}")
         lines.append("")
 
-    if frames:
+    if cues and frames:
+        # 帧跟着它前面最近的那句字幕走。
+        buckets = _frames_by_cue(cues, frames)
+        lines += ["## 字幕", ""]
+        for index, cue in enumerate(cues):
+            lines.append(f"**{ts_link(url, cue.start)}** {cue.text}")
+            lines.append("")
+            for seconds, relative in buckets.get(index, []):
+                lines += _frame_image(seconds, relative)
+    elif cues:
+        lines += ["## 字幕", ""]
+        for cue in cues:
+            lines.append(f"**{ts_link(url, cue.start)}** {cue.text}")
+            lines.append("")
+    elif frames:
         lines += ["## 关键帧", ""]
-        for seconds, relative in frames:
+        for seconds, relative in sorted(frames):
             lines.append(f"**{ts_link(url, seconds)}**")
             lines.append("")
-            lines.append(f"![{fmt_ts(seconds)}]({relative})")
-            lines.append("")
-
-    lines += ["## 字幕", ""]
-    if not cues:
+            lines += _frame_image(seconds, relative)
+    else:
+        lines += ["## 字幕", ""]
         lines += [
             "> 这个视频没有可用字幕。装了 `faster-whisper` 和 `yt-dlp` 后，",
             "> 可以用 `vidnote fetch --whisper` 在本地转写。",
             "",
         ]
-    else:
-        for cue in cues:
-            lines.append(f"**{ts_link(url, cue.start)}** {cue.text}")
-            lines.append("")
+
+    if cues is None and frames:
+        lines += ["## 字幕", ""]
+        lines += [
+            "> 这个视频没有可用字幕。上面的关键帧按时间排列，可点击时间戳跳转。",
+            "",
+        ]
 
     return "\n".join(lines).rstrip() + "\n"

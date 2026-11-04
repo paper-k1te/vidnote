@@ -2,7 +2,7 @@
 #
 # 用法：
 #   powershell -File scripts/build_app.ps1          # 轻量版（约 16 MB）
-#   powershell -File scripts/build_app.ps1 -Full    # 完整版（含本地转写，300 MB+）
+#   powershell -File scripts/build_app.ps1 -Full    # 完整版（含 Vosk + whisper 转写）
 #
 # 产物：
 #   dist-app\     或 dist-app-full\

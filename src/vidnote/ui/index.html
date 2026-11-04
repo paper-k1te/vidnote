@@ -175,6 +175,12 @@
   .check-line.off { color: var(--text-3); cursor: default; }
   .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .progress { margin-top: 14px; }
+  .progress-label { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-3); margin-bottom: 6px; }
+  .bar { height: 6px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--action-bg); transition: width .2s; }
+  .bar.indet i { width: 34% !important; animation: indet 1.2s ease-in-out infinite; }
+  @keyframes indet { 0% { transform: translateX(-110%); } 100% { transform: translateX(330%); } }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -219,7 +225,7 @@
           <input id="target" placeholder="BV1xx411c7mD 或 https://www.bilibili.com/video/...">
           <div class="grid2">
             <div><label>分P</label><input id="page" type="number" min="1" value="1"></div>
-            <div><label>关键帧</label><input id="frames" type="number" min="0" max="30" value="0"></div>
+            <div><label>关键帧</label><input id="frames" type="number" min="0" max="30" value="6"></div>
           </div>
           <label>输出目录</label>
           <input id="outdir" placeholder="留空 = 当前目录">
@@ -232,6 +238,10 @@
             <option value="small">whisper small · 下载 485 MB · 中文最好</option>
           </select>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
+          <div class="progress hidden" id="progress">
+            <div class="progress-label"><span id="phase">准备中…</span><span id="pct"></span></div>
+            <div class="bar" id="bar-track"><i id="bar"></i></div>
+          </div>
         </div>
       </section>
 
@@ -247,9 +257,10 @@
       <section class="card" id="tips">
         <div class="card-head"><h2>说明</h2></div>
         <div class="card-body tips">
+          <p id="file-hint" class="hidden"><b>提示</b>：当前是直接打开的 HTML 文件，没有本地服务。请先运行 <code>vidnote gui</code>，或双击桌面应用。</p>
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
-          <p><b>关键帧</b>：填 0 不抽；大于 0 时用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>字幕</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、无标点），whisper 75/145/485 MB（质量更好），只在第一次使用时下载。</p>
+          <p><b>关键帧</b>：默认 6 张，会插在对应字幕的后面；填 0 不抽。用 B 站现成的缩略图，不下载视频。</p>
+          <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、无标点），whisper 75/145/485 MB（质量更好）。模型只在第一次使用时下载，进度会显示在按钮下方。</p>
         </div>
       </section>
     </div>
@@ -279,8 +290,21 @@ function toast(message, kind) {
 }
 
 async function api(path, options) {
-  const res = await fetch(path, options);
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(path, options);
+  } catch (e) {
+    // 直接双击 HTML 时没有本地服务，fetch 会报 Failed to fetch。
+    throw new Error(location.protocol === "file:"
+      ? "这是静态页面，没有本地服务。请先运行 vidnote gui，或双击桌面应用打开。"
+      : "无法连接本地服务，请确认 vidnote 仍在运行。");
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error("本地服务返回异常（HTTP " + res.status + "）");
+  }
   if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
   return data;
 }
@@ -305,6 +329,12 @@ document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
   };
 });
 
+/* ---- 直接打开 HTML 时给出明确提示 ---- */
+if (location.protocol === "file:") {
+  $("file-hint").classList.remove("hidden");
+  toast("静态页面：请先运行 vidnote gui，抓取和搜索才有本地服务", "err");
+}
+
 /* ---- 主题 ---- */
 const root = document.documentElement;
 function applyTheme(theme) {
@@ -322,12 +352,22 @@ $("theme").onclick = () => applyTheme(root.dataset.theme === "dark" ? "light" : 
 /* ---- Markdown 渲染 ---- */
 function renderMarkdown(md) {
   const lines = md.split("\n"); let html = "", inTable = false, inList = false;
-  const inline = (s) => s
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
+  const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const inline = (s) => {
+    const images = [];
+    // 图片先抽出来，避免路径里的 < > 被下面的转义破坏。
+    s = s.replace(/!\[([^\]]*)\]\((<[^>]+>|[^)]+)\)/g, (m, alt, src) => {
+      const url = src.replace(/^<|>$/g, "");
+      images.push(`<img alt="${esc(alt)}" src="${esc(url)}">`);
+      return `\u0000${images.length - 1}\u0000`;
+    });
+    s = esc(s)
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>");
+    return s.replace(/\u0000(\d+)\u0000/g, (m, index) => images[Number(index)]);
+  };
   for (const raw of lines) {
     const line = raw.trimEnd();
     if (/^\|/.test(line)) {
@@ -348,11 +388,39 @@ function renderMarkdown(md) {
   return html;
 }
 
+/* ---- 进度 ---- */
+function showProgress(state) {
+  $("progress").classList.remove("hidden");
+  $("phase").textContent = state.phase || "处理中…";
+  const track = $("bar-track"), bar = $("bar");
+  if (state.total > 0) {
+    const pct = Math.max(0, Math.min(100, Math.round(state.done / state.total * 100)));
+    track.classList.remove("indet");
+    bar.style.width = pct + "%";
+    $("pct").textContent = pct + "%";
+  } else {
+    track.classList.add("indet");
+    bar.style.width = "";
+    $("pct").textContent = "";
+  }
+}
+
+function hideProgress() {
+  $("progress").classList.add("hidden");
+  $("bar-track").classList.remove("indet");
+  $("bar").style.width = "0";
+  $("pct").textContent = "";
+}
+
 /* ---- 交互 ---- */
+let jobTimer = null;
+
 $("go").onclick = async () => {
   const target = $("target").value.trim();
   if (!target) return toast("先填一个视频链接或 BV 号", "err");
+  clearTimeout(jobTimer);
   busy($("go"), true, "抓取中…");
+  showProgress({ phase: "准备中…", done: 0, total: 0 });
   try {
     const data = await api("/api/fetch", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -365,14 +433,45 @@ $("go").onclick = async () => {
         model: $("transcribe").value,
       }),
     });
-    lastNote = data.note; lastPath = data.path;
-    $("preview").innerHTML = renderMarkdown(data.note);
-    $("path").textContent = data.path;
-    $("copy").disabled = false; $("reveal").disabled = false;
-    toast(data.frames ? `完成，含 ${data.frames} 张关键帧` : "完成", "ok");
-  } catch (e) { toast(e.message, "err"); }
-  finally { busy($("go"), false, "生成笔记"); }
+    pollJob(data.job);
+  } catch (e) {
+    toast(e.message, "err");
+    busy($("go"), false, "生成笔记");
+    hideProgress();
+  }
 };
+
+async function pollJob(jobId) {
+  try {
+    const state = await api("/api/job?id=" + encodeURIComponent(jobId));
+    showProgress(state);
+    if (state.status === "running") {
+      jobTimer = setTimeout(() => pollJob(jobId), 350);
+      return;
+    }
+    busy($("go"), false, "生成笔记");
+    if (state.status === "error") throw new Error(state.error || "抓取失败");
+    const result = state.result || {};
+    lastNote = result.note || ""; lastPath = result.path || "";
+    $("preview").innerHTML = renderMarkdown(lastNote);
+    // 笔记里的图片是相对路径，预览时交给后端读取并以图片形式返回。
+    $("preview").querySelectorAll("img").forEach((img) => {
+      const src = img.getAttribute("src") || "";
+      if (src.startsWith("data:") || src.startsWith("http")) return;
+      img.src = "/api/frame?note=" + encodeURIComponent(lastPath)
+        + "&src=" + encodeURIComponent(src);
+    });
+    $("path").textContent = lastPath;
+    $("copy").disabled = !lastNote; $("reveal").disabled = !lastPath;
+    $("phase").textContent = "完成"; $("pct").textContent = "100%";
+    $("bar-track").classList.remove("indet"); $("bar").style.width = "100%";
+    if (result.warning) toast(result.warning, "err");
+    else toast(result.frames ? `完成，含 ${result.frames} 张关键帧` : "完成", "ok");
+  } catch (e) {
+    busy($("go"), false, "生成笔记");
+    toast(e.message, "err");
+  }
+}
 
 $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
 
@@ -393,7 +492,13 @@ async function doSearch() {
       li.onclick = () => { $("target").value = item.bvid; toast("已填入 " + item.bvid, "ok"); document.querySelector('[data-view="fetch"]').click(); };
       list.appendChild(li);
     }
-  } catch (e) { list.innerHTML = '<li class="empty">' + e.message + "</li>"; toast(e.message, "err"); }
+  } catch (e) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = e.message;
+    list.replaceChildren(li);
+    toast(e.message, "err");
+  }
 }
 
 $("copy").onclick = async () => {
@@ -414,18 +519,23 @@ $("reveal").onclick = async () => {
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
 
-/* 后端有哪些引擎：没有的选项直接移除，一个都没有就禁用整个下拉框 */
+/* 后端有哪些引擎：没有的选项标灰并说明，一个都没有就禁用整个下拉框 */
 fetch("/api/health").then((r) => r.json()).then((data) => {
   const engines = data.engines || {};
   const box = $("transcribe");
   [...box.options].forEach((option) => {
     if (!option.value) return;
     const needsVosk = option.value.startsWith("vosk");
-    if (needsVosk ? !engines.vosk : !engines.whisper) option.remove();
+    const available = needsVosk ? engines.vosk : engines.whisper;
+    if (!available) {
+      option.disabled = true;
+      option.textContent += "（此版本未内置）";
+    }
   });
-  if (box.options.length <= 1) {
+  const usable = [...box.options].filter((option) => option.value && !option.disabled);
+  if (!usable.length) {
+    box.value = "";
     box.disabled = true;
-    box.innerHTML = '<option value="">这个版本没有内置转写（完整版才有）</option>';
   }
 }).catch(() => {});
 </script>

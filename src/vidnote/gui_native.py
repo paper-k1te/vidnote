@@ -16,7 +16,7 @@ from tkinter import ttk
 from typing import Any
 
 from . import __version__
-from .bilibili import BilibiliClient, BiliError, parse_video_id
+from .bilibili import BilibiliClient, BiliError
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch, SearchResult
 from .storyboard import storyboard_frames
@@ -74,7 +74,7 @@ class App:
         )
 
         ttk.Label(form, text="关键帧").grid(row=1, column=2, sticky="w", padx=(16, 0), pady=(6, 0))
-        self.frames = tk.StringVar(value="0")
+        self.frames = tk.StringVar(value="6")
         ttk.Spinbox(form, from_=0, to=30, width=6, textvariable=self.frames).grid(
             row=1, column=3, sticky="w", padx=(8, 0), pady=(6, 0)
         )
@@ -247,16 +247,12 @@ def build_note_file(
 ) -> dict[str, Any]:
     """抓取 + 生成笔记，返回给界面用的字典。"""
     try:
-        video_id = parse_video_id(target)
-    except BiliError as exc:
-        return {"error": str(exc)}
-
-    try:
         with BilibiliClient() as client:
+            video_id = client.resolve(target)
             meta = client.view(video_id)
             if page < 1 or page > len(meta.pages):
                 return {"error": f"这个视频只有 {len(meta.pages)} 个分P。"}
-            subtitle = client.subtitles(meta.bvid, meta.pages[page - 1].cid)
+            subtitle = client.subtitles(meta.bvid, meta.pages[page - 1].cid, meta.aid)
     except BiliError as exc:
         return {"error": str(exc)}
     except Exception as exc:  # noqa: BLE001
@@ -274,8 +270,8 @@ def build_note_file(
             frame_dir = destination.parent / f"{destination.stem}_frames"
             shots = storyboard_frames(meta.bvid, page, frame_dir, count=frames)
             keyframes = [(shot.seconds, shot.relative_to(destination.parent)) for shot in shots]
-        except Exception as exc:  # noqa: BLE001
-            return {"error": f"取关键帧失败：{exc}"}
+        except Exception:  # noqa: BLE001 - 关键帧失败不阻塞笔记
+            keyframes = []
 
     note = build_note(
         meta,

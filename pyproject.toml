@@ -1,6 +1,6 @@
 [project]
 name = "vidnote"
-version = "0.2.3"
+version = "0.2.4"
 description = "把 B 站视频变成带时间戳的 Markdown 笔记。"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -46,8 +46,6 @@ packages = ["src/vidnote"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
-  "/archive",
-  "/samples",
   "/research",
   "/.venv",
 ]
@@ -55,7 +53,6 @@ exclude = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = ["archive"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

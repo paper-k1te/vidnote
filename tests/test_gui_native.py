@@ -28,6 +28,11 @@ def test_build_note_file_rejects_out_of_range_page(monkeypatch) -> None:
         def __exit__(self, *exc):
             return False
 
+        def resolve(self, target):
+            from vidnote.bilibili import VideoId
+
+            return VideoId(bvid="BV1")
+
         def view(self, video_id):
             from datetime import datetime, timezone
 
@@ -44,7 +49,7 @@ def test_build_note_file_rejects_out_of_range_page(monkeypatch) -> None:
                 pages=[Page(index=1, cid=1, title="p1", duration=10)],
             )
 
-        def subtitles(self, bvid, cid):
+        def subtitles(self, bvid, cid, aid=None):
             return None
 
     monkeypatch.setattr(gui_native, "BilibiliClient", lambda: FakeClient())
@@ -67,6 +72,11 @@ def test_build_note_file_writes_preview(monkeypatch, tmp_path: Path) -> None:
         def __exit__(self, *exc):
             return False
 
+        def resolve(self, target):
+            from vidnote.bilibili import VideoId
+
+            return VideoId(bvid="BV1xx411c7mD")
+
         def view(self, video_id):
             from datetime import datetime, timezone
 
@@ -83,7 +93,7 @@ def test_build_note_file_writes_preview(monkeypatch, tmp_path: Path) -> None:
                 pages=[Page(index=1, cid=1, title="p1", duration=10)],
             )
 
-        def subtitles(self, bvid, cid):
+        def subtitles(self, bvid, cid, aid=None):
             return "zh", []
 
     monkeypatch.setattr(gui_native, "BilibiliClient", lambda: FakeClient())

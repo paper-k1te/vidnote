@@ -20,7 +20,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from . import __version__
-from .bilibili import BilibiliClient, BiliError, Cue, VideoMeta, parse_video_id
+from .bilibili import BilibiliClient, BiliError, VideoMeta
 from .frames import FrameError, KeyFrame, extract_keyframes
 from .media import MediaError, transcribe_video
 from .note import NoteOptions, build_note, filename
@@ -71,10 +71,8 @@ def version() -> None:
     console.print(f"vidnote {__version__}")
 
 
-def _transcribe(
-    meta: VideoMeta, page_no: int, model: str, *, use_cache: bool
-) -> tuple[str, list[Cue]]:
-    """带进度条地跑一遍「下载音频 → 本地转写」。"""
+def _progress_runner(engine: str, meta: VideoMeta, page_no: int, model: str, *, use_cache: bool):
+    """带进度条地跑一遍「下载音频 → 下载模型 → 本地转写」。"""
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -82,19 +80,35 @@ def _transcribe(
         console=err,
         transient=True,
     ) as progress:
-        task = progress.add_task("正在下载音频…", total=None)
+        task = progress.add_task("准备中…", total=None)
+        phase = {"text": "准备中…"}
+
+        def on_status(text: str) -> None:
+            phase["text"] = text
+            progress.update(task, description=text)
 
         def on_progress(done: float, total: float) -> None:
             progress.update(
-                task, description="正在本地转写…", total=total, completed=done
+                task, description=phase["text"], total=total, completed=done
             )
 
+        if engine == "vosk":
+            from .asr import transcribe_video as vosk_transcribe
+
+            return vosk_transcribe(
+                meta,
+                page_no,
+                model=model,
+                on_progress=on_progress,
+                on_status=on_status,
+            )
         return transcribe_video(
             meta,
             page_no,
             model_size=model,
             use_cache=use_cache,
             on_progress=on_progress,
+            on_status=on_status,
         )
 
 
@@ -151,7 +165,7 @@ def fetch(
         0.0, "--delay", min=0.0, help="两次接口请求之间等待的秒数，批量处理时降低频率"
     ),
     frames: int = typer.Option(
-        0, "--frames", min=0, max=30, help="抽取关键帧的数量，0 表示不抽（需要 [frames] 依赖）"
+        6, "--frames", min=0, max=30, help="抽取关键帧的数量，默认 6，0 表示不抽"
     ),
     video: Path = typer.Option(
         None, "--video", help="用本地视频文件抽帧，而不是从网上下载"
@@ -163,16 +177,11 @@ def fetch(
     ),
 ) -> None:
     """抓取一个视频，生成 Markdown 笔记。"""
-    try:
-        video_id = parse_video_id(target)
-    except BiliError as exc:
-        err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(EXIT_ERROR) from exc
-
-    page_no = page or video_id.page
-
+    page_no = page
     try:
         with BilibiliClient() as client:
+            video_id = client.resolve(target)
+            page_no = page or video_id.page
             meta = client.view(video_id)
             if page_no < 1 or page_no > len(meta.pages):
                 err.print(f"[red]这个视频只有 {len(meta.pages)} 个分P。[/red]")
@@ -181,7 +190,7 @@ def fetch(
             if delay > 0:
                 # 批量循环时用：把两次接口请求之间拉开，别把对方接口打爆。
                 time.sleep(delay)
-            subtitle = client.subtitles(meta.bvid, current.cid)
+            subtitle = client.subtitles(meta.bvid, current.cid, meta.aid)
     except BiliError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(EXIT_ERROR) from exc
@@ -195,11 +204,11 @@ def fetch(
 
     if cues is None and vosk:
         from .asr import AsrError
-        from .asr import transcribe_video as vosk_transcribe
 
         try:
-            with console.status("正在用 Vosk 转写…"):
-                lang, cues = vosk_transcribe(meta, page_no)
+            lang, cues = _progress_runner(
+                "vosk", meta, page_no, "vosk-cn", use_cache=False
+            )
             transcribed = True
         except AsrError as exc:
             err.print(f"[red]{exc}[/red]")
@@ -207,15 +216,17 @@ def fetch(
 
     if cues is None and whisper:
         try:
-            lang, cues = _transcribe(meta, page_no, model, use_cache=not no_cache)
+            lang, cues = _progress_runner(
+                "whisper", meta, page_no, model, use_cache=not no_cache
+            )
             transcribed = True
         except MediaError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
 
     if stdout and frames:
-        err.print("[red]抓关键帧需要写文件，不能和 --stdout 一起用。[/red]")
-        raise typer.Exit(EXIT_MISSING_DEPS)
+        err.print("[yellow]--stdout 只输出文本，已跳过关键帧图片。[/yellow]")
+        frames = 0
 
     if stdout:
         text = build_note(
@@ -242,12 +253,10 @@ def fetch(
             shots = _extract_frames(
                 meta, page_no, destination, frames, video, scene=scene
             )
-        except FrameError as exc:
-            err.print(f"[red]{exc}[/red]")
-            raise typer.Exit(EXIT_MISSING_DEPS) from exc
-        except BiliError as exc:
-            err.print(f"[red]{exc}[/red]")
-            raise typer.Exit(EXIT_ERROR) from exc
+        except (FrameError, BiliError, OSError) as exc:
+            # 关键帧是锦上添花，拿不到也照常写笔记。
+            err.print(f"[yellow]跳过关键帧：{exc}[/yellow]")
+            shots = []
         keyframes = [(shot.seconds, shot.relative_to(destination.parent)) for shot in shots]
 
     text = build_note(

@@ -12,15 +12,12 @@ from __future__ import annotations
 
 import json
 import zipfile
-from collections.abc import Callable
 from pathlib import Path
 
 import httpx
 
 from .bilibili import Cue
-from .media import cache_dir
-
-ProgressFn = Callable[[float, float], None]
+from .media import ProgressFn, StatusFn, cache_dir
 
 
 class AsrError(RuntimeError):
@@ -113,6 +110,7 @@ def transcribe(
     *,
     model: str = "vosk-cn",
     on_progress: ProgressFn | None = None,
+    on_status: StatusFn | None = None,
 ) -> tuple[str, list[Cue]]:
     """用 Vosk 转写本地音频文件。"""
     try:
@@ -122,7 +120,11 @@ def transcribe(
         raise AsrError("缺少 vosk 或 av，请先安装：pip install 'vidnote[vosk]'") from exc
 
     vosk.SetLogLevel(-1)
-    directory = ensure_model(model, on_progress=None)
+    if on_status:
+        on_status("正在准备 Vosk 模型…")
+    directory = ensure_model(model, on_progress=on_progress)
+    if on_status:
+        on_status("正在本地转写…")
     recognizer = vosk.KaldiRecognizer(vosk.Model(str(directory)), 16000)
     recognizer.SetWords(True)
 
@@ -164,6 +166,7 @@ def transcribe_video(
     *,
     model: str = "vosk-cn",
     on_progress: ProgressFn | None = None,
+    on_status: StatusFn | None = None,
 ) -> tuple[str, list[Cue]]:
     """下载音频 → Vosk 转写，一步到位。"""
     import tempfile  # noqa: PLC0415
@@ -172,5 +175,9 @@ def transcribe_video(
 
     url = f"{meta.url}?p={page}" if len(meta.pages) > 1 else meta.url
     with tempfile.TemporaryDirectory(prefix="vidnote-asr-") as tmp:
-        audio = download_audio(url, Path(tmp))
-        return transcribe(audio, model=model, on_progress=on_progress)
+        audio = download_audio(
+            url, Path(tmp), on_progress=on_progress, on_status=on_status
+        )
+        return transcribe(
+            audio, model=model, on_progress=on_progress, on_status=on_status
+        )
