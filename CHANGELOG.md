@@ -11,7 +11,7 @@
 
 ### 变更
 
-- **whisper 推理引擎改为按需安装**：完整版 exe 不再内置 ctranslate2 / onnxruntime / tokenizers 等（约 66 MB），第一次在界面里选 whisper 时点「安装 whisper 依赖」单独下载；完整版从约 162 MB 降到约 106 MB。
+- **whisper 推理引擎改为按需安装**：完整版 exe 不再内置 ctranslate2 / onnxruntime / tokenizers 等（约 66 MB），第一次在界面里选 whisper 时点「安装 whisper 依赖」单独下载；完整版从约 162 MB 降到约 101 MB。同时剔除未使用的 cryptography / OpenSSL、websockets、sqlite3，保留 yt-dlp 所需的 requests / urllib3。
 - **Vosk 自动分句补标点**：利用逐词时间戳按停顿断句，并在句尾补 `。？！`，不再输出一整段无标点文本。
 
 ## [0.3.0] - 2026-11-05

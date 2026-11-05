@@ -127,7 +127,7 @@ powershell -File scripts/build_app.ps1 -Full    # 完整版，含 Vosk（模型�
 | --- | --- | --- |
 | 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ | ✅ |
 | 本地转写 | ❌（界面里会置灰） | ✅ Vosk（模型内置）；whisper（依赖按需安装） |
-| 体积 | ~16 MB | ~106 MB（Vosk 模型已打包） |
+| 体积 | ~16 MB | ~101 MB（Vosk 模型已打包） |
 | 首次转写 | — | Vosk 无需下载；whisper 先装依赖（约 66 MB），再下载模型 75 MB 起 |
 
 转写引擎可选：
@@ -145,7 +145,7 @@ whisper 的推理引擎默认不打进完整版 exe：第一次在界面里选 w
 
 `vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序，而且只有这一个文件：窗口外壳、Python 后端和 WebView2 库全部内置。首次启动时会把运行时释放到 `%LOCALAPPDATA%\vidnote\runtime`，之后复用；用户目录里始终只看到一个 exe。
 
-轻量版约 16 MB，完整版包含 Vosk 模型和音频解码，约 106 MB；要用 whisper 时再额外下载约 66 MB 依赖包。双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。首次启动会多花几秒解压，之后正常。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
+轻量版约 16 MB，完整版包含 Vosk 模型和音频解码，约 101 MB；要用 whisper 时再额外下载约 66 MB 依赖包。双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。首次启动会多花几秒解压，之后正常。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
 
 ### Windows 免安装 exe
 

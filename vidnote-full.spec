@@ -37,7 +37,6 @@ a = Analysis(
         "vosk",
         "srt",
         "requests",
-        "websockets",
         "av",
         "yt_dlp",
         # vosk 在导入时就会 import tqdm；whisper 用 tqdm.auto。
@@ -58,6 +57,11 @@ a = Analysis(
         "pydantic_core",
         "httpx2",
         "httpcore2",
+        # yt-dlp 的可选网络处理器；B 站下载走 urllib 即可
+        "cryptography",
+        "OpenSSL",
+        "websockets",
+        "sqlite3",
         # 与运行无关的东西
         "mcp",
         "tkinter",
