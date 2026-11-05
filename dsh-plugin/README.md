@@ -42,26 +42,27 @@ dsh plugin --profile desktop add ./dsh-plugin
 dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#main&path:/dsh-plugin"
 ```
 
-安装后重启 DSH，会话里就能看到 `vidnote_note` / `vidnote_search` / `vidnote_user`，左侧边栏也会多一个「B站笔记」入口。
+安装后重启 DSH，会话标题行会多出一个「B站笔记」视图（就在「对话 / 轨迹」旁边）。
 
-## 原生界面
+## 界面
 
-界面是**用 DSH 自己的组件和主题变量重写的**，不是 iframe：
+界面是**用 DSH 自己的 slot 和主题变量重写的**，不是 iframe：
 
-- 左侧边栏一个纸鸢图标，点开是主区域的一整页「B站笔记」；
-- 「抓取视频」：链接、分P、关键帧、解析方案，生成后结果直接渲染在下方，可复制 / 下载 `.md`，抓取期间有等待计时；
+- 注册为会话的第三个视图（`conversation.view`），标签「B站笔记」，和「对话」「轨迹」并列；
+- 布局照着自己的窗口来：左侧导航（抓取视频 / 搜索）、顶栏、左边表单右边预览；
+- 「抓取视频」：链接、分P、解析方案，生成后右侧直接渲染 Markdown（标题、表格、引用、列表），可切源文、复制、下载 `.md`，抓取期间有等待计时；
 - 「搜索」：视频 / UP 主切换，点视频会把链接填回抓取页；
-- 深浅色跟随 DSH 主题（全部用 `--dsw-alias-*` 变量），中英文跟随 DSH 语言。
+- 深浅色跟随 DSH 主题（`--dsw-alias-*` 变量），中英文跟随 DSH 语言；强调色保留 vidnote 的橙色。
 
 数据走三条同源接口：
 
 | 接口 | 作用 |
 | --- | --- |
-| `POST /vidnote/api/fetch` | 调 `vidnote fetch --stdout`，返回 Markdown |
+| `POST /vidnote/api/fetch` | 调 `vidnote fetch --stdout`，返回 Markdown 和解析好的块 |
 | `POST /vidnote/api/search` | 视频走 `search/all/v2`，UP 主走 `search/type` |
-| `GET /vidnote/url` | 可选：拉起 `vidnote serve-ui`，给「打开原界面」用 |
+| `POST /vidnote/window` | 起 `vidnote gui --app`，打开原来的独立窗口 |
 
-「打开原界面」会打开原来的 vidnote 窗口（要求 vidnote 支持 `serve-ui`，0.3.0 起）。原窗口关掉后服务 20 秒自动退出，不留后台进程。所有服务都只监听 `127.0.0.1`。
+「打开原界面」打开的是 vidnote 自己的 Edge 应用窗口（不是浏览器标签页），界面和原来完全一致；它是独立进程，关掉就结束，DSH 不参与它的生命周期。所有本地服务都只监听 `127.0.0.1`。
 
 ## 配置
 
@@ -96,10 +97,10 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#
 ## 开发
 
 ```sh
-node --test        # 29 个用例，全部是纯逻辑（请求都传 fake fetch），不需要装 DSH
+node --test        # 33 个用例，全部是纯逻辑（请求都传 fake fetch），不需要装 DSH
 ```
 
-`lib/run.js`、`lib/bili.js`、`lib/api.js`、`lib/ui.js` 都不 import 任何 DSH 的包，所以测试可以在没有 DSH 的环境里跑；`index.js` 才依赖 `@deepseek-ai/dsh-tools`。
+`lib/run.js`、`lib/bili.js`、`lib/api.js`、`lib/markdown.js`、`lib/window.js` 都不 import 任何 DSH 的包，所以测试可以在没有 DSH 的环境里跑；`index.js` 才依赖 `@deepseek-ai/dsh-tools`。
 
 ## 排错
 
@@ -115,10 +116,14 @@ icacls <目录> /setintegritylevel Medium /t /c
 
 按上面「依赖」里的顺序显式指定：配置 `cliPath`、设置 `VIDNOTE_CLI`，或把 vidnote 加进 PATH。
 
+**界面里搜索/抓取报 `HTTP 404` 或 `HTTP 405`**
+
+客户端代码热更新了、宿主进程还是旧插件（没有 `/vidnote/api/*` 路由）。重启 DSH 即可。
+
 ## 已知限制
 
 - 每次工具调用会起一个 vidnote 进程，冷启动约 1 秒（单文件 exe 要解压）；
 - 转写走本机 CPU，长视频会占满一个核；
 - 工具带 `--stdout`，笔记只回到会话里，不写文件；要落盘就用 CLI 的 `vidnote fetch ... --dir ...`；
-- 原生界面里的抓取是「一次请求等到结束」，没有逐条进度：转写长视频时只能看到等待计时，进度条仍是原窗口的；
-- 「打开原界面」打开的仍是 vidnote 自己的页面（另一个本地端口），它不跟随 DSH 主题。
+- 界面里的抓取是「一次请求等到结束」，没有逐条进度：转写长视频时只能看到等待计时，进度条仍是原窗口的；
+- 「打开原界面」是 vidnote 自己的 Edge 应用窗口，故意保持原样，不跟随 DSH 主题。

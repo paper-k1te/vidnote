@@ -1,4 +1,5 @@
 import { searchUsers, searchVideos } from './bili.js'
+import { parseNote } from './markdown.js'
 import { buildArgs, runVidnote } from './run.js'
 
 /**
@@ -94,7 +95,8 @@ export function createHandlers({
           timeoutMs,
           signal: controller.signal,
         })
-        send(res, 200, { markdown, target })
+        const note = parseNote(markdown)
+        send(res, 200, { markdown, meta: note.meta, blocks: note.blocks, target })
       } catch (error) {
         send(res, 502, { error: String(error?.message ?? error) })
       }

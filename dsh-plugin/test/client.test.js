@@ -57,15 +57,11 @@ test('client.js 注册主面板与侧边栏入口', async () => {
 
   module.apply(ctx)
 
-  assert.deepEqual(injections, ['main', 'sidebar.panellist'])
-  assert.equal(registered.length, 2)
-
-  const page = registered.find((entry) => entry.options.name === 'main')
-  assert.equal(page?.options.key, 'vidnote')
-  assert.equal(typeof page?.component, 'function')
-
-  const row = registered.find((entry) => entry.options.name === 'sidebar.panellist')
-  assert.equal(row?.options.id, 'vidnote')
-  assert.equal(typeof row?.component, 'function')
+  assert.deepEqual(injections, ['conversation.view'])
+  assert.equal(registered.length, 1)
+  assert.equal(registered[0].options.name, 'conversation.view')
+  assert.equal(registered[0].options.id, 'vidnote')
+  assert.equal(registered[0].options.order, 20)
+  assert.equal(typeof registered[0].component, 'function')
   assert.equal(effects.length, 1)
 })

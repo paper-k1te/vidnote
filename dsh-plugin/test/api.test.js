@@ -52,7 +52,10 @@ test('POST /vidnote/api/fetch 调命令行并返回 markdown', async () => {
   await done
 
   assert.equal(state.status, 200)
-  assert.deepEqual(state.json(), { markdown: '# note', target: 'BV1xx' })
+  const body = state.json()
+  assert.equal(body.markdown, '# note')
+  assert.equal(body.target, 'BV1xx')
+  assert.equal(body.blocks[0].type, 'heading')
   assert.deepEqual(calls[0].argv, ['fetch', 'BV1xx', '--stdout', '--page', '2', '--vosk'])
   assert.equal(calls[0].options.cliPath, 'vidnote')
 })

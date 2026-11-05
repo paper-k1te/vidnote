@@ -2,7 +2,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { createHandlers } from './lib/api.js'
 import { searchUsers } from './lib/bili.js'
 import { buildArgs, resolveCli, runVidnote } from './lib/run.js'
-import { createUiServer } from './lib/ui.js'
+import { openAppWindow } from './lib/window.js'
 
 export const name = 'dsh-vidnote'
 export const inject = ['tools', 'webServer']
@@ -14,13 +14,12 @@ export const inject = ['tools', 'webServer']
  *   - vidnote_note   给链接/BV 号，返回整篇笔记
  *   - vidnote_search 给关键词，返回候选视频列表
  *   - vidnote_user   给关键词，返回候选 UP 主（直接请求 B 站搜索接口）
+ *
+ * 浏览器侧还有一张输入框上方的卡片，走 /vidnote/api/*。
  */
 export function apply(ctx, config = {}) {
   const cliPath = resolveCli(config)
   const timeoutMs = Number(config.timeoutMs) || 180_000
-
-  const ui = createUiServer({ cliPath })
-  ctx.effect(() => () => ui.stop())
 
   const api = createHandlers({ cliPath, timeoutMs })
   for (const [path, handler] of [
@@ -30,20 +29,20 @@ export function apply(ctx, config = {}) {
     ctx.effect(() => ctx.webServer.register({ kind: 'exact', path, handler }))
   }
 
-  // 「打开原界面」用：拉起 `vidnote serve-ui` 并返回地址，服务只监听 127.0.0.1。
+  // 「打开原界面」：起 vidnote 自己的独立窗口（Edge 应用窗口），不是浏览器标签页。
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
-    path: '/vidnote/url',
+    path: '/vidnote/window',
     async handler(_req, res) {
       try {
-        const url = await ui.ensure()
+        openAppWindow({ cliPath })
         res.writeHead(200, {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         })
-        res.end(JSON.stringify({ url }))
+        res.end(JSON.stringify({ ok: true }))
       } catch (error) {
-        res.writeHead(503, {
+        res.writeHead(502, {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         })
