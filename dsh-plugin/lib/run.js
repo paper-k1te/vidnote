@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+﻿import { spawn } from 'node:child_process'
+import { existsSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 
 /**
  * 调用 vidnote 命令行，返回 stdout。
@@ -13,6 +13,31 @@ import { homedir } from 'node:os'
 const DEFAULT_TIMEOUT = 180_000
 
 const PLUGIN_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
+
+/** 找一个确实**可写**的临时目录：TEMP 被清空的进程里 os.tmpdir() 也会返回空串，
+ *  而 %SystemRoot%\Temp 存在但普通用户写不进去。 */
+export function scratchDir() {
+  const candidates = [
+    process.env.TEMP,
+    process.env.TMP,
+    tmpdir(),
+    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'Temp'),
+    process.env.USERPROFILE && join(process.env.USERPROFILE, 'AppData', 'Local', 'Temp'),
+    process.env.SystemRoot && join(process.env.SystemRoot, 'Temp'),
+  ]
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    try {
+      const probe = join(candidate, `.vidnote-probe-${process.pid}`)
+      writeFileSync(probe, '')
+      unlinkSync(probe)
+      return candidate
+    } catch {
+      // 不存在或没权限，试下一个
+    }
+  }
+  return tmpdir()
+}
 
 /** 桌面版解压出来的目录名前缀，例如 vidnote-app-full-0.2.3。 */
 const DESKTOP_APP_PREFIX = 'vidnote-app'
@@ -86,6 +111,9 @@ export function runVidnote(argv, { cliPath, timeoutMs = DEFAULT_TIMEOUT, signal,
     const child = spawnImpl(cliPath, argv, {
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
+      // 单文件 exe 启动时要解压到 %TEMP%；变量缺失或被清空的进程里会直接报
+      // "Could not create temporary directory"，这里兜一个默认值。
+      env: { ...process.env, TEMP: scratchDir(), TMP: scratchDir() },
     })
 
     let stdout = ''
