@@ -110,6 +110,32 @@ def test_missing_api_key(monkeypatch) -> None:
         gemini.api_key(None)
 
 
+def test_system_proxy_reads_registry_style_values(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "urllib.request.getproxies", lambda: {"https": "127.0.0.1:12450"}
+    )
+    assert gemini.system_proxy() == "http://127.0.0.1:12450"
+
+    monkeypatch.setattr(
+        "urllib.request.getproxies", lambda: {"https": "http://127.0.0.1:7897"}
+    )
+    assert gemini.system_proxy() == "http://127.0.0.1:7897"
+
+    monkeypatch.setattr("urllib.request.getproxies", lambda: {})
+    assert gemini.system_proxy() is None
+
+
+def test_post_chunk_reports_connection_failure() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("blocked", request=request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(gemini.GeminiError, match="连不上 Gemini"):
+            gemini._post_chunk(
+                {"contents": []}, key="k", model=gemini.DEFAULT_MODEL, client=client
+            )
+
+
 def test_post_chunk_retries_after_rate_limit(monkeypatch) -> None:
     calls = {"count": 0}
 

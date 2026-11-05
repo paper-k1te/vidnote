@@ -69,6 +69,29 @@ def make_sprite(path: Path) -> None:
     sheet.save(path, format="JPEG")
 
 
+def test_save_frames_uses_nearest_cells(tmp_path: Path) -> None:
+    sprite = tmp_path / "sprite.jpg"
+    make_sprite(sprite)
+    content = sprite.read_bytes()
+
+    board = Storyboard(
+        sprite_url="https://example.com/sprite.jpg",
+        columns=2,
+        rows=2,
+        cell_width=160,
+        cell_height=90,
+        timestamps=[0, 60, 120, 180],
+    )
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, content=content))
+    with httpx.Client(transport=transport) as client:
+        frames = save_frames(
+            board, tmp_path / "frames", times=[58, 179], client=client
+        )
+
+    assert [frame.seconds for frame in frames] == [60.0, 180.0]
+    assert all(frame.path.exists() for frame in frames)
+
+
 def test_save_frames_crops_cells(tmp_path: Path) -> None:
     sprite = tmp_path / "sprite.jpg"
     make_sprite(sprite)

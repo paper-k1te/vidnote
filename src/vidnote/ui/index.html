@@ -301,7 +301,7 @@
 
       <!-- 下载 -->
       <section class="card grow hidden" id="view-download">
-        <div class="card-head"><h2>下载</h2><span class="hint">whisper 依赖、模型与 Gemini</span></div>
+        <div class="card-head"><h2>下载</h2><span class="hint">whisper 依赖、模型、Gemini 与 LLM</span></div>
         <div class="card-body">
           <label>下载渠道</label>
           <select id="channel">
@@ -326,7 +326,18 @@
           <input id="gemini-key" type="password" placeholder="AIza...">
           <label>模型</label>
           <input id="gemini-model" value="gemini-2.5-flash">
-          <p class="field-hint">音频会上传到 Google Gemini；API Key 只用于本次运行，不写进笔记、不保存。也可以换成 gemini-2.5-pro 等模型名。</p>
+          <p class="field-hint">音频会上传到 Google Gemini（需要能访问 Google，必要时开代理）；API Key 只用于本次运行，不写进笔记、不保存。也可以换成 gemini-2.5-pro 等模型名。</p>
+          <div class="engine-sep"></div>
+          <label>笔记精修（LLM，可选）</label>
+          <label class="check-line">
+            <input type="checkbox" id="refine"> 用 LLM 修正错字、补标点，并生成摘要和要点
+          </label>
+          <input id="llm-key" type="password" placeholder="sk-...">
+          <div class="grid2" style="margin-top:10px">
+            <div><label>接口地址</label><input id="llm-base" value="https://api.deepseek.com/v1"></div>
+            <div><label>模型</label><input id="llm-model" value="deepseek-chat"></div>
+          </div>
+          <p class="field-hint">任意 OpenAI 兼容接口（DeepSeek、通义千问、智谱、Kimi 等）。只上传转写文本，不上传音频；Key 不保存。</p>
         </div>
       </section>
 
@@ -538,6 +549,10 @@ $("go").onclick = async () => {
         cookie: $("cookie").value.trim(),
         gemini_key: $("gemini-key").value.trim(),
         gemini_model: $("gemini-model").value.trim(),
+        refine: $("refine").checked,
+        llm_key: $("llm-key").value.trim(),
+        llm_base: $("llm-base").value.trim(),
+        llm_model: $("llm-model").value.trim(),
       }),
     });
     pollJob(data.job);

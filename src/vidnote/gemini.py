@@ -27,6 +27,7 @@ from .media import (
     load_cached,
     save_cached,
 )
+from .net import system_proxy
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-2.5-flash"
@@ -256,14 +257,22 @@ def _post_chunk(
 ) -> dict:
     url = f"{API_BASE}/models/{model}:generateContent"
     owned = client is None
-    active = client or httpx.Client(timeout=httpx.Timeout(600.0, connect=20.0))
+    active = client or httpx.Client(
+        timeout=httpx.Timeout(600.0, connect=20.0), proxy=system_proxy()
+    )
     try:
         for attempt in range(3):
-            response = active.post(
-                url,
-                headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                json=body,
-            )
+            try:
+                response = active.post(
+                    url,
+                    headers={"x-goog-api-key": key, "Content-Type": "application/json"},
+                    json=body,
+                )
+            except httpx.HTTPError as exc:
+                raise GeminiError(
+                    f"连不上 Gemini（{exc}）。如果在中国大陆，请先开启代理"
+                    "（Clash 等工具的「系统代理」或 TUN 模式）。"
+                ) from exc
             if response.status_code in (429, 500, 502, 503, 504) and attempt < 2:
                 delay = retry_delay * (2**attempt)
                 retry_after = response.headers.get("Retry-After")

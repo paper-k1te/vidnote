@@ -53,6 +53,13 @@ def filename(meta: VideoMeta, *, when: date | None = None) -> str:
     return f"{day.isoformat()}_{slugify(meta.title)}_{meta.bvid}.md"
 
 
+_ENGINE_LABELS = {
+    "gemini": "Gemini（云端，实验）",
+    "vosk": "Vosk 本地转写",
+    "whisper": "Whisper 本地转写",
+}
+
+
 @dataclass(frozen=True)
 class NoteOptions:
     source: str | None = None
@@ -60,6 +67,16 @@ class NoteOptions:
     page: int = 1
     fetched: date | None = None
     transcription: str = ""
+    refined: str = ""
+    summary: str = ""
+    points: tuple[tuple[float, str, str], ...] = ()
+
+
+def _engine_label(opts: NoteOptions) -> str:
+    label = _ENGINE_LABELS.get(opts.transcription, opts.transcription)
+    if opts.refined:
+        label += f"，{opts.refined} 精修"
+    return label
 
 
 def _frame_image(seconds: float, relative: str) -> list[str]:
@@ -160,6 +177,8 @@ def build_note(
     }
     if opts.transcription:
         front["transcription"] = opts.transcription
+    if opts.refined:
+        front["refined_by"] = opts.refined
     if opts.page > 1 and current:
         front["page"] = f"P{current.index} {current.title}"
     if opts.source:
@@ -252,7 +271,7 @@ def build_note(
         subtitle_cell = "无"
     lines.append(f"| 字幕 | {subtitle_cell} |")
     if opts.transcription:
-        lines.append("| 转写 | Gemini（云端，实验） |")
+        lines.append(f"| 转写 | {_engine_label(opts)} |")
     if meta.cover:
         lines.append(f"| 封面 | [原图]({meta.cover}) |")
     if len(meta.staff) > 1:
@@ -288,6 +307,20 @@ def build_note(
     if opts.include_desc and meta.desc:
         lines += ["## 简介", "", meta.desc.strip(), ""]
 
+    if opts.summary:
+        lines += ["## 摘要", "", opts.summary.strip(), ""]
+
+    if opts.points:
+        lines += ["## 要点", ""]
+        for seconds, title, detail in opts.points:
+            body = f"- **{ts_link(url, seconds)}**"
+            if title:
+                body += f" **{title}**"
+            if detail:
+                body += f"：{detail}"
+            lines.append(body)
+        lines.append("")
+
     if len(meta.pages) > 1:
         lines += ["## 分P", ""]
         for page in meta.pages:
@@ -319,12 +352,21 @@ def build_note(
 
     if cues:
         lines += ["## 转写" if opts.transcription else "## 字幕", ""]
-        if opts.transcription:
+        if opts.transcription == "gemini":
             lines += [
                 "> 以下内容由 Gemini 云端转写（实验），音频已上传到 Google；"
                 "可能存在识别错误。",
                 "",
             ]
+        elif opts.transcription:
+            note = f"> 由 {_engine_label(opts)}"
+            if opts.refined:
+                note += "；时间戳来自原始识别，可能有偏差。"
+            else:
+                note += "；标点为按停顿自动补充。"
+            lines += [note, ""]
+        elif opts.refined:
+            lines += [f"> 字幕文字经 {opts.refined} 精修，时间戳保持原样。", ""]
         buckets = _frames_by_cue(cues, frames) if frames else {}
         for index, cue in enumerate(cues):
             lines.append(f"**{ts_link(url, cue.start)}** {cue.text}")

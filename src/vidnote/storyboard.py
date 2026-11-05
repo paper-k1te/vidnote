@@ -91,11 +91,26 @@ def choose_cells(total: int, count: int) -> list[int]:
     return sorted({int(index * step) for index in range(count)})
 
 
+def _nearest_cells(board: Storyboard, times: list[float]) -> list[int]:
+    """把时刻换成最接近的缩略图格子，去重后按时间排序。"""
+    if not board.timestamps:
+        return []
+    cells: set[int] = set()
+    for moment in times:
+        index = min(
+            range(len(board.timestamps)),
+            key=lambda i: abs(board.timestamps[i] - moment),
+        )
+        cells.add(index)
+    return sorted(cells)
+
+
 def save_frames(
     board: Storyboard,
     outdir: Path,
     *,
     count: int = 8,
+    times: list[float] | None = None,
     client: httpx.Client | None = None,
 ) -> list[KeyFrame]:
     """下载雪碧图，按格子裁剪并保存为 JPEG。"""
@@ -116,7 +131,11 @@ def save_frames(
         if owns_client:
             http.close()
 
-    picked = choose_cells(min(board.cells, len(board.timestamps) or board.cells), count)
+    picked = _nearest_cells(board, times) if times else []
+    if not picked:
+        picked = choose_cells(
+            min(board.cells, len(board.timestamps) or board.cells), count
+        )
     outdir.mkdir(parents=True, exist_ok=True)
 
     frames: list[KeyFrame] = []
@@ -141,7 +160,14 @@ def save_frames(
     return frames
 
 
-def storyboard_frames(bvid: str, page: int, outdir: Path, *, count: int = 8) -> list[KeyFrame]:
+def storyboard_frames(
+    bvid: str,
+    page: int,
+    outdir: Path,
+    *,
+    count: int = 8,
+    times: list[float] | None = None,
+) -> list[KeyFrame]:
     """一步到位：取信息 → 下载 → 裁剪。"""
     board = fetch_storyboard(bvid, page)
-    return save_frames(board, outdir, count=count)
+    return save_frames(board, outdir, count=count, times=times)

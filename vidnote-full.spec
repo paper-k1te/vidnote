@@ -40,6 +40,7 @@ a = Analysis(
         "av",
         "yt_dlp",
         "vidnote.gemini",
+        "vidnote.llm",
         # vosk 在导入时就会 import tqdm；whisper 用 tqdm.auto。
         "tqdm.auto",
     ],

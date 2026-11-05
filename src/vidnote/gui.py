@@ -30,6 +30,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import __version__, whisper_deps
 from .bilibili import BilibiliClient, BiliError
+from .highlights import highlight_times
 from .media import ProgressFn, StatusFn, hf_endpoint
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch
@@ -397,7 +398,14 @@ def fetch_video(
     channel = str(payload.get("channel") or "auto").strip()
     gemini_key = str(payload.get("gemini_key") or "").strip()
     gemini_model = str(payload.get("gemini_model") or "").strip() or "gemini-2.5-flash"
-    gemini_used = False
+    refine = bool(payload.get("refine"))
+    llm_key = str(payload.get("llm_key") or "").strip()
+    llm_base = str(payload.get("llm_base") or "").strip()
+    llm_model = str(payload.get("llm_model") or "").strip()
+    engine_used = ""
+
+    if refine and not llm_key:
+        return {"error": "精修需要 LLM API Key。请在「笔记精修」里填写，或取消勾选。"}
 
     if on_status:
         on_status("正在获取视频信息…")
@@ -439,7 +447,7 @@ def fetch_video(
                     on_progress=on_progress,
                     on_status=on_status,
                 )
-                gemini_used = True
+                engine_used = "gemini"
             except GeminiError as exc:
                 return {"error": f"Gemini 转写失败：{exc}"}
         elif model.startswith("vosk"):
@@ -459,6 +467,7 @@ def fetch_video(
                     on_progress=on_progress,
                     on_status=on_status,
                 )
+                engine_used = "vosk"
             except AsrError as exc:
                 return {"error": f"本地转写失败：{exc}"}
         else:
@@ -478,8 +487,31 @@ def fetch_video(
                     on_status=on_status,
                     endpoint=hf_endpoint(channel),
                 )
+                engine_used = "whisper"
             except MediaError as exc:
                 return {"error": f"本地转写失败：{exc}"}
+
+    refined = None
+    if refine and cues:
+        from .llm import LlmError, refine_cues
+
+        try:
+            if on_status:
+                on_status("正在用 LLM 精修转写…")
+            refined = refine_cues(
+                cues,
+                meta,
+                api_key_value=llm_key,
+                base_url=llm_base or None,
+                model=llm_model or None,
+                on_progress=on_progress,
+                on_status=on_status,
+            )
+            cues = refined.cues
+            if refined.errors:
+                warning = f"部分段落精修失败：{refined.errors[0]}"
+        except LlmError as exc:
+            warning = f"精修失败，保留原始转写：{exc}"
 
     directory = Path(outdir) if outdir else Path.cwd()
     destination = directory / filename(meta)
@@ -490,18 +522,34 @@ def fetch_video(
             on_status("正在提取关键帧…")
         try:
             out = destination.parent / f"{destination.stem}_frames"
-            shots = storyboard_frames(meta.bvid, page, out, count=frames)
+            times = highlight_times(meta, page, count=frames)
+            shots = storyboard_frames(
+                meta.bvid,
+                page,
+                out,
+                count=frames,
+                times=times if len(times) >= 2 else None,
+            )
             keyframes = [
                 (shot.seconds, shot.relative_to(destination.parent)) for shot in shots
             ]
         except Exception as exc:  # noqa: BLE001 - 关键帧失败不阻塞笔记
-            warning = f"跳过关键帧：{exc}"
+            message = f"跳过关键帧：{exc}"
+            warning = f"{warning}；{message}" if warning else message
 
     note = build_note(
         meta,
         cues,
         options=NoteOptions(
-            page=page, transcription="gemini" if gemini_used else ""
+            page=page,
+            transcription=engine_used,
+            refined=refined.model if refined and refined.changed else "",
+            summary=refined.summary if refined else "",
+            points=(
+                tuple((point.seconds, point.title, point.detail) for point in refined.points)
+                if refined
+                else ()
+            ),
         ),
         subtitle_lang=lang,
         frames=keyframes,

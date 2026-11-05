@@ -20,8 +20,9 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from . import __version__
-from .bilibili import BilibiliClient, BiliError, VideoMeta
+from .bilibili import BilibiliClient, BiliError, Cue, VideoMeta
 from .frames import FrameError, KeyFrame, extract_keyframes
+from .highlights import highlight_times
 from .media import MediaError, hf_endpoint, transcribe_video
 from .note import NoteOptions, build_note, filename
 from .search import BilibiliSearch
@@ -135,6 +136,47 @@ def _progress_runner(
         )
 
 
+def _refine_runner(
+    meta: VideoMeta,
+    cues: list[Cue],
+    *,
+    llm_key: str | None,
+    llm_base: str | None,
+    llm_model: str | None,
+):
+    """带进度条地跑一遍 LLM 精修。"""
+    from .llm import refine_cues
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        console=err,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("准备精修…", total=None)
+        phase = {"text": "准备精修…"}
+
+        def on_status(text: str) -> None:
+            phase["text"] = text
+            progress.update(task, description=text)
+
+        def on_progress(done: float, total: float) -> None:
+            progress.update(
+                task, description=phase["text"], total=total, completed=done
+            )
+
+        return refine_cues(
+            cues,
+            meta,
+            api_key_value=llm_key,
+            base_url=llm_base,
+            model=llm_model,
+            on_progress=on_progress,
+            on_status=on_status,
+        )
+
+
 def _extract_frames(
     meta: VideoMeta,
     page_no: int,
@@ -143,6 +185,7 @@ def _extract_frames(
     video_path: Path | None = None,
     *,
     scene: bool = False,
+    highlight: bool = True,
 ) -> list[KeyFrame]:
     """把关键帧导出到笔记旁边的 ``<笔记名>_frames/`` 目录。
 
@@ -160,8 +203,16 @@ def _extract_frames(
                 meta, page_no, outdir, max_frames=count, video_path=video_path
             )
 
+    times: list[float] | None = None
+    if highlight:
+        times = highlight_times(meta, page_no, count=count)
+        if len(times) < 2:
+            times = None
+
     with console.status("正在取缩略帧…"):
-        return storyboard_frames(meta.bvid, page_no, outdir, count=count)
+        return storyboard_frames(
+            meta.bvid, page_no, outdir, count=count, times=times
+        )
 
 
 @app.command()
@@ -193,6 +244,20 @@ def fetch(
     gemini_model: str = typer.Option(
         "gemini-2.5-flash", "--gemini-model", help="Gemini 模型"
     ),
+    refine: bool = typer.Option(
+        False, "--refine", help="用 LLM 精修转写并生成摘要/要点（文本会上传）"
+    ),
+    llm_key: str = typer.Option(
+        None,
+        "--llm-key",
+        help="LLM API Key；也可设 VIDNOTE_LLM_KEY 或 DEEPSEEK_API_KEY",
+    ),
+    llm_base: str = typer.Option(
+        None, "--llm-base", help="OpenAI 兼容接口地址，默认 DeepSeek"
+    ),
+    llm_model: str = typer.Option(
+        None, "--llm-model", help="LLM 模型名，默认 deepseek-chat"
+    ),
     model: str = typer.Option(
         "small", "--model", help="whisper 模型：tiny/base/small/medium/large-v3"
     ),
@@ -221,11 +286,25 @@ def fetch(
         "--scene",
         help="按画面变化选帧（需下载视频，需 [scene] 依赖）；默认用 B 站现成的缩略图",
     ),
+    highlight: bool = typer.Option(
+        True,
+        "--frames-highlight/--frames-even",
+        help="关键帧优先按弹幕高能时刻取；--frames-even 均匀取帧",
+    ),
 ) -> None:
     """抓取一个视频，生成 Markdown 笔记。"""
     if sum((vosk, whisper, gemini)) > 1:
         err.print("[red]一次只能选择一个转写引擎。[/red]")
         raise typer.Exit(EXIT_ERROR)
+    if refine:
+        from .llm import LlmError
+        from .llm import api_key as llm_api_key
+
+        try:
+            llm_api_key(llm_key)
+        except LlmError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_ERROR) from exc
     page_no = page
     try:
         with BilibiliClient(cookie=cookie) as client:
@@ -250,6 +329,7 @@ def fetch(
     cues = subtitle[1] if subtitle else None
     lang = subtitle[0] if subtitle else "none"
     engine_label = ""
+    engine_kind = ""
 
     if cues is None and vosk:
         from .asr import AsrError
@@ -259,6 +339,7 @@ def fetch(
                 "vosk", meta, page_no, "vosk-cn", use_cache=False
             )
             engine_label = "本地转写"
+            engine_kind = "vosk"
         except AsrError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
@@ -274,6 +355,7 @@ def fetch(
                 endpoint=hf_endpoint(channel),
             )
             engine_label = "本地转写"
+            engine_kind = "whisper"
         except MediaError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
@@ -291,9 +373,34 @@ def fetch(
                 api_key_value=gemini_key,
             )
             engine_label = "Gemini 云端转写"
+            engine_kind = "gemini"
         except GeminiError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_ERROR) from exc
+
+    refined = None
+    if refine and cues:
+        from .llm import LlmError
+
+        try:
+            refined = _refine_runner(
+                meta,
+                cues,
+                llm_key=llm_key,
+                llm_base=llm_base,
+                llm_model=llm_model,
+            )
+            cues = refined.cues
+            if refined.changed:
+                engine_label = f"{engine_label}，{refined.model} 精修".lstrip("，")
+        except LlmError as exc:
+            err.print(f"[yellow]精修失败，保留原始转写：{exc}[/yellow]")
+
+    refine_points = (
+        tuple((point.seconds, point.title, point.detail) for point in refined.points)
+        if refined
+        else ()
+    )
 
     if stdout and frames:
         err.print("[yellow]--stdout 只输出文本，已跳过关键帧图片。[/yellow]")
@@ -307,7 +414,10 @@ def fetch(
                 source=source,
                 include_desc=not no_desc,
                 page=page_no,
-                transcription="gemini" if engine_label.startswith("Gemini") else "",
+                transcription=engine_kind,
+                refined=refined.model if refined and refined.changed else "",
+                summary=refined.summary if refined else "",
+                points=refine_points,
             ),
             subtitle_lang=lang,
         )
@@ -327,7 +437,8 @@ def fetch(
     if frames:
         try:
             shots = _extract_frames(
-                meta, page_no, destination, frames, video, scene=scene
+                meta, page_no, destination, frames, video, scene=scene,
+                highlight=highlight,
             )
         except (FrameError, BiliError, OSError) as exc:
             # 关键帧是锦上添花，拿不到也照常写笔记。
@@ -342,7 +453,10 @@ def fetch(
             source=source,
             include_desc=not no_desc,
             page=page_no,
-            transcription="gemini" if engine_label.startswith("Gemini") else "",
+            transcription=engine_kind,
+            refined=refined.model if refined and refined.changed else "",
+            summary=refined.summary if refined else "",
+            points=refine_points,
         ),
         subtitle_lang=lang,
         frames=keyframes,

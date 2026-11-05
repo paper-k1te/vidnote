@@ -41,6 +41,28 @@ def test_gemini_transcription_uses_transcript_section() -> None:
     assert "## 字幕" not in note
 
 
+def test_refined_transcription_has_summary_and_points() -> None:
+    note = build_note(
+        META,
+        CUES,
+        options=NoteOptions(
+            transcription="vosk",
+            refined="deepseek-chat",
+            summary="这段视频介绍了重点。",
+            points=((754.0, "重点", "这里是重点。"),),
+        ),
+    )
+    assert "transcription: vosk" in note
+    assert "refined_by: deepseek-chat" in note
+    assert "| 转写 | Vosk 本地转写，deepseek-chat 精修 |" in note
+    assert "## 摘要" in note
+    assert "这段视频介绍了重点。" in note
+    assert "## 要点" in note
+    assert "**重点**：这里是重点。" in note
+    assert "时间戳来自原始识别" in note
+    assert "## 转写" in note
+
+
 def test_normal_note_still_uses_subtitle_section() -> None:
     note = build_note(META, CUES)
     assert "## 字幕" in note
