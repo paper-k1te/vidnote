@@ -191,7 +191,7 @@ def fetch(
         help="Gemini API Key；也可设 GEMINI_API_KEY 或 GOOGLE_API_KEY",
     ),
     gemini_model: str = typer.Option(
-        "gemini-3.8-flash", "--gemini-model", help="Gemini 模型"
+        "gemini-2.5-flash", "--gemini-model", help="Gemini 模型"
     ),
     model: str = typer.Option(
         "small", "--model", help="whisper 模型：tiny/base/small/medium/large-v3"

@@ -396,7 +396,7 @@ def fetch_video(
     cookie = str(payload.get("cookie") or "").strip()
     channel = str(payload.get("channel") or "auto").strip()
     gemini_key = str(payload.get("gemini_key") or "").strip()
-    gemini_model = str(payload.get("gemini_model") or "").strip() or "gemini-3.8-flash"
+    gemini_model = str(payload.get("gemini_model") or "").strip() or "gemini-2.5-flash"
     gemini_used = False
 
     if on_status:

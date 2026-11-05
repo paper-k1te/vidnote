@@ -29,7 +29,7 @@ from .media import (
 )
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-3.8-flash"
+DEFAULT_MODEL = "gemini-2.5-flash"
 SAMPLE_RATE = 16000
 CHUNK_SECONDS = 240
 _CHUNK_SAMPLES = SAMPLE_RATE * CHUNK_SECONDS

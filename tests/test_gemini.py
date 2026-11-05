@@ -129,7 +129,7 @@ def test_post_chunk_retries_after_rate_limit(monkeypatch) -> None:
     monkeypatch.setattr(gemini.time, "sleep", lambda _: None)
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         data = gemini._post_chunk(
-            {"contents": []}, key="k", model="gemini-3.8-flash", client=client
+            {"contents": []}, key="k", model=gemini.DEFAULT_MODEL, client=client
         )
     assert calls["count"] == 2
     assert data["candidates"][0]["content"]["parts"][0]["text"] == '{"segments": []}'
