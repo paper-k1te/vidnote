@@ -6,7 +6,8 @@
 
 ### 新增
 
-- **DeepSeek Harness 插件**：`dsh-plugin/` 把 vidnote 接进 DSH，模型可以直接调用 `vidnote_note`（链接 → 带时间戳的 Markdown）和 `vidnote_search`（关键词 → 候选视频 JSON）；带中英文标题、描述和图标，安装一条命令即可。
+- **DeepSeek Harness 插件**：`dsh-plugin/` 把 vidnote 接进 DSH，模型可以直接调用 `vidnote_note`（链接 → 带时间戳的 Markdown）、`vidnote_search`（关键词 → 候选视频 JSON）和 `vidnote_user`（关键词 → 候选 UP 主 JSON）；带中英文标题、描述和图标，安装一条命令即可。
+- **交互窗口搬进 DSH**：Web 界面右下角的「B站」按钮打开弹窗，里面是原来的 vidnote 界面；宿主用 `vidnote serve-ui` 拉起本地服务，关闭后 20 秒自动退出。
 - 插件把单文件 exe 解压失败（`PYI-xxxx`）翻译成可操作的提示，不再只抛一行 bootloader 错误。
 
 ## [0.3.1] - 2026-11-05
