@@ -95,9 +95,11 @@ test('runVidnote 超时会杀掉进程', async () => {
 
 test('runVidnote 启动失败给出清晰错误', async () => {
   const child = makeChild()
-  setImmediate(() => child.emit('error', new Error('ENOENT')))
+  const error = new Error('spawn failed')
+  error.code = 'ENOENT'
+  setImmediate(() => child.emit('error', error))
   await assert.rejects(
     runVidnote(['version'], { cliPath: 'vidnote', spawnImpl: () => child }),
-    /无法启动 vidnote/,
+    /找不到 vidnote 命令行（尝试执行「vidnote」）/,
   )
 })

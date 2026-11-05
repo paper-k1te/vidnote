@@ -109,6 +109,16 @@ export function runVidnote(argv, { cliPath, timeoutMs = DEFAULT_TIMEOUT, signal,
     child.on('error', (error) => {
       clearTimeout(timer)
       signal?.removeEventListener('abort', onAbort)
+      if (error.code === 'ENOENT') {
+        reject(new Error(
+          `找不到 vidnote 命令行（尝试执行「${cliPath}」）。\n` +
+          '请任选一种方式指定：\n' +
+          '  1. 设置环境变量 VIDNOTE_CLI 指向 vidnote.exe 或 vidnote-server.exe；\n' +
+          '  2. 在 profile 的 cordis.patch.yml 里给 dsh-vidnote 配置 cliPath；\n' +
+          '  3. 把 vidnote 加到 PATH。',
+        ))
+        return
+      }
       reject(new Error(`无法启动 vidnote（${cliPath}）：${error.message}`))
     })
 
