@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "vidnote — B 站视频转 Markdown 笔记",
+    "description": "搜索 B 站视频，把单个视频抓成带时间戳的 Markdown（元数据、字幕或本地转写、关键帧）。"
+  }
+}

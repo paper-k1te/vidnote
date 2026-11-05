@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "vidnote — Bilibili to Markdown notes",
+    "description": "Search Bilibili and turn a video into timestamped Markdown (metadata, subtitles or local transcription, keyframes)."
+  }
+}

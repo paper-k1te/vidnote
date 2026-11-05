@@ -2,6 +2,8 @@
 
 把 [vidnote](https://github.com/paper-k1te/vidnote) 接进 DeepSeek Harness：模型可以直接抓 B 站视频、搜视频，拿到带时间戳的 Markdown 笔记。
 
+装好后「插件」页里显示为 **vidnote — B 站视频转 Markdown 笔记**（英文界面为 *vidnote — Bilibili to Markdown notes*），标题和描述来自 `locale/*.json`，图标用仓库里的 `assets/vidnote.png`（MIT）。
+
 ## 给模型的两个工具
 
 | 工具 | 作用 |
@@ -66,13 +68,27 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#
 ## 开发
 
 ```sh
-node --test        # 10 个用例，全部是纯逻辑，不需要装 DSH
+node --test        # 11 个用例，全部是纯逻辑，不需要装 DSH
 ```
 
 `lib/run.js` 不 import 任何 DSH 的包，所以测试可以在没有 DSH 的环境里跑；`index.js` 才依赖 `@deepseek-ai/dsh-tools`。
+
+## 排错
+
+**`vidnote 无法解压运行环境：单文件 exe 需要可写的临时目录`**
+
+PyInstaller 单文件 exe 启动时会把自己解压到 `%TEMP%`。如果 `TEMP` 不可写，或者 exe 所在的目录被打上了**低完整性标签**（例如整棵树被某个沙箱工具标成 Low integrity），解压会失败。把 exe 移到普通目录，或对所在目录执行：
+
+```powershell
+icacls <目录> /setintegritylevel Medium /t /c
+```
+
+**`找不到 vidnote 命令行`**
+
+按上面「依赖」里的顺序显式指定：配置 `cliPath`、设置 `VIDNOTE_CLI`，或把 vidnote 加进 PATH。
 
 ## 已知限制
 
 - 每次工具调用会起一个 vidnote 进程，冷启动约 1 秒（单文件 exe 要解压）；
 - 转写走本机 CPU，长视频会占满一个核；
-- 笔记默认写到进程的工作目录，需要固定路径时在命令里用 `--dir`（插件暂未暴露该参数）。
+- 工具带 `--stdout`，笔记只回到会话里，不写文件；要落盘就用 CLI 的 `vidnote fetch ... --dir ...`。

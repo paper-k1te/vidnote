@@ -279,6 +279,21 @@ agent 会多出一个工具 `fetch_note`：
 | `include_desc` | 是否包含简介，默认 `true`            |
 | `transcribe`   | 没有字幕时是否本地转写，默认 `false` |
 
+### DeepSeek Harness（DSH）插件
+
+仓库里的 [`dsh-plugin/`](dsh-plugin/) 把 vidnote 包成 DSH 插件，模型直接调用工具，不用自己拼命令行：
+
+| 工具 | 作用 |
+| --- | --- |
+| `vidnote_note` | 给链接 / BV 号 / av 号，返回整篇带时间戳的 Markdown |
+| `vidnote_search` | 按关键词搜 B 站视频，返回 BV 号、标题、UP 主、时长、播放量（JSON） |
+
+```bash
+dsh plugin --profile desktop add ./dsh-plugin
+```
+
+插件调用本机的 vidnote 命令行，按「配置里的 `cliPath` → `VIDNOTE_CLI` → 仓库构建产物 → 常见安装位置 → PATH」的顺序查找。安装后在「插件」页显示为 **vidnote — B 站视频转 Markdown 笔记**。完整参数和配置见 [`dsh-plugin/README.md`](dsh-plugin/README.md)。
+
 ## 🧭 设计原则
 
 三条承诺，都能在代码里验证：**只读公开接口**，不模拟登录、不批量抓取；**不编造内容**，没有字幕就说没有，不会用模型编一段假的；**不覆盖你的文件**，笔记里可能有你手写的东西，除非你显式 `--force`。

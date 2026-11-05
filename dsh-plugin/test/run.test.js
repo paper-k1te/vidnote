@@ -103,3 +103,16 @@ test('runVidnote 启动失败给出清晰错误', async () => {
     /找不到 vidnote 命令行（尝试执行「vidnote」）/,
   )
 })
+
+test('runVidnote 把 PyInstaller 解压失败翻译成可操作提示', async () => {
+  await assert.rejects(
+    runVidnote(['version'], {
+      cliPath: 'vidnote',
+      spawnImpl: () => fakeChild({
+        code: -1,
+        stderr: '[PYI-1234:ERROR] Could not create temporary directory!',
+      }),
+    }),
+    /无法解压运行环境[\s\S]*原始输出：\[PYI-1234:ERROR\]/,
+  )
+})

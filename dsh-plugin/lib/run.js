@@ -1,4 +1,4 @@
-﻿import { spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -158,6 +158,16 @@ export function runVidnote(argv, { cliPath, timeoutMs = DEFAULT_TIMEOUT, signal,
         return
       }
       const detail = (stderr || stdout).trim().split('\n').slice(-3).join(' ')
+      // 单文件 exe 启动时要解压到临时目录；目录不可写或 exe 带低完整性标签时，
+      // PyInstaller 只会吐一行 PYI-xxxx 错误，模型看不出该怎么办。
+      if (/PYI-\d+:ERROR\].*(temporary directory|parent directory)/i.test(detail)) {
+        reject(new Error(
+          'vidnote 无法解压运行环境：单文件 exe 需要可写的临时目录。\n' +
+          '请把 TEMP/TMP 指向可写目录，或把 vidnote 可执行文件移到普通目录（不要放在带低完整性标签的沙箱目录）后重试。\n' +
+          `原始输出：${detail}`,
+        ))
+        return
+      }
       reject(new Error(`vidnote 退出码 ${code}${detail ? `：${detail}` : ''}`))
     })
   })
