@@ -59,6 +59,7 @@ class NoteOptions:
     include_desc: bool = True
     page: int = 1
     fetched: date | None = None
+    transcription: str = ""
 
 
 def _frame_image(seconds: float, relative: str) -> list[str]:
@@ -154,9 +155,11 @@ def build_note(
         "published_at": meta.pubdate.isoformat(),
         "fetched": (opts.fetched or date.today()).isoformat(),
         "language": subtitle_lang,
-        "subtitle": _subtitle_state(meta, cues),
+        "subtitle": _subtitle_state(meta, None if opts.transcription else cues),
         "tags": ["bilibili", "vidnote"],
     }
+    if opts.transcription:
+        front["transcription"] = opts.transcription
     if opts.page > 1 and current:
         front["page"] = f"P{current.index} {current.title}"
     if opts.source:
@@ -235,7 +238,9 @@ def build_note(
         lines.append(f"| 画质 | {meta.dimension} |")
     if current and len(meta.pages) > 1:
         lines.append(f"| 分P | P{current.index} {current.title} |")
-    if cues:
+    if opts.transcription:
+        subtitle_cell = "有（需登录）" if meta.subtitle_tracks else "无"
+    elif cues:
         subtitle_cell = "有"
     elif meta.subtitle_tracks:
         subtitle_cell = (
@@ -246,6 +251,8 @@ def build_note(
     else:
         subtitle_cell = "无"
     lines.append(f"| 字幕 | {subtitle_cell} |")
+    if opts.transcription:
+        lines.append("| 转写 | Gemini（云端，实验） |")
     if meta.cover:
         lines.append(f"| 封面 | [原图]({meta.cover}) |")
     if len(meta.staff) > 1:
@@ -311,7 +318,13 @@ def build_note(
             lines.append("")
 
     if cues:
-        lines += ["## 字幕", ""]
+        lines += ["## 转写" if opts.transcription else "## 字幕", ""]
+        if opts.transcription:
+            lines += [
+                "> 以下内容由 Gemini 云端转写（实验），音频已上传到 Google；"
+                "可能存在识别错误。",
+                "",
+            ]
         buckets = _frames_by_cue(cues, frames) if frames else {}
         for index, cue in enumerate(cues):
             lines.append(f"**{ts_link(url, cue.start)}** {cue.text}")

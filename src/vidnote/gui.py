@@ -296,7 +296,7 @@ _engine_errors: dict[str, str] = {}
 
 def transcribe_engines() -> dict[str, bool]:
     """后端可用的转写引擎。"""
-    engines = {"vosk": False, "whisper": False}
+    engines = {"vosk": False, "whisper": False, "gemini": False}
     try:
         import av  # noqa: F401, PLC0415
         import vosk  # noqa: F401, PLC0415
@@ -305,6 +305,14 @@ def transcribe_engines() -> dict[str, bool]:
         _engine_errors.pop("vosk", None)
     except Exception as exc:  # noqa: BLE001
         _engine_errors["vosk"] = f"{type(exc).__name__}: {exc}"
+    try:
+        import av  # noqa: F401, PLC0415
+        import yt_dlp  # noqa: F401, PLC0415
+
+        engines["gemini"] = True
+        _engine_errors.pop("gemini", None)
+    except Exception as exc:  # noqa: BLE001
+        _engine_errors["gemini"] = f"{type(exc).__name__}: {exc}"
     engines["whisper"] = whisper_deps.available()
     return engines
 
@@ -387,6 +395,9 @@ def fetch_video(
     model = str(payload.get("model") or "").strip() or ("small" if transcribe else "")
     cookie = str(payload.get("cookie") or "").strip()
     channel = str(payload.get("channel") or "auto").strip()
+    gemini_key = str(payload.get("gemini_key") or "").strip()
+    gemini_model = str(payload.get("gemini_model") or "").strip() or "gemini-3.8-flash"
+    gemini_used = False
 
     if on_status:
         on_status("正在获取视频信息…")
@@ -411,7 +422,27 @@ def fetch_video(
 
     if cues is None and model:
         engines = transcribe_engines()
-        if model.startswith("vosk"):
+        if model == "gemini":
+            if not engines["gemini"]:
+                return {
+                    "error": "这个版本没有音频下载/解码能力，Gemini 转写不可用；请用完整版。"
+                }
+            from .gemini import GeminiError
+            from .gemini import transcribe_video as gemini_transcribe
+
+            try:
+                lang, cues = gemini_transcribe(
+                    meta,
+                    page,
+                    api_key_value=gemini_key,
+                    model=gemini_model,
+                    on_progress=on_progress,
+                    on_status=on_status,
+                )
+                gemini_used = True
+            except GeminiError as exc:
+                return {"error": f"Gemini 转写失败：{exc}"}
+        elif model.startswith("vosk"):
             if not engines["vosk"]:
                 return {
                     "error": "这个版本没有内置 Vosk 转写。请用完整版（vidnote-app-full），"
@@ -469,7 +500,9 @@ def fetch_video(
     note = build_note(
         meta,
         cues,
-        options=NoteOptions(page=page),
+        options=NoteOptions(
+            page=page, transcription="gemini" if gemini_used else ""
+        ),
         subtitle_lang=lang,
         frames=keyframes,
     )

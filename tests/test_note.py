@@ -30,6 +30,23 @@ CUES = [
 ]
 
 
+def test_gemini_transcription_uses_transcript_section() -> None:
+    note = build_note(
+        META, CUES, options=NoteOptions(transcription="gemini")
+    )
+    assert "transcription: gemini" in note
+    assert "## 转写" in note
+    assert "音频已上传到 Google" in note
+    assert "| 转写 | Gemini（云端，实验） |" in note
+    assert "## 字幕" not in note
+
+
+def test_normal_note_still_uses_subtitle_section() -> None:
+    note = build_note(META, CUES)
+    assert "## 字幕" in note
+    assert "transcription: gemini" not in note
+
+
 def test_fmt_ts() -> None:
     assert fmt_ts(0) == "00:00"
     assert fmt_ts(75) == "01:15"

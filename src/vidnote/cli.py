@@ -79,8 +79,9 @@ def _progress_runner(
     *,
     use_cache: bool,
     endpoint: str | None = None,
+    api_key_value: str | None = None,
 ):
-    """带进度条地跑一遍「下载音频 → 下载模型 → 本地转写」。"""
+    """带进度条地跑一遍「下载音频 → 转写」。"""
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -98,6 +99,19 @@ def _progress_runner(
         def on_progress(done: float, total: float) -> None:
             progress.update(
                 task, description=phase["text"], total=total, completed=done
+            )
+
+        if engine == "gemini":
+            from .gemini import transcribe_video as gemini_transcribe
+
+            return gemini_transcribe(
+                meta,
+                page_no,
+                api_key_value=api_key_value,
+                model=model,
+                use_cache=use_cache,
+                on_progress=on_progress,
+                on_status=on_status,
             )
 
         if engine == "vosk":
@@ -166,6 +180,19 @@ def fetch(
     vosk: bool = typer.Option(
         False, "--vosk", help="没有字幕时用 Vosk 小模型转写（42 MB，需要 [vosk] 依赖）"
     ),
+    gemini: bool = typer.Option(
+        False,
+        "--gemini",
+        help="没有字幕时用 Gemini 云端转写（实验，音频会上传，需要 API Key）",
+    ),
+    gemini_key: str = typer.Option(
+        None,
+        "--gemini-key",
+        help="Gemini API Key；也可设 GEMINI_API_KEY 或 GOOGLE_API_KEY",
+    ),
+    gemini_model: str = typer.Option(
+        "gemini-3.8-flash", "--gemini-model", help="Gemini 模型"
+    ),
     model: str = typer.Option(
         "small", "--model", help="whisper 模型：tiny/base/small/medium/large-v3"
     ),
@@ -196,6 +223,9 @@ def fetch(
     ),
 ) -> None:
     """抓取一个视频，生成 Markdown 笔记。"""
+    if sum((vosk, whisper, gemini)) > 1:
+        err.print("[red]一次只能选择一个转写引擎。[/red]")
+        raise typer.Exit(EXIT_ERROR)
     page_no = page
     try:
         with BilibiliClient(cookie=cookie) as client:
@@ -219,7 +249,7 @@ def fetch(
 
     cues = subtitle[1] if subtitle else None
     lang = subtitle[0] if subtitle else "none"
-    transcribed = False
+    engine_label = ""
 
     if cues is None and vosk:
         from .asr import AsrError
@@ -228,7 +258,7 @@ def fetch(
             lang, cues = _progress_runner(
                 "vosk", meta, page_no, "vosk-cn", use_cache=False
             )
-            transcribed = True
+            engine_label = "本地转写"
         except AsrError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
@@ -243,10 +273,27 @@ def fetch(
                 use_cache=not no_cache,
                 endpoint=hf_endpoint(channel),
             )
-            transcribed = True
+            engine_label = "本地转写"
         except MediaError as exc:
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
+
+    if cues is None and gemini:
+        from .gemini import GeminiError
+
+        try:
+            lang, cues = _progress_runner(
+                "gemini",
+                meta,
+                page_no,
+                gemini_model,
+                use_cache=not no_cache,
+                api_key_value=gemini_key,
+            )
+            engine_label = "Gemini 云端转写"
+        except GeminiError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_ERROR) from exc
 
     if stdout and frames:
         err.print("[yellow]--stdout 只输出文本，已跳过关键帧图片。[/yellow]")
@@ -256,7 +303,12 @@ def fetch(
         text = build_note(
             meta,
             cues,
-            options=NoteOptions(source=source, include_desc=not no_desc, page=page_no),
+            options=NoteOptions(
+                source=source,
+                include_desc=not no_desc,
+                page=page_no,
+                transcription="gemini" if engine_label.startswith("Gemini") else "",
+            ),
             subtitle_lang=lang,
         )
         sys.stdout.write(text)
@@ -286,7 +338,12 @@ def fetch(
     text = build_note(
         meta,
         cues,
-        options=NoteOptions(source=source, include_desc=not no_desc, page=page_no),
+        options=NoteOptions(
+            source=source,
+            include_desc=not no_desc,
+            page=page_no,
+            transcription="gemini" if engine_label.startswith("Gemini") else "",
+        ),
         subtitle_lang=lang,
         frames=keyframes,
     )
@@ -297,8 +354,8 @@ def fetch(
     temporary.write_text(text, encoding="utf-8")
     temporary.replace(destination)
 
-    if transcribed:
-        status = "本地转写"
+    if engine_label:
+        status = engine_label
     elif cues:
         status = "有字幕"
     else:

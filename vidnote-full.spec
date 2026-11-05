@@ -39,6 +39,7 @@ a = Analysis(
         "requests",
         "av",
         "yt_dlp",
+        "vidnote.gemini",
         # vosk 在导入时就会 import tqdm；whisper 用 tqdm.auto。
         "tqdm.auto",
     ],

@@ -37,6 +37,10 @@ def test_index_has_core_controls() -> None:
         "data-search-type",
         "打开空间",
         "/api/open-url",
+        "Gemini 云端识别",
+        'id="gemini-key"',
+        'id="gemini-model"',
+        'value="gemini"',
     ):
         assert needle in html
 

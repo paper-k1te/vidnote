@@ -188,6 +188,7 @@
   .field-hint { margin: 6px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 16px; }
   .deps-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
   .deps-row .field-hint { margin: 0; }
+  .engine-sep { border-top: 1px solid var(--border); margin: 20px 0 14px; }
   .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .progress { margin-top: 14px; }
@@ -259,12 +260,13 @@
           <label>解析方案</label>
           <select id="transcribe">
             <option value="" selected>不转写 · 只输出元数据</option>
+            <option value="gemini">Gemini 云端识别（实验）· 质量最好，上传音频</option>
             <option value="vosk-cn">Vosk 小模型 · 快、占用小、自动分句</option>
             <option value="tiny">whisper tiny · 最快，质量一般</option>
             <option value="base">whisper base · 速度与质量平衡</option>
             <option value="small">whisper small · 中文质量最好</option>
           </select>
-          <p class="field-hint">whisper 的依赖安装和模型下载渠道在左侧「下载」页。</p>
+          <p class="field-hint">Gemini 的 Key 在左侧「下载」页填写；whisper 的依赖安装和模型渠道也在那里。</p>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
           <div class="progress hidden" id="progress">
             <div class="progress-label"><span id="phase">准备中…</span><span id="pct"></span></div>
@@ -299,7 +301,7 @@
 
       <!-- 下载 -->
       <section class="card grow hidden" id="view-download">
-        <div class="card-head"><h2>下载</h2><span class="hint">whisper 依赖与模型</span></div>
+        <div class="card-head"><h2>下载</h2><span class="hint">whisper 依赖、模型与 Gemini</span></div>
         <div class="card-body">
           <label>下载渠道</label>
           <select id="channel">
@@ -319,6 +321,12 @@
             <div class="bar"><i id="deps-bar"></i></div>
           </div>
           <p class="field-hint">模型大小：tiny 75 MB · base 145 MB · small 485 MB。</p>
+          <div class="engine-sep"></div>
+          <label>Gemini 云端识别（实验）</label>
+          <input id="gemini-key" type="password" placeholder="AIza...">
+          <label>模型</label>
+          <input id="gemini-model" value="gemini-3.8-flash">
+          <p class="field-hint">音频会上传到 Google Gemini；API Key 只用于本次运行，不写进笔记、不保存。模型不可用时可以换成 gemini-2.5-flash。</p>
         </div>
       </section>
 
@@ -328,7 +336,7 @@
           <p id="file-hint" class="hidden"><b>提示</b>：当前是直接打开的 HTML 文件，没有本地服务。请先运行 <code>vidnote gui</code>，或双击桌面应用。</p>
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
           <p><b>关键帧</b>：默认 6 张，会插在对应字幕的后面；填 0 不抽。用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、自动分句），whisper 需要先装依赖，模型 75/145/485 MB（质量更好）。模型只在第一次使用时下载，进度会显示在按钮下方。</p>
+          <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、自动分句），whisper 需要先装依赖，模型 75/145/485 MB（质量更好）。Gemini（实验）不用下载模型，但会上传音频并按 Google 账单计费。</p>
           <p><b>Cookie</b>：大部分字幕需要登录态，在左侧「登录」页填 SESSDATA 后能抓到。Cookie 只用于本次请求，不写进笔记，也不保存。</p>
           <p><b>依赖与下载</b>：whisper 的依赖安装、模型下载渠道都在左侧「下载」页。</p>
         </div>
@@ -511,6 +519,8 @@ let jobTimer = null;
 $("go").onclick = async () => {
   const target = $("target").value.trim();
   if (!target) return toast("先填一个视频链接或 BV 号", "err");
+  const model = $("transcribe").value;
+  if (model === "gemini" && !confirm("Gemini 会把音频上传到 Google，并可能产生费用。继续？")) return;
   clearTimeout(jobTimer);
   busy($("go"), true, "抓取中…");
   showProgress({ phase: "准备中…", done: 0, total: 0 });
@@ -522,10 +532,12 @@ $("go").onclick = async () => {
         page: parseInt($("page").value || "1", 10),
         frames: parseInt($("frames").value || "0", 10),
         outdir: $("outdir").value.trim(),
-        transcribe: $("transcribe").value !== "",
-        model: $("transcribe").value,
+        transcribe: model !== "",
+        model,
         channel: $("channel").value,
         cookie: $("cookie").value.trim(),
+        gemini_key: $("gemini-key").value.trim(),
+        gemini_model: $("gemini-model").value.trim(),
       }),
     });
     pollJob(data.job);
@@ -751,13 +763,15 @@ function applyEngines(data) {
     if (!option.dataset.label) option.dataset.label = option.textContent;
     option.textContent = option.dataset.label;
     option.disabled = false;
-    const whisper = !option.value.startsWith("vosk");
-    const available = whisper ? engines.whisper : engines.vosk;
+    const kind = option.value === "gemini"
+      ? "gemini"
+      : option.value.startsWith("vosk") ? "vosk" : "whisper";
+    const available = engines[kind];
     if (!available) {
       option.disabled = true;
-      option.textContent += whisper && deps.installable
+      option.textContent += kind === "whisper" && deps.installable
         ? "（需安装依赖）"
-        : "（此版本未内置）";
+        : "（此版本不可用）";
     }
   });
   const usable = [...box.options].filter((option) => option.value && !option.disabled);
