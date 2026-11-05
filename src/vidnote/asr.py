@@ -1,9 +1,10 @@
 """Vosk 本地转写（小引擎）。
 
 为什么加它：faster-whisper 的模型最小也要 145 MB、常用 485 MB，太重。
-Vosk 的中文小模型只有 42 MB，运行库 13 MB，适合「只想有个大概文稿」的场景。
+Vosk 的中文小模型只有 42 MB，适合「只想有个大概文稿」的场景。
 
-代价要说清楚：Vosk 输出不带标点、专有名词准确率一般。要更好的质量仍然用 whisper。
+代价要说清楚：Vosk 原始输出不带标点。这里利用它给的逐词时间戳，按停顿
+分句，并按常见的疑问/感叹句式补上 ``。？！``，读起来不会是一整块。
 
 模型不在包里，第一次用的时候下载到 ``~/.cache/vidnote/vosk``。
 """
@@ -87,31 +88,98 @@ def ensure_model(key: str = "vosk-cn", on_progress: ProgressFn | None = None) ->
     return target
 
 
-def _group_words(words: list[dict], max_gap: float = 0.8, max_words: int = 14) -> list[Cue]:
-    """把逐词结果拼成句子，按停顿和长度断开。"""
+_SENTENCE_GAP = 0.75
+_COMMA_GAP = 0.35
+_MAX_CHARS = 42
+
+_QUESTION_TAILS = ("吗", "呢", "么", "嘛")
+_QUESTION_WORDS = (
+    "为什么",
+    "怎么",
+    "怎样",
+    "什么",
+    "哪",
+    "谁",
+    "多少",
+    "是不是",
+    "有没有",
+    "对不对",
+    "好不好",
+    "行不行",
+    "可不可以",
+    "能不能",
+    "要不要",
+)
+_EXCLAIM_TAILS = ("啊", "呀", "哇")
+
+
+def _append(text: str, token: str) -> str:
+    if not text:
+        return token
+    if (
+        text[-1].isascii()
+        and text[-1].isalnum()
+        and token[:1].isascii()
+        and token[:1].isalnum()
+    ):
+        return f"{text} {token}"
+    return text + token
+
+
+def _sentence_end(text: str) -> str:
+    """按句尾判断用问号、感叹号还是句号。"""
+    core = text.rstrip("，、；： ")
+    if core.endswith(("。", "？", "！", "?", "!", ".")):
+        return core
+    if core.endswith(_QUESTION_TAILS) or core.endswith(_QUESTION_WORDS):
+        return core + "？"
+    if any(word in core[-12:] for word in _QUESTION_WORDS[7:]):
+        return core + "？"
+    if core.endswith(_EXCLAIM_TAILS):
+        return core + "！"
+    return core + "。"
+
+
+def _group_words(
+    words: list[dict],
+    *,
+    max_gap: float = _SENTENCE_GAP,
+    comma_gap: float = _COMMA_GAP,
+    max_chars: int = _MAX_CHARS,
+) -> list[Cue]:
+    """把逐词结果拼成句子：长停顿断句，中等停顿补逗号，句尾补标点。"""
     cues: list[Cue] = []
     buffer: list[dict] = []
+    text = ""
 
     def flush() -> None:
-        if not buffer:
-            return
-        text = "".join(str(word.get("word", "")) for word in buffer).strip()
-        if text:
-            cues.append(
-                Cue(
-                    start=float(buffer[0].get("start", 0.0)),
-                    end=float(buffer[-1].get("end", 0.0)),
-                    text=text,
-                )
-            )
+        nonlocal text
+        body = text.rstrip("，、；： ")
+        if body:
+            start = float(buffer[0].get("start", 0.0))
+            end = float(buffer[-1].get("end", start))
+            cues.append(Cue(start=start, end=end, text=_sentence_end(text)))
         buffer.clear()
+        text = ""
 
     for word in words:
+        token = str(word.get("word", "")).strip()
+        if not token:
+            continue
         if buffer:
             gap = float(word.get("start", 0.0)) - float(buffer[-1].get("end", 0.0))
-            if gap > max_gap or len(buffer) >= max_words:
+            if gap >= max_gap:
                 flush()
+            elif (
+                gap >= comma_gap
+                and len(text) >= 12
+                and not text.endswith(("，", "。", "？", "！"))
+            ):
+                text += "，"
         buffer.append(word)
+        text = _append(text, token)
+        if len(text.replace("，", "")) >= max_chars:
+            flush()
     flush()
     return cues
 

@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__
+from . import __version__, whisper_deps
 from .bilibili import BilibiliClient, BiliError
 from .media import ProgressFn, StatusFn, hf_endpoint
 from .note import NoteOptions, build_note, filename
@@ -89,12 +89,18 @@ class Handler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, page.encode("utf-8"), "text/html; charset=utf-8")
             return
         if parsed.path == "/api/health":
+            engines = transcribe_engines()
             self._json(
                 {
                     "ok": True,
                     "version": __version__,
-                    "transcribe": transcription_available(),
-                    "engines": transcribe_engines(),
+                    "transcribe": any(engines.values()),
+                    "engines": engines,
+                    "engine_errors": dict(_engine_errors),
+                    "whisper_deps": {
+                        **whisper_deps_state(),
+                        "available": engines["whisper"],
+                    },
                 }
             )
             return
@@ -107,11 +113,18 @@ class Handler(BaseHTTPRequestHandler):
             query = parse_qs(parsed.query)
             keyword = (query.get("q") or [""])[0]
             limit = int((query.get("limit") or ["8"])[0])
-            self._json(search_videos(keyword, limit))
+            kind = (query.get("type") or ["video"])[0]
+            if kind == "author":
+                self._json(search_authors(keyword, limit))
+            else:
+                self._json(search_videos(keyword, limit))
             return
         if parsed.path == "/api/job":
             query = parse_qs(parsed.query)
             self._json(job_state((query.get("id") or [""])[0]))
+            return
+        if parsed.path == "/api/deps":
+            self._json(whisper_deps_state())
             return
         if parsed.path == "/api/frame":
             query = parse_qs(parsed.query)
@@ -144,6 +157,13 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/pick-folder":
             Handler.last_ping = time.time()
             self._json(pick_folder())
+            return
+        if parsed.path == "/api/deps/install":
+            Handler.last_ping = time.time()
+            self._json(start_deps_install())
+            return
+        if parsed.path == "/api/open-url":
+            self._json(open_url(self._body().get("url", "")))
             return
         if parsed.path == "/api/reveal-folder":
             self._json(reveal_folder(self._body().get("path", "")))
@@ -243,27 +263,113 @@ def search_videos(keyword: str, limit: int = 8) -> dict[str, Any]:
     }
 
 
+def search_authors(keyword: str, limit: int = 8) -> dict[str, Any]:
+    try:
+        with BilibiliSearch() as client:
+            results = client.search_authors(keyword, limit=limit)
+    except BiliError as exc:
+        _log(f"搜索作者「{keyword}」失败：{exc}")
+        return {"error": str(exc)}
+    except Exception as exc:  # noqa: BLE001
+        _log(f"搜索作者「{keyword}」请求失败：{exc}")
+        return {"error": f"请求失败：{exc}"}
+    return {
+        "type": "author",
+        "results": [
+            {
+                "mid": item.mid,
+                "name": item.name,
+                "avatar": item.avatar,
+                "fans": item.fans,
+                "videos": item.videos,
+                "sign": item.sign,
+                "verified": item.verified,
+                "url": item.url,
+            }
+            for item in results
+        ],
+    }
+
+
+_engine_errors: dict[str, str] = {}
+
+
 def transcribe_engines() -> dict[str, bool]:
     """后端可用的转写引擎。"""
     engines = {"vosk": False, "whisper": False}
     try:
+        import av  # noqa: F401, PLC0415
         import vosk  # noqa: F401, PLC0415
 
         engines["vosk"] = True
-    except Exception:  # noqa: BLE001
-        pass
-    try:
-        import faster_whisper  # noqa: F401, PLC0415
-
-        engines["whisper"] = True
-    except Exception:  # noqa: BLE001
-        pass
+        _engine_errors.pop("vosk", None)
+    except Exception as exc:  # noqa: BLE001
+        _engine_errors["vosk"] = f"{type(exc).__name__}: {exc}"
+    engines["whisper"] = whisper_deps.available()
     return engines
 
 
 def transcription_available() -> bool:
     """任意一个引擎可用即可。"""
     return any(transcribe_engines().values())
+
+
+_deps_lock = threading.Lock()
+_deps_state: dict[str, Any] = {
+    "running": False,
+    "phase": "",
+    "done": 0.0,
+    "total": 0.0,
+    "last_error": None,
+}
+
+
+def whisper_deps_state() -> dict[str, Any]:
+    """whisper 依赖的安装状态，供界面轮询。"""
+    with _deps_lock:
+        state = dict(_deps_state)
+    state["installed"] = whisper_deps.installed()
+    state["installable"] = whisper_deps.installable()
+    state["size_mb"] = whisper_deps.DOWNLOAD_MB
+    state["import_error"] = whisper_deps.import_error()
+    return state
+
+
+def start_deps_install() -> dict[str, Any]:
+    """后台下载 whisper 依赖；重复点击直接返回当前状态。"""
+    with _deps_lock:
+        already = bool(_deps_state["running"])
+        if not already:
+            _deps_state.update(
+                running=True, phase="准备下载…", done=0.0, total=0.0, last_error=None
+            )
+    if already:
+        return whisper_deps_state()
+
+    def on_status(message: str) -> None:
+        with _deps_lock:
+            _deps_state["phase"] = message
+
+    def on_progress(done: float, total: float) -> None:
+        with _deps_lock:
+            _deps_state["done"] = done
+            _deps_state["total"] = total
+
+    def run() -> None:
+        try:
+            whisper_deps.install(on_progress=on_progress, on_status=on_status)
+            with _deps_lock:
+                _deps_state.update(
+                    running=False,
+                    phase="安装完成",
+                    done=_deps_state["total"],
+                )
+        except Exception as exc:  # noqa: BLE001 - 后台线程，错误要带回界面
+            with _deps_lock:
+                _deps_state.update(running=False, phase="安装失败", last_error=str(exc))
+
+    threading.Thread(target=run, name="whisper-deps", daemon=True).start()
+    return whisper_deps_state()
 
 
 def fetch_video(
@@ -327,7 +433,7 @@ def fetch_video(
         else:
             if not engines["whisper"]:
                 return {
-                    "error": "这个版本没有内置 whisper。请用完整版（vidnote-app-full），"
+                    "error": "这个版本没有内置 whisper。先点界面里的「安装 whisper 依赖」，"
                     "或在命令行 pip install 'vidnote[whisper]' 后运行 vidnote fetch --whisper。"
                 }
             from .media import MediaError, transcribe_video
@@ -519,6 +625,24 @@ def reveal(path: str) -> dict[str, Any]:
             subprocess.Popen([opener, str(target)])  # noqa: S603
     except OSError as exc:
         return {"error": f"打开失败：{exc}"}
+    return {"ok": True}
+
+
+def open_url(url: str) -> dict[str, Any]:
+    """在默认浏览器里打开 B 站页面（作者空间等）。"""
+    parsed = urlparse(str(url).strip())
+    if parsed.scheme != "https" or parsed.netloc not in {
+        "space.bilibili.com",
+        "www.bilibili.com",
+        "b23.tv",
+    }:
+        return {"error": "只允许打开 B 站链接"}
+    try:
+        opened = webbrowser.open(parsed.geturl())
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"打开链接失败：{exc}"}
+    if not opened:
+        return {"error": "没有找到可用的浏览器"}
     return {"ok": True}
 
 

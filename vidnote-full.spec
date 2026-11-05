@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""完整版打包配置：核心功能 + 本地转写（Vosk + whisper + yt-dlp）。
+"""完整版打包配置：核心功能 + Vosk 本地转写 + yt-dlp。
 
 Vosk 小引擎和中文模型（约 65 MB）直接打进 exe，第一次转写不用再下载；
-faster-whisper 及 ctranslate2 / onnxruntime 也一并打包，whisper 模型仍按需
-下载到缓存目录，下载进度会显示在界面和命令行里。
+whisper 的推理引擎（ctranslate2 / onnxruntime / tokenizers 等）默认不打进
+exe，第一次要用 whisper 时由界面单独下载 ``vidnote-whisper-deps-<版本>.zip``。
 
 用法：
     pyinstaller vidnote-full.spec --noconfirm --distpath dist-exe-full --workpath build-exe-full
@@ -25,19 +25,14 @@ if not os.path.isdir(_MODEL_DIR):
 a = Analysis(
     ["packaging/entry.py"],
     pathex=["src"],
-    # vosk 用 ctypes 加载自带的 libvosk.dll；ctranslate2 / onnxruntime 同理，
-    # 它们原生库不会被自动收集。
-    binaries=collect_dynamic_libs("vosk")
-    + collect_dynamic_libs("ctranslate2")
-    + collect_dynamic_libs("onnxruntime"),
+    # vosk 用 ctypes 加载自带的 libvosk.dll；原生库不会被自动收集。
+    binaries=collect_dynamic_libs("vosk"),
     datas=[
         ("src/vidnote/ui/index.html", "vidnote/ui"),
         (_MODEL_DIR, f"vidnote/models/{_MODEL_FOLDER}"),
     ]
     + collect_data_files("vosk")
-    + collect_data_files("srt")
-    + collect_data_files("faster_whisper")
-    + collect_data_files("huggingface_hub"),
+    + collect_data_files("srt"),
     hiddenimports=[
         "vosk",
         "srt",
@@ -45,16 +40,24 @@ a = Analysis(
         "websockets",
         "av",
         "yt_dlp",
-        "faster_whisper",
-        "ctranslate2",
-        "huggingface_hub",
-        "tokenizers",
-        "onnxruntime",
-        "tqdm",
+        # vosk 在导入时就会 import tqdm；whisper 用 tqdm.auto。
+        "tqdm.auto",
     ],
     hookspath=[],
     runtime_hooks=[],
     excludes=[
+        # whisper 依赖改为运行时单独下载
+        "faster_whisper",
+        "ctranslate2",
+        "onnxruntime",
+        "tokenizers",
+        "huggingface_hub",
+        "hf_xet",
+        "numpy",
+        "pydantic",
+        "pydantic_core",
+        "httpx2",
+        "httpcore2",
         # 与运行无关的东西
         "mcp",
         "tkinter",

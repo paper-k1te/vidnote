@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -27,20 +28,18 @@ namespace Vidnote
             try
             {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string cache = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "vidnote", "runtime");
+                string requested = null;
                 for (int i = 0; i < args.Length - 1; i++)
                 {
                     if (args[i] == "--cache")
                     {
-                        cache = args[i + 1];
+                        requested = args[i + 1];
                         break;
                     }
                 }
-                Directory.CreateDirectory(cache);
+                string cache = FindWritableCache(requested, baseDir);
 
-                // 版本标记变化或文件缺失时才重新释放，避免每次启动搬 160 MB。
+                // 版本标记变化或文件缺失时才重新释放，避免每次启动搬 100+ MB。
                 string buildId = ReadResourceText("build-id.txt").Trim();
                 string idFile = Path.Combine(cache, "build-id.txt");
                 bool stale = !File.Exists(idFile)
@@ -67,7 +66,9 @@ namespace Vidnote
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = host,
-                    Arguments = "--workdir \"" + baseDir + "\" --temp \"" + temp + "\"",
+                    // 路径末尾的反斜杠会转义引号，先去掉。
+                    Arguments = "--workdir \"" + baseDir.TrimEnd('\\')
+                        + "\" --temp \"" + temp.TrimEnd('\\') + "\"",
                     WorkingDirectory = baseDir,
                     UseShellExecute = false,
                 };
@@ -75,21 +76,85 @@ namespace Vidnote
             }
             catch (Exception ex)
             {
+                LogError(ex);
+                MessageBox.Show("启动 vidnote 失败：" + ex.Message, "vidnote",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// 找一个可写的运行时目录：LocalAppData 被 ACL 或安全软件挡住时，
+        /// 依次退到 LocalLow、系统临时目录、exe 旁边，避免应用直接起不来。
+        /// </summary>
+        private static string FindWritableCache(string requested, string baseDir)
+        {
+            string[] candidates;
+            if (!string.IsNullOrEmpty(requested))
+            {
+                candidates = new[] { requested };
+            }
+            else
+            {
+                string profile = Environment.GetFolderPath(
+                    Environment.SpecialFolder.UserProfile);
+                candidates = new[]
+                {
+                    Path.Combine(
+                        Environment.GetFolderPath(
+                            Environment.SpecialFolder.LocalApplicationData),
+                        "vidnote", "runtime"),
+                    Path.Combine(
+                        profile, "AppData", "LocalLow", "vidnote", "runtime"),
+                    Path.Combine(Path.GetTempPath(), "vidnote", "runtime"),
+                    Path.Combine(baseDir, ".vidnote", "runtime"),
+                };
+            }
+
+            var failures = new List<string>();
+            foreach (string candidate in candidates)
+            {
                 try
                 {
-                    string log = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "vidnote", "launcher.log");
+                    Directory.CreateDirectory(candidate);
+                    string probe = Path.Combine(candidate, ".write-test");
+                    File.WriteAllText(probe, "ok");
+                    File.Delete(probe);
+                    return candidate;
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(candidate + " -> " + ex.Message);
+                }
+            }
+            throw new IOException(
+                "没有可写的运行时目录：\r\n" + string.Join("\r\n", failures)
+                + "\r\n可以给快捷方式加 --cache \"D:\\vidnote-cache\" 指定一个可写目录。");
+        }
+
+        private static void LogError(Exception ex)
+        {
+            string[] logs =
+            {
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.LocalApplicationData),
+                    "vidnote", "launcher.log"),
+                Path.Combine(Path.GetTempPath(), "vidnote-launcher.log"),
+            };
+            foreach (string log in logs)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(log));
                     File.AppendAllText(
                         log,
                         DateTime.Now.ToString("s") + " " + ex + Environment.NewLine);
+                    return;
                 }
                 catch
                 {
-                    // 日志写不进去时仍然弹窗。
+                    // 换下一个位置。
                 }
-                MessageBox.Show("启动 vidnote 失败：" + ex.Message, "vidnote",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

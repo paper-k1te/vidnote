@@ -168,6 +168,8 @@ namespace Vidnote
             var form = new Form
             {
                 Text = "vidnote",
+                Icon = System.Drawing.Icon.ExtractAssociatedIcon(
+                    Application.ExecutablePath),
                 Width = width,
                 Height = height,
                 MinimumSize = new Size(minWidth, minHeight),

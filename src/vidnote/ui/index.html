@@ -144,6 +144,15 @@
   ul.results li:hover { background: var(--bg-subtle); }
   ul.results li b { display: block; font-size: 13px; font-weight: 500; color: var(--text-1); }
   ul.results li small { color: var(--text-3); font-size: 11.5px; }
+  ul.results li.author { display: flex; align-items: center; gap: 10px; }
+  ul.results li.author img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--bg-subtle); flex: none; }
+  ul.results li.author .info { flex: 1; min-width: 0; }
+  ul.results li.author .info b,
+  ul.results li.author .info small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  ul.results li.author .btn-ghost { flex: none; height: 26px; padding: 0 10px; font-size: 12px; }
+  .mode-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .mode-btn { height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text-2); font-size: 12px; cursor: pointer; }
+  .mode-btn.active { background: var(--action-soft); border-color: var(--action-bg); color: var(--action-text); }
   .empty { color: var(--text-3); font-size: 12px; padding: 10px; }
 
   .preview-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
@@ -177,11 +186,8 @@
   .check-line input { width: 15px; height: 15px; accent-color: var(--action-bg); margin: 0; }
   .check-line.off { color: var(--text-3); cursor: default; }
   .field-hint { margin: 6px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 16px; }
-  .collapse-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 12px; cursor: pointer; user-select: none; }
-  .collapse-head.first { margin-top: 0; margin-bottom: 12px; padding-top: 0; border-top: 0; }
-  .collapse-head:hover { color: var(--text-1); }
-  .collapse-head .chev { color: var(--text-3); transition: transform .15s; }
-  .collapse-head.open .chev { transform: rotate(180deg); }
+  .deps-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .deps-row .field-hint { margin: 0; }
   .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .progress { margin-top: 14px; }
@@ -204,6 +210,14 @@
     <div class="nav-item" data-view="search">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
       <span>搜索</span>
+    </div>
+    <div class="nav-item" data-view="login">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+      <span>登录</span>
+    </div>
+    <div class="nav-item" data-view="download">
+      <svg viewBox="0 0 24 24"><path d="M12 4v9m0 0 3.5-3.5M12 13 8.5 9.5"/><rect x="4" y="16" width="16" height="4" rx="1"/></svg>
+      <span>下载</span>
     </div>
   </div>
   <div class="side-foot">
@@ -231,14 +245,6 @@
       <section class="card" id="view-fetch">
         <div class="card-head"><h2>视频</h2><span class="hint">支持链接 / BV 号 / av 号</span></div>
         <div class="card-body">
-          <div class="collapse-head first" id="cookie-toggle">
-            <span>登录 B 站（可选）</span>
-            <span class="chev" id="cookie-chev">⌄</span>
-          </div>
-          <div id="cookie-box" class="hidden">
-            <input id="cookie" type="password" placeholder="SESSDATA=...">
-            <p class="field-hint">只用于读取登录后才能拿到的字幕，不保存。</p>
-          </div>
           <label>链接或编号</label>
           <input id="target" placeholder="BV1xx411c7mD 或 https://www.bilibili.com/video/...">
           <div class="grid2">
@@ -253,18 +259,12 @@
           <label>解析方案</label>
           <select id="transcribe">
             <option value="" selected>不转写 · 只输出元数据</option>
-            <option value="vosk-cn">Vosk 小模型 · 快、占用小、无标点</option>
+            <option value="vosk-cn">Vosk 小模型 · 快、占用小、自动分句</option>
             <option value="tiny">whisper tiny · 最快，质量一般</option>
             <option value="base">whisper base · 速度与质量平衡</option>
             <option value="small">whisper small · 中文质量最好</option>
           </select>
-          <label>下载渠道</label>
-          <select id="channel">
-            <option value="auto" selected>自动（完整版内置优先）</option>
-            <option value="official">HuggingFace 官方</option>
-            <option value="mirror">hf-mirror 国内镜像</option>
-          </select>
-          <p class="field-hint">Vosk 模型完整版已内置；whisper 首次使用会按这里的渠道下载。</p>
+          <p class="field-hint">whisper 的依赖安装和模型下载渠道在左侧「下载」页。</p>
           <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
           <div class="progress hidden" id="progress">
             <div class="progress-label"><span id="phase">准备中…</span><span id="pct"></span></div>
@@ -275,10 +275,50 @@
 
       <!-- 搜索 -->
       <section class="card grow hidden" id="view-search">
-        <div class="card-head"><h2>搜索视频</h2><span class="hint">点击结果填入编号</span></div>
+        <div class="card-head"><h2>搜索</h2><span class="hint" id="search-hint">点击视频填入编号</span></div>
         <div class="card-body">
+          <div class="mode-row">
+            <button class="mode-btn active" data-search-type="video" type="button">视频</button>
+            <button class="mode-btn" data-search-type="author" type="button">作者</button>
+          </div>
           <input id="q" placeholder="输入关键词后回车，例如：Python 异步">
           <ul class="results" id="results"><li class="empty">还没有搜索结果</li></ul>
+        </div>
+      </section>
+
+      <!-- 登录 -->
+      <section class="card grow hidden" id="view-login">
+        <div class="card-head"><h2>登录 B 站</h2><span class="hint">可选，只用于字幕</span></div>
+        <div class="card-body">
+          <label>Cookie</label>
+          <input id="cookie" type="password" placeholder="SESSDATA=...">
+          <p class="field-hint">大部分字幕需要登录态。粘贴 SESSDATA=... 或整段 Cookie；只用于本次抓取，不写进笔记，也不保存。</p>
+          <p class="field-hint">填好后回「抓取」页生成笔记即可。</p>
+        </div>
+      </section>
+
+      <!-- 下载 -->
+      <section class="card grow hidden" id="view-download">
+        <div class="card-head"><h2>下载</h2><span class="hint">whisper 依赖与模型</span></div>
+        <div class="card-body">
+          <label>下载渠道</label>
+          <select id="channel">
+            <option value="auto" selected>自动（完整版内置优先）</option>
+            <option value="official">HuggingFace 官方</option>
+            <option value="mirror">hf-mirror 国内镜像</option>
+          </select>
+          <p class="field-hint">whisper 模型第一次使用时按这里的渠道下载；Vosk 模型完整版已内置。</p>
+          <label>whisper 依赖</label>
+          <p class="field-hint" id="deps-state">正在检查…</p>
+          <div class="deps-row hidden" id="deps-row">
+            <button class="btn-ghost" id="install-whisper" type="button">安装 whisper 依赖</button>
+            <span class="field-hint">装好后才能选 whisper</span>
+          </div>
+          <div class="progress hidden" id="deps-progress">
+            <div class="progress-label"><span id="deps-phase">准备中…</span><span id="deps-pct"></span></div>
+            <div class="bar"><i id="deps-bar"></i></div>
+          </div>
+          <p class="field-hint">模型大小：tiny 75 MB · base 145 MB · small 485 MB。</p>
         </div>
       </section>
 
@@ -288,8 +328,9 @@
           <p id="file-hint" class="hidden"><b>提示</b>：当前是直接打开的 HTML 文件，没有本地服务。请先运行 <code>vidnote gui</code>，或双击桌面应用。</p>
           <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
           <p><b>关键帧</b>：默认 6 张，会插在对应字幕的后面；填 0 不抽。用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、无标点），whisper 75/145/485 MB（质量更好）。模型只在第一次使用时下载，进度会显示在按钮下方。</p>
-          <p><b>Cookie</b>：大部分字幕需要登录态，填 SESSDATA 后能抓到。Cookie 只用于本次请求，不写进笔记，也不保存。</p>
+          <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、自动分句），whisper 需要先装依赖，模型 75/145/485 MB（质量更好）。模型只在第一次使用时下载，进度会显示在按钮下方。</p>
+          <p><b>Cookie</b>：大部分字幕需要登录态，在左侧「登录」页填 SESSDATA 后能抓到。Cookie 只用于本次请求，不写进笔记，也不保存。</p>
+          <p><b>依赖与下载</b>：whisper 的依赖安装、模型下载渠道都在左侧「下载」页。</p>
         </div>
       </section>
     </div>
@@ -343,22 +384,6 @@ function busy(btn, on, label) {
   btn.innerHTML = on ? '<span class="spin"></span> ' + label : label;
 }
 
-/* 解析方案决定下载渠道是否可用：Vosk 用内置模型，不涉及渠道。 */
-function syncChannel() {
-  const scheme = $("transcribe").value;
-  const whisper = scheme && !scheme.startsWith("vosk");
-  $("channel").disabled = !whisper;
-  if (!whisper) $("channel").value = "auto";
-}
-$("transcribe").addEventListener("change", syncChannel);
-syncChannel();
-
-$("cookie-toggle").onclick = () => {
-  const box = $("cookie-box");
-  const open = box.classList.toggle("hidden") === false;
-  $("cookie-toggle").classList.toggle("open", open);
-};
-
 $("pick-folder").onclick = async () => {
   const btn = $("pick-folder");
   btn.disabled = true;
@@ -381,14 +406,17 @@ $("pick-folder").onclick = async () => {
 
 /* ---- 视图切换 ---- */
 const VIEWS = { fetch: { title: "抓取视频", sub: "把 B 站视频变成带时间戳的 Markdown 笔记" },
-                search: { title: "搜索视频", sub: "先搜到 BV 号，再去抓取" } };
+                search: { title: "搜索视频", sub: "先搜到 BV 号，再去抓取" },
+                login: { title: "登录 B 站", sub: "填入 SESSDATA，解锁登录后才可见的字幕" },
+                download: { title: "下载", sub: "whisper 依赖与模型下载渠道" } };
 document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
   item.onclick = () => {
     document.querySelectorAll(".nav-item[data-view]").forEach((i) => i.classList.remove("active"));
     item.classList.add("active");
     const view = item.dataset.view;
-    $("view-fetch").classList.toggle("hidden", view !== "fetch");
-    $("view-search").classList.toggle("hidden", view !== "search");
+    ["fetch", "search", "login", "download"].forEach((name) => {
+      $("view-" + name).classList.toggle("hidden", view !== name);
+    });
     $("page-title").textContent = VIEWS[view].title;
     $("page-sub").textContent = VIEWS[view].sub;
   };
@@ -540,17 +568,97 @@ async function pollJob(jobId) {
   }
 }
 
+let searchType = "video";
+let searchSeq = 0;
+
+function setSearchType(kind) {
+  searchType = kind;
+  searchSeq += 1;
+  document.querySelectorAll(".mode-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.searchType === kind);
+  });
+  $("q").placeholder = kind === "author"
+    ? "输入 UP 主昵称，例如：老番茄"
+    : "输入关键词后回车，例如：Python 异步";
+  $("search-hint").textContent = kind === "author" ? "点击结果打开空间页" : "点击视频填入编号";
+  $("results").innerHTML = '<li class="empty">还没有搜索结果</li>';
+}
+
+document.querySelectorAll(".mode-btn").forEach((btn) => {
+  btn.onclick = () => setSearchType(btn.dataset.searchType);
+});
+
+function formatCount(value) {
+  const n = Number(value) || 0;
+  if (n >= 100000000) return (n / 100000000).toFixed(1) + " 亿";
+  if (n >= 10000) return (n / 10000).toFixed(1) + " 万";
+  return n.toLocaleString();
+}
+
+async function openSpace(url) {
+  try {
+    await api("/api/open-url", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+  } catch (e) { toast(e.message, "err"); }
+}
+
+function renderAuthors(list, items) {
+  for (const item of items) {
+    const li = document.createElement("li");
+    li.className = "author";
+    const avatar = document.createElement("img");
+    if (item.avatar && item.avatar.startsWith("https://")) {
+      avatar.src = item.avatar;
+      avatar.alt = "";
+      avatar.loading = "lazy";
+      avatar.referrerPolicy = "no-referrer";
+    }
+    const info = document.createElement("div");
+    info.className = "info";
+    const name = document.createElement("b");
+    name.textContent = item.name + (item.verified ? " ✓" : "");
+    const meta = document.createElement("small");
+    const bits = [formatCount(item.fans) + " 粉丝", item.videos + " 个视频"];
+    if (item.sign) bits.push(item.sign);
+    meta.textContent = bits.join(" · ");
+    info.append(name, meta);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-ghost";
+    button.textContent = "打开空间";
+    button.onclick = (e) => { e.stopPropagation(); openSpace(item.url); };
+    li.append(avatar, info, button);
+    li.onclick = () => openSpace(item.url);
+    list.appendChild(li);
+  }
+}
+
 $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
 
 async function doSearch() {
   const q = $("q").value.trim();
   if (!q) return toast("先输入关键词", "err");
+  const kind = searchType;
+  const seq = ++searchSeq;
   const list = $("results");
   list.innerHTML = '<li class="empty">搜索中…</li>';
   try {
-    const data = await api("/api/search?q=" + encodeURIComponent(q) + "&limit=10");
+    const data = await api("/api/search?q=" + encodeURIComponent(q)
+      + "&limit=10&type=" + encodeURIComponent(kind));
+    if (seq !== searchSeq) return;
     list.innerHTML = "";
-    if (!data.results.length) list.innerHTML = '<li class="empty">没有找到结果</li>';
+    if (!data.results.length) {
+      list.innerHTML = kind === "author"
+        ? '<li class="empty">没有找到作者</li>'
+        : '<li class="empty">没有找到结果</li>';
+      return;
+    }
+    if (kind === "author") {
+      renderAuthors(list, data.results);
+      return;
+    }
     for (const item of data.results) {
       const li = document.createElement("li");
       li.innerHTML = "<b></b><small></small>";
@@ -560,6 +668,7 @@ async function doSearch() {
       list.appendChild(li);
     }
   } catch (e) {
+    if (seq !== searchSeq) return;
     const li = document.createElement("li");
     li.className = "empty";
     li.textContent = e.message;
@@ -596,26 +705,90 @@ $("reveal-folder").onclick = async () => {
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
 
-/* 后端有哪些引擎：没有的选项标灰并说明，一个都没有就禁用整个下拉框 */
-fetch("/api/health").then((r) => r.json()).then((data) => {
+/* 后端有哪些引擎：没有的选项标灰并说明；whisper 依赖可以单独安装 */
+async function pollDeps() {
+  try {
+    const s = await api("/api/deps");
+    $("deps-progress").classList.remove("hidden");
+    if (s.running) $("deps-row").classList.remove("hidden");
+    $("deps-phase").textContent = s.phase || "安装中…";
+    const pct = s.total ? Math.min(100, Math.round((s.done / s.total) * 100)) : 0;
+    $("deps-pct").textContent = s.total ? pct + "%" : "";
+    $("deps-bar").style.width = s.total ? pct + "%" : "0";
+    if (s.running) { setTimeout(pollDeps, 800); return; }
+    $("install-whisper").disabled = false;
+    if (s.last_error) {
+      toast(s.last_error, "err");
+      $("deps-phase").textContent = "安装失败";
+      $("deps-pct").textContent = "";
+      return;
+    }
+    $("deps-progress").classList.add("hidden");
+    loadEngines();
+    toast("whisper 依赖安装完成", "ok");
+  } catch (e) {
+    setTimeout(pollDeps, 1200);
+  }
+}
+
+$("install-whisper").onclick = async () => {
+  $("install-whisper").disabled = true;
+  try {
+    await api("/api/deps/install", { method: "POST" });
+    pollDeps();
+  } catch (e) {
+    toast(e.message, "err");
+    $("install-whisper").disabled = false;
+  }
+};
+
+function applyEngines(data) {
   const engines = data.engines || {};
+  const deps = data.whisper_deps || {};
   const box = $("transcribe");
   [...box.options].forEach((option) => {
     if (!option.value) return;
-    const needsVosk = option.value.startsWith("vosk");
-    const available = needsVosk ? engines.vosk : engines.whisper;
+    if (!option.dataset.label) option.dataset.label = option.textContent;
+    option.textContent = option.dataset.label;
+    option.disabled = false;
+    const whisper = !option.value.startsWith("vosk");
+    const available = whisper ? engines.whisper : engines.vosk;
     if (!available) {
       option.disabled = true;
-      option.textContent += "（此版本未内置）";
+      option.textContent += whisper && deps.installable
+        ? "（需安装依赖）"
+        : "（此版本未内置）";
     }
   });
   const usable = [...box.options].filter((option) => option.value && !option.disabled);
-  if (!usable.length) {
+  if (usable.length) {
+    box.disabled = false;
+  } else {
     box.value = "";
     box.disabled = true;
   }
-  syncChannel();
-}).catch(() => {});
+  $("deps-row").classList.toggle("hidden", !(deps.installable && !deps.available));
+  $("install-whisper").textContent =
+    "安装 whisper 依赖" + (deps.size_mb ? "（约 " + deps.size_mb + " MB）" : "");
+  $("deps-state").textContent = deps.available
+    ? "已安装，可直接选择 whisper 方案。"
+    : deps.import_error
+      ? "依赖导入失败：" + deps.import_error
+      : deps.installable
+        ? "未安装；装好后才能选择 whisper 方案。"
+        : "当前版本不包含 whisper 转写。";
+}
+
+function loadEngines() {
+  return fetch("/api/health").then((r) => r.json()).then(applyEngines).catch(() => {});
+}
+
+loadEngines().then(() => api("/api/deps").catch(() => null)).then((s) => {
+  if (s && s.running) {
+    $("deps-progress").classList.remove("hidden");
+    pollDeps();
+  }
+});
 </script>
 </body>
 </html>

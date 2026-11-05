@@ -231,11 +231,15 @@ def ensure_whisper_model(
         return target
 
     try:
+        from .whisper_deps import activate  # noqa: PLC0415
+
+        activate()
         from huggingface_hub import snapshot_download  # noqa: PLC0415
         from tqdm import tqdm
     except ImportError as exc:  # pragma: no cover - 取决于环境
         raise MediaError(
-            "缺少 faster-whisper / huggingface_hub，请先安装：pip install 'vidnote[whisper]'"
+            "缺少 whisper 依赖，请在界面里点「安装 whisper 依赖」，"
+            "或在命令行 pip install 'vidnote[whisper]'"
         ) from exc
 
     repo_id, size_mb = WHISPER_MODELS[model_size]
@@ -353,10 +357,14 @@ def transcribe(
 ) -> tuple[str, list[Cue]]:
     """在本地转写，返回 (检测到的语言, 字幕条目)。"""
     try:
+        from .whisper_deps import activate  # noqa: PLC0415
+
+        activate()
         from faster_whisper import WhisperModel  # noqa: PLC0415
     except ImportError as exc:  # pragma: no cover - 取决于环境
         raise MediaError(
-            "缺少 faster-whisper，请先安装：pip install 'vidnote[whisper]'"
+            "缺少 whisper 依赖，请在界面里点「安装 whisper 依赖」，"
+            "或在命令行 pip install 'vidnote[whisper]'"
         ) from exc
 
     try:

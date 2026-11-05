@@ -6,9 +6,11 @@ from vidnote.gui import (
     fetch_video,
     index_html,
     job_state,
+    open_url,
     read_frame,
     reveal,
     reveal_folder,
+    whisper_deps_state,
 )
 from vidnote.media import hf_endpoint
 
@@ -29,25 +31,46 @@ def test_index_has_core_controls() -> None:
         "/api/pick-folder",
         "打开文件夹",
         "/api/reveal-folder",
+        "安装 whisper 依赖",
+        "/api/deps",
+        "作者",
+        "data-search-type",
+        "打开空间",
+        "/api/open-url",
     ):
         assert needle in html
 
 
-def test_cookie_box_is_collapsed_by_default() -> None:
+def test_login_and_download_are_separate_views() -> None:
+    """登录与下载从抓取表单里独立出来，各自是一个左侧入口。"""
     html = index_html()
-    assert 'id="cookie-box" class="hidden"' in html
+    assert 'data-view="login"' in html
+    assert 'data-view="download"' in html
+    assert 'id="view-login"' in html
+    assert 'id="view-download"' in html
 
+    fetch_start = html.index('id="view-fetch"')
+    login_start = html.index('id="view-login"')
+    download_start = html.index('id="view-download"')
+    assert fetch_start < login_start < download_start
 
-def test_cookie_box_sits_above_resolution_options() -> None:
-    """登录 B 站的折叠块放在表单顶部，解析方案在其后。"""
-    html = index_html()
-    assert html.index("登录 B 站") < html.index("解析方案")
+    fetch_section = html[fetch_start:login_start]
+    assert 'id="cookie"' not in fetch_section
+    assert 'id="channel"' not in fetch_section
+    assert 'id="cookie"' in html[login_start:download_start]
+    assert 'id="channel"' in html[download_start:]
 
 
 def test_hf_endpoint_maps_channels() -> None:
     assert hf_endpoint("mirror") == "https://hf-mirror.com"
     assert hf_endpoint("official") == "https://huggingface.co"
     assert hf_endpoint("auto") is None
+
+
+def test_whisper_deps_state_has_install_flags() -> None:
+    state = whisper_deps_state()
+    for key in ("running", "phase", "installed", "installable", "size_mb"):
+        assert key in state
 
 
 def test_index_is_standalone_html() -> None:
@@ -78,6 +101,12 @@ def test_fetch_rejects_bad_target() -> None:
 
 def test_fetch_rejects_empty_target() -> None:
     assert "error" in fetch_video({})
+
+
+def test_open_url_rejects_non_bilibili_links() -> None:
+    assert "error" in open_url("https://example.com/")
+    assert "error" in open_url("http://space.bilibili.com/1")
+    assert "error" in open_url("javascript:alert(1)")
 
 
 def test_reveal_rejects_missing_file(tmp_path: Path) -> None:

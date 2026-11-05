@@ -30,6 +30,16 @@ $workDir = if ($Full) { "build-exe-full" } else { "build-exe" }
 $appDir = if ($Full) { "dist-app-full" } else { "dist-app" }
 $serverName = if ($Full) { "vidnote-server.exe" } else { "vidnote.exe" }
 
+# 应用版本号：写进 exe 的版本信息，跟 pyproject.toml 保持一致。
+$pyproject = Get-Content pyproject.toml -Raw
+$appVersion = [regex]::Match($pyproject, 'version = "([^"]+)"').Groups[1].Value
+if (-not $appVersion) { throw "无法从 pyproject.toml 读取版本号" }
+$numeric = ($appVersion -replace '[^0-9.].*$', '')
+$pieces = @($numeric.Split('.') | Where-Object { $_ -ne '' })
+$four = (@($pieces + @('0', '0', '0', '0'))[0..3]) -join '.'
+$icon = "assets\vidnote.ico"
+if (-not (Test-Path $icon)) { throw "缺少图标：$icon" }
+
 # 完整版把 Vosk 模型打进 exe；本地有缓存就复制，没有就下载。
 if ($Full) {
     $modelFolder = "vosk-model-small-cn-0.22"
@@ -67,15 +77,35 @@ if (-not (Test-Path "$sdk\lib\net462\Microsoft.Web.WebView2.Core.dll")) {
     Expand-Archive ".tools\webview2\webview2.zip" -DestinationPath $sdk -Force
 }
 
-# 3. 编译窗口外壳
-Write-Host "==> 编译窗口外壳"
+# 3. 写版本信息并编译窗口外壳
+Write-Host "==> 编译窗口外壳（v$appVersion）"
 New-Item -ItemType Directory -Force -Path "build\shell" | Out-Null
+$assemblyInfo = @"
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+[assembly: AssemblyTitle("vidnote")]
+[assembly: AssemblyDescription("vidnote - B 站视频笔记")]
+[assembly: AssemblyCompany("Paperkite Studio")]
+[assembly: AssemblyProduct("vidnote")]
+[assembly: AssemblyCopyright("Copyright © 2026 Paperkite Studio")]
+[assembly: AssemblyVersion("$four")]
+[assembly: AssemblyFileVersion("$four")]
+[assembly: AssemblyInformationalVersion("$appVersion")]
+[assembly: ComVisible(false)]
+"@
+[IO.File]::WriteAllText(
+    (Join-Path (Get-Location) "build\shell\AssemblyInfo.cs"),
+    $assemblyInfo,
+    [Text.UTF8Encoding]::new($true)
+)
 & $csc /nologo /target:winexe /platform:anycpu /win32manifest:shell\app.manifest `
+    /win32icon:$icon `
     /out:build\shell\vidnote-app-host.exe `
     /r:"System.Net.Http.dll" /r:"System.Windows.Forms.dll" /r:"System.Drawing.dll" `
     /r:"$sdk\lib\net462\Microsoft.Web.WebView2.Core.dll" `
     /r:"$sdk\lib\net462\Microsoft.Web.WebView2.WinForms.dll" `
-    shell\Program.cs
+    shell\Program.cs build\shell\AssemblyInfo.cs
 
 # 4. 生成单文件启动器
 Write-Host "==> 生成单文件 $appDir\vidnote-app.exe"
@@ -87,6 +117,7 @@ Write-Host "==> 生成单文件 $appDir\vidnote-app.exe"
 Remove-Item $appDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $appDir | Out-Null
 & $csc /nologo /target:winexe /platform:anycpu /win32manifest:shell\app.manifest `
+    /win32icon:$icon `
     /out:"$appDir\vidnote-app.exe" `
     /r:"System.Windows.Forms.dll" /r:"System.Drawing.dll" `
     /resource:"build\shell\vidnote-app-host.exe,vidnote-app-host.exe" `
@@ -95,7 +126,7 @@ New-Item -ItemType Directory -Force -Path $appDir | Out-Null
     /resource:"$sdk\lib\net462\Microsoft.Web.WebView2.WinForms.dll,Microsoft.Web.WebView2.WinForms.dll" `
     /resource:"$sdk\runtimes\win-x64\native\WebView2Loader.dll,WebView2Loader.dll" `
     /resource:"build\shell\build-id.txt,build-id.txt" `
-    shell\Launcher.cs
+    shell\Launcher.cs build\shell\AssemblyInfo.cs
 
 $total = [math]::Round((Get-Item "$appDir\vidnote-app.exe").Length / 1MB, 2)
 Write-Host "完成：单文件 $appDir\vidnote-app.exe（$total MB）"
