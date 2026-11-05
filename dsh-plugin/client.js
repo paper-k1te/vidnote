@@ -87,11 +87,20 @@ window.__ModuleLoader__.load({
       },
     }
 
+    const FALLBACK_SNAPSHOT = { active: 'zh' }
+    const FALLBACK_LOCALE = {
+      subscribe: () => () => {},
+      getSnapshot: () => FALLBACK_SNAPSHOT,
+    }
+
     function useT() {
-      const facade = localeFacade
-      const snapshot = facade
-        ? React.useSyncExternalStore(facade.subscribe, facade.getSnapshot, facade.getSnapshot)
-        : null
+      // 始终调用同一个 hook：locale 服务来晚了也不会改变 hook 数量。
+      const facade = localeFacade ?? FALLBACK_LOCALE
+      const snapshot = React.useSyncExternalStore(
+        facade.subscribe,
+        facade.getSnapshot,
+        facade.getSnapshot,
+      )
       const active = String(snapshot?.active ?? 'zh').toLowerCase()
       return active.startsWith('en') ? TEXT.en : TEXT.zh
     }
