@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-/** 用一个假的 React 和假的加载器，验证客户端模块的接线（不渲染 DOM）。 */
-test('client.js 注册到 shell.overlay', async () => {
+/** 假的 React / DSH 运行时，只验证客户端模块的注册接线（不渲染）。 */
+test('client.js 注册主面板与侧边栏入口', async () => {
   let captured
+  const styleNode = { textContent: '', remove() {} }
+  globalThis.document = {
+    head: { appendChild() {} },
+    createElement: () => styleNode,
+  }
   globalThis.window = {
     __ModuleLoader__: {
       load(definition) {
@@ -13,28 +18,33 @@ test('client.js 注册到 shell.overlay', async () => {
   }
 
   await import('../client.js')
-
   assert.equal(captured.id, 'dsh-vidnote')
-  assert.equal(typeof captured.factory, 'function')
 
   const React = {
     createElement: (...args) => args,
     Fragment: Symbol('Fragment'),
     useState: (value) => [value, () => {}],
     useEffect: () => {},
+    useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
   }
   const module = captured.factory((name) => {
     if (name === 'react') return React
-    if (name === 'react-dom') return { createPortal: (node) => node }
+    if (name === 'react-dom') return {}
     throw new Error(`unexpected module: ${name}`)
   })
 
+  const injections = []
   const registered = []
-  const injected = []
-  module.apply({
+  const effects = []
+  const ctx = {
+    get: () => undefined,
+    effect(fn) {
+      effects.push(fn())
+      return () => {}
+    },
     slots: {
       inject(slot, callback) {
-        injected.push(slot)
+        injections.push(slot)
         callback()
         return () => {}
       },
@@ -43,11 +53,19 @@ test('client.js 注册到 shell.overlay', async () => {
         return () => {}
       },
     },
-  })
+  }
 
-  assert.deepEqual(injected, ['shell.overlay'])
-  assert.equal(registered.length, 1)
-  assert.equal(registered[0].options.name, 'shell.overlay')
-  assert.equal(registered[0].options.id, 'dsh-vidnote.window')
-  assert.equal(typeof registered[0].component, 'function')
+  module.apply(ctx)
+
+  assert.deepEqual(injections, ['main', 'sidebar.panellist'])
+  assert.equal(registered.length, 2)
+
+  const page = registered.find((entry) => entry.options.name === 'main')
+  assert.equal(page?.options.key, 'vidnote')
+  assert.equal(typeof page?.component, 'function')
+
+  const row = registered.find((entry) => entry.options.name === 'sidebar.panellist')
+  assert.equal(row?.options.id, 'vidnote')
+  assert.equal(typeof row?.component, 'function')
+  assert.equal(effects.length, 1)
 })

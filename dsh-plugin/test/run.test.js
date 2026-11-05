@@ -31,10 +31,10 @@ test('fetch 参数：默认只带 --stdout', () => {
   assert.deepEqual(buildArgs('fetch', { target: ' BV1xx ' }), ['fetch', 'BV1xx', '--stdout'])
 })
 
-test('fetch 参数：分P、关键帧、转写引擎', () => {
+test('fetch 参数：分P、转写引擎；--stdout 下不传关键帧', () => {
   assert.deepEqual(
     buildArgs('fetch', { target: 'BV1', page: 2, frames: 4, transcribe: 'vosk-cn' }),
-    ['fetch', 'BV1', '--stdout', '--page', '2', '--frames', '4', '--vosk'],
+    ['fetch', 'BV1', '--stdout', '--page', '2', '--vosk'],
   )
   assert.deepEqual(
     buildArgs('fetch', { target: 'BV1', transcribe: 'small' }),

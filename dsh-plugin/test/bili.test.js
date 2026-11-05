@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parseUsers, searchUsers, userSearchUrl } from '../lib/bili.js'
+import { parseUsers, parseVideos, searchUsers, searchVideos, userSearchUrl, videoSearchUrl } from '../lib/bili.js'
 
 const data = {
   result: [
@@ -57,4 +57,30 @@ test('searchUsers 返回解析后的列表', async () => {
 
 test('searchUsers 空关键词直接报错', async () => {
   await assert.rejects(searchUsers('  ', {}), /不能为空/)
+})
+
+const grouped = {
+  result: [
+    { result_type: 'video', data: [
+      { bvid: 'BV1', title: '<em>标题</em>', author: 'UP', duration: '3:20', play: 42 },
+    ] },
+    { result_type: 'bili_user', data: [{ mid: 1, uname: 'u' }] },
+  ],
+}
+
+test('parseVideos 只取 video 分组并去标签', () => {
+  assert.deepEqual(parseVideos(grouped), [
+    { bvid: 'BV1', title: '标题', author: 'UP', duration: '3:20', play: 42, url: 'https://www.bilibili.com/video/BV1' },
+  ])
+})
+
+test('videoSearchUrl 带编码后的关键词', () => {
+  assert.match(videoSearchUrl('python 异步'), /keyword=python\+%E5%BC%82%E6%AD%A5/)
+})
+
+test('searchVideos 返回解析后的列表', async () => {
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ code: 0, data: grouped }) })
+  const videos = await searchVideos('python', { fetchImpl })
+  assert.equal(videos.length, 1)
+  assert.equal(videos[0].bvid, 'BV1')
 })

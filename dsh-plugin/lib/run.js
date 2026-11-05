@@ -89,7 +89,7 @@ export function buildArgs(command, args = {}) {
   if (command === 'fetch') {
     const argv = ['fetch', String(args.target ?? '').trim(), '--stdout']
     if (args.page && Number(args.page) > 1) argv.push('--page', String(Number(args.page)))
-    if (args.frames && Number(args.frames) > 0) argv.push('--frames', String(Number(args.frames)))
+    // `--stdout` 只输出文本，vidnote 会跳过关键帧；传 `--frames` 只会让进程以 1 退出。
     if (args.transcribe === 'vosk-cn') argv.push('--vosk')
     else if (args.transcribe) argv.push('--whisper', '--model', String(args.transcribe))
     return argv

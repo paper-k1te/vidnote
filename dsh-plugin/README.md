@@ -42,18 +42,26 @@ dsh plugin --profile desktop add ./dsh-plugin
 dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#main&path:/dsh-plugin"
 ```
 
-安装后重启 DSH，会话里就能看到 `vidnote_note` / `vidnote_search` / `vidnote_user`，Web 界面右下角也会出现「B站」按钮。
+安装后重启 DSH，会话里就能看到 `vidnote_note` / `vidnote_search` / `vidnote_user`，左侧边栏也会多一个「B站笔记」入口。
 
-## 交互窗口
+## 原生界面
 
-插件没有重写 vidnote 的界面，而是把原来那个窗口整扇搬进来：
+界面是**用 DSH 自己的组件和主题变量重写的**，不是 iframe：
 
-1. 点「B站」按钮 → 前端 `GET /vidnote/url`；
-2. 宿主的这条路由会用 `vidnote serve-ui --port <空闲端口>` 拉起本地服务，轮询 `/api/health` 直到就绪；
-3. 前端拿到地址后用一个 iframe 铺满弹窗，里面就是 `vidnote/ui/index.html` 原页面；
-4. 关掉弹窗，页面停止 ping，服务 20 秒后自动退出，不留后台进程。再次打开会重新拉起。
+- 左侧边栏一个纸鸢图标，点开是主区域的一整页「B站笔记」；
+- 「抓取视频」：链接、分P、关键帧、解析方案，生成后结果直接渲染在下方，可复制 / 下载 `.md`，抓取期间有等待计时；
+- 「搜索」：视频 / UP 主切换，点视频会把链接填回抓取页；
+- 深浅色跟随 DSH 主题（全部用 `--dsw-alias-*` 变量），中英文跟随 DSH 语言。
 
-要求 vidnote 支持 `serve-ui`（0.3.0 起，桌面版和 pip 版都有）。窗口和服务都只监听 `127.0.0.1`。
+数据走三条同源接口：
+
+| 接口 | 作用 |
+| --- | --- |
+| `POST /vidnote/api/fetch` | 调 `vidnote fetch --stdout`，返回 Markdown |
+| `POST /vidnote/api/search` | 视频走 `search/all/v2`，UP 主走 `search/type` |
+| `GET /vidnote/url` | 可选：拉起 `vidnote serve-ui`，给「打开原界面」用 |
+
+「打开原界面」会打开原来的 vidnote 窗口（要求 vidnote 支持 `serve-ui`，0.3.0 起）。原窗口关掉后服务 20 秒自动退出，不留后台进程。所有服务都只监听 `127.0.0.1`。
 
 ## 配置
 
@@ -79,18 +87,19 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#
 | --- | --- |
 | `target` | 必填，B 站链接 / BV 号 / av 号 |
 | `page` | 分P 序号，默认 1 |
-| `frames` | 导出关键帧张数，0 表示不抽 |
 | `transcribe` | 留空不转写；`vosk-cn` 用 Vosk 小模型（42 MB）；`tiny`/`base`/`small` 用 whisper |
+
+注意：工具走 `--stdout`，vidnote 在这个模式下会跳过关键帧（传 `--frames` 反而会让进程以 1 退出），所以关键帧只在「打开原界面」或直接用 CLI 时才有。
 
 `vidnote_search` / `vidnote_user`：`keyword` 必填，`limit` 默认 10（`vidnote_user` 最多 50）。
 
 ## 开发
 
 ```sh
-node --test        # 20 个用例，全部是纯逻辑（请求都传 fake fetch），不需要装 DSH
+node --test        # 29 个用例，全部是纯逻辑（请求都传 fake fetch），不需要装 DSH
 ```
 
-`lib/run.js`、`lib/bili.js`、`lib/ui.js` 都不 import 任何 DSH 的包，所以测试可以在没有 DSH 的环境里跑；`index.js` 才依赖 `@deepseek-ai/dsh-tools`。
+`lib/run.js`、`lib/bili.js`、`lib/api.js`、`lib/ui.js` 都不 import 任何 DSH 的包，所以测试可以在没有 DSH 的环境里跑；`index.js` 才依赖 `@deepseek-ai/dsh-tools`。
 
 ## 排错
 
@@ -111,4 +120,5 @@ icacls <目录> /setintegritylevel Medium /t /c
 - 每次工具调用会起一个 vidnote 进程，冷启动约 1 秒（单文件 exe 要解压）；
 - 转写走本机 CPU，长视频会占满一个核；
 - 工具带 `--stdout`，笔记只回到会话里，不写文件；要落盘就用 CLI 的 `vidnote fetch ... --dir ...`；
-- 交互窗口是 iframe 嵌的另一个本地端口，和 DSH 页面不同源；快捷键、主题跟随由 vidnote 页面自己决定，不跟 DSH 的深色模式联动。
+- 原生界面里的抓取是「一次请求等到结束」，没有逐条进度：转写长视频时只能看到等待计时，进度条仍是原窗口的；
+- 「打开原界面」打开的仍是 vidnote 自己的页面（另一个本地端口），它不跟随 DSH 主题。

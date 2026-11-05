@@ -1,7 +1,7 @@
 {
   "name": "dsh-vidnote",
-  "version": "0.2.0",
-  "description": "Bilibili videos to timestamped Markdown notes: tools, UP search, and the vidnote window inside DSH.",
+  "version": "0.3.0",
+  "description": "Bilibili videos to timestamped Markdown: native DSH panel, tools, and UP search.",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -9,6 +9,7 @@
     "./client": "./client.js",
     "./lib/run": "./lib/run.js",
     "./lib/bili": "./lib/bili.js",
+    "./lib/api": "./lib/api.js",
     "./lib/ui": "./lib/ui.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./locale/*.json": "./locale/*.json",
@@ -20,6 +21,7 @@
     "client.js",
     "lib/run.js",
     "lib/bili.js",
+    "lib/api.js",
     "lib/ui.js",
     "cordis.patch.yml",
     "locale/*.json",

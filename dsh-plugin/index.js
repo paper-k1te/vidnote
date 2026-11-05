@@ -1,4 +1,5 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import { createHandlers } from './lib/api.js'
 import { searchUsers } from './lib/bili.js'
 import { buildArgs, resolveCli, runVidnote } from './lib/run.js'
 import { createUiServer } from './lib/ui.js'
@@ -21,7 +22,15 @@ export function apply(ctx, config = {}) {
   const ui = createUiServer({ cliPath })
   ctx.effect(() => () => ui.stop())
 
-  // 浏览器里的「B站笔记」按钮通过这个路由拿本地界面地址。服务只监听 127.0.0.1。
+  const api = createHandlers({ cliPath, timeoutMs })
+  for (const [path, handler] of [
+    ['/vidnote/api/search', api.search],
+    ['/vidnote/api/fetch', api.fetch],
+  ]) {
+    ctx.effect(() => ctx.webServer.register({ kind: 'exact', path, handler }))
+  }
+
+  // 「打开原界面」用：拉起 `vidnote serve-ui` 并返回地址，服务只监听 127.0.0.1。
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: '/vidnote/url',
@@ -46,11 +55,10 @@ export function apply(ctx, config = {}) {
   ctx.tools.register(defineTool({
     name: 'vidnote_note',
     description:
-      '把 B 站视频抓成一篇带时间戳的 Markdown 笔记（标题、UP 主、分P、字幕/转写、可选关键帧）。',
+      '把 B 站视频抓成一篇带时间戳的 Markdown 笔记（标题、UP 主、分P、字幕或本地转写）。',
     parameters: {
       target: { type: 'string', required: true, description: 'B 站链接、BV 号或 av 号' },
       page: { type: 'number', description: '分P 序号，默认 1' },
-      frames: { type: 'number', description: '导出关键帧张数，0 表示不抽' },
       transcribe: {
         type: 'string',
         description:

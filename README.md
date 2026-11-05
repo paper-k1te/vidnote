@@ -289,7 +289,7 @@ agent 会多出一个工具 `fetch_note`：
 | `vidnote_search` | 按关键词搜 B 站视频，返回 BV 号、标题、UP 主、时长、播放量（JSON） |
 | `vidnote_user` | 按关键词搜 UP 主，返回 UID、昵称、粉丝、投稿数、签名、空间链接（JSON） |
 
-原来的交互窗口也一起搬了进来：Web 界面右下角的「B站」按钮会打开一个弹窗，里面就是 vidnote 自己的界面（`vidnote serve-ui`），抓取、搜索、进度、关键帧预览都在。
+界面也是原生的一页，不是嵌网页：左侧边栏的「B站笔记」打开主区域整页，抓取表单、结果预览、视频/UP 主搜索都用 DSH 自己的组件和主题变量，深浅色和语言跟着 DSH 走；需要原窗口时页面里还有「打开原界面」。
 
 ```bash
 dsh plugin --profile desktop add ./dsh-plugin
