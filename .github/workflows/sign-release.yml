@@ -1,0 +1,205 @@
+# Sign the Windows release with SignPath (free for open-source projects).
+#
+# One-time setup:
+#   1. Apply to the SignPath Foundation program for this public MIT-licensed repo:
+#      https://signpath.org/apply
+#   2. In SignPath, create/select an organization and a project, then link the
+#      predefined "GitHub.com" trusted build system to the project.
+#   3. Install the SignPath GitHub App and grant it access to this repository.
+#   4. Create an artifact configuration for a ZIP archive that contains
+#      `vidnote-app.exe` at the archive root, with a PE Authenticode signature.
+#      (Upload one of our unsigned exes as a sample and let SignPath generate it.)
+#   5. Create a signing policy (e.g. `release-signing`) and an API token for a
+#      user with submitter permission.
+#   6. Add these repository variables:
+#        SIGNPATH_ORGANIZATION_ID
+#        SIGNPATH_PROJECT_SLUG
+#        SIGNPATH_SIGNING_POLICY_SLUG
+#        SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
+#      and this repository secret:
+#        SIGNPATH_API_TOKEN
+#
+# Run this workflow manually with the release tag after the GitHub Release has
+# been created. It rebuilds the lite/full exe, signs both through SignPath,
+# verifies the signatures, re-packs the release ZIPs and replaces the assets.
+
+name: Sign Windows release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v0.3.1
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  sign:
+    runs-on: windows-latest
+    steps:
+      - name: Check SignPath configuration
+        shell: pwsh
+        env:
+          ORG: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          PROJECT: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          POLICY: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          CONFIG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          $missing = @()
+          if (-not $env:ORG) { $missing += 'SIGNPATH_ORGANIZATION_ID (variable)' }
+          if (-not $env:PROJECT) { $missing += 'SIGNPATH_PROJECT_SLUG (variable)' }
+          if (-not $env:POLICY) { $missing += 'SIGNPATH_SIGNING_POLICY_SLUG (variable)' }
+          if (-not $env:CONFIG) { $missing += 'SIGNPATH_ARTIFACT_CONFIGURATION_SLUG (variable)' }
+          if (-not $env:TOKEN) { $missing += 'SIGNPATH_API_TOKEN (secret)' }
+          if ($missing.Count) {
+            throw "SignPath 配置不完整：$($missing -join '、')"
+          }
+
+      - name: Check out the release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Resolve release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${{ inputs.tag }}" -R "${{ github.repository }}" --json tagName | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release ${{ inputs.tag }} 不存在；请先创建 Release 再运行签名。"
+          }
+          $version = ('${{ inputs.tag }}' -replace '^v', '')
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Validate tag and version
+        shell: pwsh
+        run: |
+          $sourceVersion = [regex]::Match(
+            (Get-Content pyproject.toml -Raw),
+            'version = "([^"]+)"'
+          ).Groups[1].Value
+          if (-not $sourceVersion -or $sourceVersion -ne $env:VERSION) {
+            throw "Tag ${{ inputs.tag }} 与 pyproject.toml 版本 '$sourceVersion' 不一致"
+          }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -e ".[vosk]" pyinstaller
+
+      - name: Build lite app
+        shell: pwsh
+        run: powershell -NoProfile -File scripts\build_app.ps1
+
+      - name: Build full app
+        shell: pwsh
+        run: powershell -NoProfile -File scripts\build_app.ps1 -Full
+
+      - name: Upload unsigned full exe
+        id: unsigned-full
+        uses: actions/upload-artifact@v4
+        with:
+          name: vidnote-unsigned-full-${{ github.run_id }}
+          path: dist-app-full\vidnote-app.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload unsigned lite exe
+        id: unsigned-lite
+        uses: actions/upload-artifact@v4
+        with:
+          name: vidnote-unsigned-lite-${{ github.run_id }}
+          path: dist-app\vidnote-app.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign full exe
+        id: sign-full
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-full.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 900
+          output-artifact-directory: signed-full
+
+      - name: Sign lite exe
+        id: sign-lite
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-lite.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 900
+          output-artifact-directory: signed-lite
+
+      - name: Verify signatures
+        shell: pwsh
+        run: |
+          $files = @(
+            (Get-ChildItem signed-full -Recurse -Filter vidnote-app.exe | Select-Object -First 1),
+            (Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1)
+          )
+          if ($files.Count -ne 2 -or ($files | Where-Object { $_ -eq $null }).Count) {
+            throw "SignPath 返回的产物里找不到两个 vidnote-app.exe"
+          }
+          foreach ($file in $files) {
+            $signature = Get-AuthenticodeSignature -FilePath $file.FullName
+            if ($signature.Status -ne 'Valid') {
+              throw "签名校验失败：$($file.FullName) ($($signature.Status))"
+            }
+            "已签名：$($file.FullName) / $($signature.SignerCertificate.Subject)"
+          }
+
+      - name: Re-pack signed release assets
+        shell: pwsh
+        run: |
+          $full = Get-ChildItem signed-full -Recurse -Filter vidnote-app.exe | Select-Object -First 1
+          $lite = Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1
+          Compress-Archive -Path $full.FullName -DestinationPath "vidnote-app-full-$env:VERSION.zip" -Force
+          Compress-Archive -Path $lite.FullName -DestinationPath "vidnote-app-lite-$env:VERSION.zip" -Force
+
+      - name: Replace release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ inputs.tag }}" `
+            "vidnote-app-full-$env:VERSION.zip" `
+            "vidnote-app-lite-$env:VERSION.zip" `
+            --clobber -R "${{ github.repository }}"
+
+      - name: Write signing summary
+        if: always()
+        shell: pwsh
+        run: |
+          @"
+          ## SignPath
+
+          - Full signing request: ${{ steps.sign-full.outputs.signing-request-web-url }}
+          - Lite signing request: ${{ steps.sign-lite.outputs.signing-request-web-url }}
+          "@ >> $env:GITHUB_STEP_SUMMARY
