@@ -22,9 +22,12 @@
 
 1. 配置里的 `cliPath`
 2. 环境变量 `VIDNOTE_CLI`
-3. `%LOCALAPPDATA%\vidnote\vidnote.exe`
-4. `%USERPROFILE%\Desktop\vidnote-app-full\vidnote-server.exe`
-5. PATH 上的 `vidnote`
+3. 仓库里的 `dist-exe-full/vidnote-server.exe`、`dist-exe/vidnote.exe`（开发时直接可用）
+4. `%LOCALAPPDATA%\vidnote\vidnote.exe`
+5. 桌面上的 `vidnote-app*/vidnote-server.exe`
+6. PATH 上的 `vidnote`
+
+需要读登录后才可见的字幕时，设置环境变量 `VIDNOTE_COOKIE`（值为 B 站的 SESSDATA），插件会把环境原样传给命令行。
 
 ## 安装
 
