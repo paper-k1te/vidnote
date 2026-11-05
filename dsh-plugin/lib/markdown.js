@@ -18,17 +18,22 @@ export function stripFrontmatter(markdown) {
   return { meta, body: text.slice(match[0].length).replace(/^\r?\n+/, '') }
 }
 
-/** 行内：**粗体**、*斜体*、`代码`、[文字](url)。 */
+/** 行内：**粗体**、*斜体*、`代码`、[文字](url)、![图](<路径>)。 */
 export function parseInline(text) {
   const source = String(text ?? '')
   const nodes = []
-  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\*[^*]+\*)/g
+  const pattern = /(!\[[^\]]*\]\(<[^>]+>\)|!\[[^\]]*\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\*[^*]+\*)/g
   let last = 0
   let match
   while ((match = pattern.exec(source)) !== null) {
     if (match.index > last) nodes.push({ type: 'text', value: source.slice(last, match.index) })
     const token = match[0]
-    if (token.startsWith('**')) nodes.push({ type: 'strong', value: token.slice(2, -2) })
+    if (token.startsWith('!')) {
+      const image = /^!\[([^\]]*)\]\(<?([^)>]+)>?\)$/.exec(token)
+      nodes.push(image
+        ? { type: 'image', alt: image[1], src: image[2] }
+        : { type: 'text', value: token })
+    } else if (token.startsWith('**')) nodes.push({ type: 'strong', value: token.slice(2, -2) })
     else if (token.startsWith('`')) nodes.push({ type: 'code', value: token.slice(1, -1) })
     else if (token.startsWith('[')) {
       const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token)

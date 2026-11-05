@@ -289,7 +289,7 @@ agent 会多出一个工具 `fetch_note`：
 | `vidnote_search` | 按关键词搜 B 站视频，返回 BV 号、标题、UP 主、时长、播放量（JSON） |
 | `vidnote_user` | 按关键词搜 UP 主，返回 UID、昵称、粉丝、投稿数、签名、空间链接（JSON） |
 
-界面也是原生的：会话视图栏里「对话 / 轨迹」旁边多一个「B站笔记」，点开就是照着原窗口排的左侧导航 + 表单 + 渲染好的 Markdown 预览；全部用 DSH 的 slot 和主题变量，深浅色和语言跟着 DSH 走。需要原窗口时点「打开原界面」，会起 vidnote 自己的独立应用窗口。
+界面也是原生的：会话视图栏里「对话 / 轨迹」旁边多一个「B站笔记」，布局照着原窗口（左侧导航 + 表单 + 渲染好的 Markdown 预览）；抓取进度、关键帧、输出目录、Cookie、whisper 依赖都通过代理复用 vidnote 自己的接口，功能和原窗口一致，状态切标签页不会丢。需要原窗口时点「打开原界面」，会起 vidnote 自己的独立应用窗口。
 
 ```bash
 dsh plugin --profile desktop add ./dsh-plugin

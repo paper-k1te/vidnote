@@ -20,6 +20,12 @@ test('parseInline 处理粗体、代码、链接', () => {
   ])
 })
 
+test('parseInline 处理尖括号包裹的关键帧图片', () => {
+  assert.deepEqual(parseInline('![关键帧 00:12](<BV1_frames/000012.jpg>)'), [
+    { type: 'image', alt: '关键帧 00:12', src: 'BV1_frames/000012.jpg' },
+  ])
+})
+
 test('parseBlocks 解析标题、表格、引用、列表', () => {
   const blocks = parseBlocks([
     '## 视频信息',

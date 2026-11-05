@@ -1,7 +1,9 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { createHandlers } from './lib/api.js'
 import { searchUsers } from './lib/bili.js'
+import { createProxy } from './lib/proxy.js'
 import { buildArgs, resolveCli, runVidnote } from './lib/run.js'
+import { createUiServer } from './lib/ui.js'
 import { openAppWindow } from './lib/window.js'
 
 export const name = 'dsh-vidnote'
@@ -15,19 +17,33 @@ export const inject = ['tools', 'webServer']
  *   - vidnote_search 给关键词，返回候选视频列表
  *   - vidnote_user   给关键词，返回候选 UP 主（直接请求 B 站搜索接口）
  *
- * 浏览器侧还有一张输入框上方的卡片，走 /vidnote/api/*。
+ * 浏览器侧是「对话 / 轨迹」旁边的第三个视图，界面走代理复用 vidnote 自己的
+ * serve-ui 接口（进度、关键帧、选目录、打开文件、whisper 依赖都在那边）。
  */
 export function apply(ctx, config = {}) {
   const cliPath = resolveCli(config)
   const timeoutMs = Number(config.timeoutMs) || 180_000
 
-  const api = createHandlers({ cliPath, timeoutMs })
-  for (const [path, handler] of [
-    ['/vidnote/api/search', api.search],
-    ['/vidnote/api/fetch', api.fetch],
-  ]) {
-    ctx.effect(() => ctx.webServer.register({ kind: 'exact', path, handler }))
-  }
+  const ui = createUiServer({ cliPath })
+  ctx.effect(() => () => ui.stop())
+
+  const api = createHandlers()
+  ctx.effect(() => ctx.webServer.register({
+    kind: 'exact',
+    path: '/vidnote/parse',
+    handler: api.parse,
+  }))
+
+  // /vidnote/app/api/* → 本地 serve-ui 的 /api/*（流式代理，图片和进度都在里面）
+  const proxy = createProxy(async () => {
+    await ui.ensure()
+    return ui.origin()
+  })
+  ctx.effect(() => ctx.webServer.register({
+    kind: 'prefix',
+    path: '/vidnote/app',
+    handler: proxy,
+  }))
 
   // 「打开原界面」：起 vidnote 自己的独立窗口（Edge 应用窗口），不是浏览器标签页。
   ctx.effect(() => ctx.webServer.register({
