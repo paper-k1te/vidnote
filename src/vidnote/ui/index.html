@@ -226,7 +226,7 @@
       <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
       <span id="theme-label">深色模式</span>
     </div>
-    <div class="meta">v__VERSION__</div>
+    <div class="meta">v__VERSION__ · LLM 实验版</div>
   </div>
 </aside>
 
@@ -328,16 +328,27 @@
           <input id="gemini-model" value="gemini-2.5-flash">
           <p class="field-hint">音频会上传到 Google Gemini（需要能访问 Google，必要时开代理）；API Key 只用于本次运行，不写进笔记、不保存。也可以换成 gemini-2.5-pro 等模型名。</p>
           <div class="engine-sep"></div>
-          <label>笔记精修（LLM，可选）</label>
+          <label>LLM 精修（实验，可选）</label>
           <label class="check-line">
-            <input type="checkbox" id="refine"> 用 LLM 修正错字、补标点，并生成摘要和要点
+            <input type="checkbox" id="refine"> 修正错字、补标点，并生成摘要和要点
           </label>
+          <label>模型</label>
+          <select id="llm-preset">
+            <option value="deepseek-chat" data-base="https://api.deepseek.com/v1" selected>DeepSeek V3 · deepseek-chat</option>
+            <option value="deepseek-reasoner" data-base="https://api.deepseek.com/v1">DeepSeek R1 · deepseek-reasoner</option>
+            <option value="qwen-plus" data-base="https://dashscope.aliyuncs.com/compatible-mode/v1">通义千问 · qwen-plus</option>
+            <option value="glm-4-flash" data-base="https://open.bigmodel.cn/api/paas/v4">智谱 · glm-4-flash</option>
+            <option value="moonshot-v1-8k" data-base="https://api.moonshot.cn/v1">Kimi · moonshot-v1-8k</option>
+            <option value="gpt-4o-mini" data-base="https://api.openai.com/v1">OpenAI · gpt-4o-mini</option>
+            <option value="custom">自定义（OpenAI 兼容）</option>
+          </select>
+          <label>API Key</label>
           <input id="llm-key" type="password" placeholder="sk-...">
           <div class="grid2" style="margin-top:10px">
             <div><label>接口地址</label><input id="llm-base" value="https://api.deepseek.com/v1"></div>
             <div><label>模型</label><input id="llm-model" value="deepseek-chat"></div>
           </div>
-          <p class="field-hint">任意 OpenAI 兼容接口（DeepSeek、通义千问、智谱、Kimi 等）。只上传转写文本，不上传音频；Key 不保存。</p>
+          <p class="field-hint">只上传转写文本，不上传音频；Key 只用于本次运行，不保存。选「自定义」后可手动改接口地址和模型名。</p>
         </div>
       </section>
 
@@ -526,6 +537,13 @@ function hideProgress() {
 
 /* ---- 交互 ---- */
 let jobTimer = null;
+
+$("llm-preset").onchange = () => {
+  const option = $("llm-preset").selectedOptions[0];
+  if (!option || option.value === "custom") return;
+  $("llm-base").value = option.dataset.base || "";
+  $("llm-model").value = option.value;
+};
 
 $("go").onclick = async () => {
   const target = $("target").value.trim();

@@ -41,11 +41,13 @@ def test_index_has_core_controls() -> None:
         'id="gemini-key"',
         'id="gemini-model"',
         'value="gemini"',
-        "笔记精修",
+        "LLM 精修",
         'id="refine"',
+        'id="llm-preset"',
         'id="llm-key"',
         'id="llm-base"',
         'id="llm-model"',
+        'value="deepseek-chat"',
     ):
         assert needle in html
 

@@ -18,6 +18,7 @@ dist-exe-full/
 dist-app/
 dist-app-full/
 dist-app-gemini/
+dist-app-llm/
 build/
 build-exe/
 build-exe-full/
