@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { existsSync } from 'node:fs'
 import { test } from 'node:test'
 import { buildArgs, resolveCli, runVidnote } from '../lib/run.js'
 
@@ -59,8 +60,10 @@ test('resolveCli 优先用配置里的路径', () => {
   assert.equal(resolveCli({ cliPath: process.execPath }), process.execPath)
 })
 
-test('resolveCli 找不到时回落到 PATH 上的 vidnote', () => {
-  assert.equal(resolveCli({ cliPath: 'C:/definitely/not/here.exe' }), 'vidnote')
+test('resolveCli 忽略不存在的路径，回落到可用项', () => {
+  const cli = resolveCli({ cliPath: 'C:/definitely/not/here.exe' })
+  // 仓库里构建过时会命中本地产物，没构建过则回落到 PATH 上的 vidnote。
+  assert.ok(cli === 'vidnote' || existsSync(cli), `unexpected: ${cli}`)
 })
 
 test('runVidnote 返回 stdout 并去掉尾部空白', async () => {

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readdirSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
 
 /**
@@ -11,13 +12,44 @@ import { homedir } from 'node:os'
 
 const DEFAULT_TIMEOUT = 180_000
 
-/** 依次尝试：配置里指定的路径、环境变量、PATH、桌面应用目录。 */
-export function resolveCli(config = {}) {
+const PLUGIN_DIR = dirname(dirname(fileURLToPath(import.meta.url)))
+
+/** 桌面版解压出来的目录名前缀，例如 vidnote-app-full-0.2.3。 */
+const DESKTOP_APP_PREFIX = 'vidnote-app'
+
+/** 在桌面目录里找解压好的桌面版（目录名带版本号，只能扫）。 */
+function desktopApps(home = homedir(), readdir = readdirSync) {
+  const found = []
+  for (const desktop of [join(home, 'Desktop'), join(home, 'OneDrive', 'Desktop')]) {
+    let entries = []
+    try {
+      entries = readdir(desktop, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !entry.name.startsWith(DESKTOP_APP_PREFIX)) continue
+      for (const exe of ['vidnote-server.exe', 'vidnote.exe']) {
+        const candidate = join(desktop, entry.name, exe)
+        if (existsSync(candidate)) found.push(candidate)
+      }
+    }
+  }
+  return found
+}
+
+/** 依次尝试：配置、环境变量、仓库里的构建产物、常见安装位置、桌面版、PATH。 */
+export function resolveCli(config = {}, env = process.env, readdir = readdirSync) {
   const candidates = [
     config.cliPath,
-    process.env.VIDNOTE_CLI,
-    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'vidnote', 'vidnote.exe'),
-    process.env.USERPROFILE && join(process.env.USERPROFILE, 'Desktop', 'vidnote-app-full', 'vidnote-server.exe'),
+    env.VIDNOTE_CLI,
+    // 从仓库里直接 link 进来时，构建产物就在隔壁（开发场景最常见）
+    join(PLUGIN_DIR, '..', 'dist-exe-full', 'vidnote-server.exe'),
+    join(PLUGIN_DIR, '..', 'dist-exe', 'vidnote.exe'),
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'vidnote', 'vidnote.exe'),
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'Programs', 'vidnote', 'vidnote.exe'),
+    env.USERPROFILE && join(env.USERPROFILE, 'Desktop', 'vidnote-app-full', 'vidnote-server.exe'),
+    ...desktopApps(env.USERPROFILE || homedir(), readdir),
   ].filter(Boolean)
 
   for (const candidate of candidates) {
