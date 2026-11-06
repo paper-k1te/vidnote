@@ -114,7 +114,7 @@ icacls <目录> /setintegritylevel Medium /t /c
 ## 已知限制
 
 - 每次工具调用会起一个 vid2note 进程，冷启动约 1 秒；界面服务第一次打开约 3–5 秒；
-- 转写走本机 CPU，长视频会占满一个核；
+- 转写默认走云端（Gemini / OpenAI 兼容 Whisper），需要 API Key；本地 Vosk 改为可选安装；
 - 界面状态和历史上限 24 条，存在**当前浏览器**里：刷新或换设备会重置，不同步；
 - 界面抓取会把笔记和关键帧写进输出目录（默认 `%LOCALAPPDATA%\vid2note\notes`）；
 - 「打开原界面」优先起 Tauri 桌面端；没有桌面端时退回 Edge 应用窗口，那个不跟随 DSH 主题。
