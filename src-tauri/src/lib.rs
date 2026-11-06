@@ -35,6 +35,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_server_port,
             get_app_info,
+            tauri_api,
             pick_folder,
             reveal_path,
             open_file,

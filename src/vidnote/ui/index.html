@@ -836,6 +836,19 @@
   }
 
   async function api(path, options = {}) {
+    if (isTauri && tauriInvoke) {
+      try {
+        const method = options.method || 'GET';
+        const body = options.body || null;
+        const resText = await tauriInvoke('tauri_api', { path, method, body });
+        const data = JSON.parse(resText);
+        if (data.error) throw new Error(data.error);
+        return data;
+      } catch (err) {
+        console.warn('Tauri IPC 调用失败，回退至网络请求:', err);
+      }
+    }
+
     let port = await getServerPort();
     let url = path;
     if (path.startsWith('/api/')) {
