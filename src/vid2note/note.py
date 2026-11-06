@@ -301,10 +301,10 @@ def build_note(
     if len(meta.pages) > 1:
         lines += ["## 分P", ""]
         for page in meta.pages:
-            marker = "**" if current and page.index == current.index else ""
+            marker = "▶ " if current and page.index == current.index else ""
             lines.append(
                 f"- {marker}[P{page.index} {page.title}]({url}?p={page.index})"
-                f"（{fmt_ts(page.duration)}）{marker}"
+                f"（{fmt_ts(page.duration)}）"
             )
         lines.append("")
 
@@ -313,17 +313,17 @@ def build_note(
         lines += ["## 合集", ""]
         season_url = _season_url(season)
         label = f"[{season.title}]({season_url})" if season_url else season.title
-        lines.append(f"**{label}**（共 {len(season.episodes)} 集）")
+        lines.append(f"{label}（共 {len(season.episodes)} 集）")
         lines.append("")
         for section in season.sections:
             if len(season.sections) > 1 and section.title:
                 lines += [f"### {section.title}", ""]
             for episode in section.episodes:
-                marker = "**" if episode.bvid == meta.bvid else ""
+                marker = "▶ " if episode.bvid == meta.bvid else ""
                 suffix = f"?p={episode.page}" if episode.page > 1 else ""
                 lines.append(
                     f"- {marker}[{episode.title}]({episode.url}{suffix})"
-                    f"（{fmt_ts(episode.duration)}）{marker}"
+                    f"（{fmt_ts(episode.duration)}）"
                 )
             lines.append("")
 
@@ -331,14 +331,14 @@ def build_note(
         lines += ["## 字幕", ""]
         buckets = _frames_by_cue(cues, frames) if frames else {}
         for index, cue in enumerate(cues):
-            lines.append(f"**{ts_link(url, cue.start)}** {cue.text}")
+            lines.append(f"{ts_link(url, cue.start)} {cue.text}")
             lines.append("")
             for seconds, relative in buckets.get(index, []):
                 lines += _frame_image(seconds, relative)
     elif frames:
         lines += ["## 关键帧", ""]
         for seconds, relative in sorted(frames):
-            lines.append(f"**{ts_link(url, seconds)}**")
+            lines.append(ts_link(url, seconds))
             lines.append("")
             lines += _frame_image(seconds, relative)
 

@@ -116,7 +116,7 @@ vid2note gui
 
 ### 桌面应用（Tauri 2.0 原生 Rust 桌面端 + 系统托盘）
 
-v0.4.3 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
+v0.4.4 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
 
 ```powershell
 powershell -File scripts/build_tauri.ps1

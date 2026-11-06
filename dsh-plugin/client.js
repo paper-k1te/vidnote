@@ -398,7 +398,7 @@ window.__ModuleLoader__.load({
 .vn-tips { margin: 0; padding-left: 18px; }
 .vn-tips li { margin: 6px 0; line-height: 1.7; font-size: 13px; }
 
-/* ---- 0.4.3 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
+/* ---- 0.4.4 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
 .vn-view { background: radial-gradient(1100px 380px at 18% -12%, rgba(251,114,153,.10), transparent 62%), radial-gradient(900px 320px at 92% 0%, rgba(249,115,22,.10), transparent 58%), var(--dsw-alias-bg-base, #fff); }
 .vn-side { width: 184px; gap: 3px; }
 .vn-brand { padding-bottom: 16px; }
@@ -1358,7 +1358,7 @@ window.__ModuleLoader__.load({
               h(entry.icon),
               h('span', null, t[entry.nav]))),
           h('div', { className: 'vn-side-foot' },
-            h('span', { className: 'vn-version' }, 'v0.4.3 · Tauri'),
+            h('span', { className: 'vn-version' }, 'v0.4.4 · Tauri'),
             h('button', { type: 'button', className: 'vn-ghost', onClick: openWindow }, state.opened ? t.opened : t.legacy))),
         h('main', { className: 'vn-main' },
           h('div', { className: 'vn-topbar' },

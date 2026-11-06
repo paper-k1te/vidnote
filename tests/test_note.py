@@ -98,6 +98,12 @@ def test_keyframes_are_placed_next_to_matching_cue() -> None:
     assert "## 关键帧" not in text
 
 
+def test_timestamp_links_are_not_bold() -> None:
+    text = build_note(META, CUES, options=NoteOptions(fetched=date(2026, 11, 4)))
+    assert "**[" not in text
+    assert ts_link(META.url, 754) in text
+
+
 def test_keyframes_without_transcript_get_their_own_section() -> None:
     text = build_note(
         META,
