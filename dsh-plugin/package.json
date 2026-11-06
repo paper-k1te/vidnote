@@ -1,7 +1,7 @@
 {
   "name": "dsh-vidnote",
-  "version": "0.5.1",
-  "description": "Bilibili videos to timestamped Markdown: native DSH view, tools, and UP search.",
+  "version": "0.6.0",
+  "description": "vid2note for DeepSeek Harness: native view, tools, and UP search for Bilibili videos.",
   "type": "module",
   "main": "index.js",
   "exports": {

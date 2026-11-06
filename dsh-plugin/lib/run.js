@@ -67,10 +67,23 @@ function desktopApps(home = homedir(), readdir = readdirSync) {
 export function resolveCli(config = {}, env = process.env, readdir = readdirSync) {
   const candidates = [
     config.cliPath,
+    env.VID2NOTE_CLI,
     env.VIDNOTE_CLI,
+    // 仓库里开着 editable 的 venv 时优先用它（开发场景下比旧构建产物新）
+    join(PLUGIN_DIR, '..', '.venv', 'Scripts', 'vid2note.exe'),
+    join(PLUGIN_DIR, '..', '.venv', 'Scripts', 'vidnote.exe'),
     // 从仓库里直接 link 进来时，构建产物就在隔壁（开发场景最常见）
-    join(PLUGIN_DIR, '..', 'dist-exe-full', 'vidnote-server.exe'),
+    join(PLUGIN_DIR, '..', 'dist-exe', 'vid2note-server.exe'),
+    join(PLUGIN_DIR, '..', 'dist-exe', 'vid2note.exe'),
+    join(PLUGIN_DIR, '..', 'dist-exe-full', 'vid2note-server.exe'),
+    join(PLUGIN_DIR, '..', 'dist-exe', 'vidnote-server.exe'),
     join(PLUGIN_DIR, '..', 'dist-exe', 'vidnote.exe'),
+    join(PLUGIN_DIR, '..', 'dist-exe-full', 'vidnote-server.exe'),
+    // Tauri 桌面端随包带的 Python 后端
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'vid2note', 'runtime', 'vid2note-server.exe'),
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'vid2note', 'vid2note.exe'),
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'Programs', 'vid2note', 'vid2note.exe'),
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'vidnote', 'runtime', 'vidnote-server.exe'),
     env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'vidnote', 'vidnote.exe'),
     env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'Programs', 'vidnote', 'vidnote.exe'),
     env.USERPROFILE && join(env.USERPROFILE, 'Desktop', 'vidnote-app-full', 'vidnote-server.exe'),
@@ -81,7 +94,7 @@ export function resolveCli(config = {}, env = process.env, readdir = readdirSync
     if (existsSync(candidate)) return candidate
   }
   // 交给 PATH 解析；找不到时由调用方给出清晰错误。
-  return 'vidnote'
+  return 'vid2note'
 }
 
 /** 把工具参数翻译成命令行参数。 */
@@ -125,7 +138,7 @@ export function runVidnote(argv, { cliPath, timeoutMs = DEFAULT_TIMEOUT, signal,
 
     const timer = setTimeout(() => {
       child.kill()
-      reject(new Error(`vidnote 超时（${Math.round(timeoutMs / 1000)} 秒）`))
+      reject(new Error(`vid2note 超时（${Math.round(timeoutMs / 1000)} 秒）`))
     }, timeoutMs)
 
     const onAbort = () => {
@@ -139,15 +152,15 @@ export function runVidnote(argv, { cliPath, timeoutMs = DEFAULT_TIMEOUT, signal,
       signal?.removeEventListener('abort', onAbort)
       if (error.code === 'ENOENT') {
         reject(new Error(
-          `找不到 vidnote 命令行（尝试执行「${cliPath}」）。\n` +
+          `找不到 vid2note 命令行（尝试执行「${cliPath}」）。\n` +
           '请任选一种方式指定：\n' +
-          '  1. 设置环境变量 VIDNOTE_CLI 指向 vidnote.exe 或 vidnote-server.exe；\n' +
+          '  1. 设置环境变量 VID2NOTE_CLI（或 VIDNOTE_CLI）指向 vid2note.exe / vid2note-server.exe；\n' +
           '  2. 在 profile 的 cordis.patch.yml 里给 dsh-vidnote 配置 cliPath；\n' +
-          '  3. 把 vidnote 加到 PATH。',
+          '  3. 把 vid2note 加到 PATH。',
         ))
         return
       }
-      reject(new Error(`无法启动 vidnote（${cliPath}）：${error.message}`))
+      reject(new Error(`无法启动 vid2note（${cliPath}）：${error.message}`))
     })
 
     child.on('close', (code) => {
@@ -162,8 +175,8 @@ export function runVidnote(argv, { cliPath, timeoutMs = DEFAULT_TIMEOUT, signal,
       // PyInstaller 只会吐一行 PYI-xxxx 错误，模型看不出该怎么办。
       if (/PYI-\d+:ERROR\].*(temporary directory|parent directory)/i.test(detail)) {
         reject(new Error(
-          'vidnote 无法解压运行环境：单文件 exe 需要可写的临时目录。\n' +
-          '请把 TEMP/TMP 指向可写目录，或把 vidnote 可执行文件移到普通目录（不要放在带低完整性标签的沙箱目录）后重试。\n' +
+          'vid2note 无法解压运行环境：单文件 exe 需要可写的临时目录。\n' +
+          '请把 TEMP/TMP 指向可写目录，或把 vid2note 可执行文件移到普通目录（不要放在带低完整性标签的沙箱目录）后重试。\n' +
           `原始输出：${detail}`,
         ))
         return

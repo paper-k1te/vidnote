@@ -16,16 +16,19 @@ import { createServer } from 'node:net'
 
 const HOST = '127.0.0.1'
 
-/** 默认落盘目录：%LOCALAPPDATA%\vidnote\notes（外一层的进程 cwd 不一定是用户目录）。 */
+/** 默认落盘目录：%LOCALAPPDATA%\vid2note\notes（旧版是 vidnote\notes）。 */
 export function notesDir(env = process.env) {
   const base = env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local')
-  const dir = join(base, 'vidnote', 'notes')
-  try {
-    mkdirSync(dir, { recursive: true })
-    return dir
-  } catch {
-    return homedir()
+  for (const name of ['vid2note', 'vidnote']) {
+    const dir = join(base, name, 'notes')
+    try {
+      mkdirSync(dir, { recursive: true })
+      return dir
+    } catch {
+      // 换下一个目录名
+    }
   }
+  return homedir()
 }
 
 /** 让系统分配一个空闲端口。 */

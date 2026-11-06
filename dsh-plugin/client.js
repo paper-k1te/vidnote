@@ -1,6 +1,7 @@
-// vidnote 在 DSH 里的界面：注册成「对话 / 轨迹」旁边的第三个视图。
-// 布局照着自己的窗口来——左侧导航（抓取 / 搜索 / 登录 / 下载）、顶栏、左边表单右边预览。
-// 抓取/进度/关键帧/选目录/依赖安装都通过 /vidnote/app/api/* 代理给 vidnote 自己的 serve-ui。
+// vid2note（原 vidnote）在 DSH 里的界面：注册成「对话 / 轨迹」旁边的第三个视图。
+// 布局对齐 0.3.4 的新界面：左侧导航（抓取 / 搜索 / 登录 / 下载 / 历史 / 提示），
+// 右侧「预览 / 关键帧 / 源文」三种视图 + 元数据头。
+// 抓取/进度/关键帧/选目录/依赖安装都通过 /vidnote/app/api/* 代理给 vid2note 的 serve-ui。
 // 状态放在模块级 store 里，切到「对话」再切回来不会丢。
 window.__ModuleLoader__.load({
   id: 'dsh-vidnote',
@@ -11,16 +12,20 @@ window.__ModuleLoader__.load({
     const NS = 'dsh-vidnote'
     const ACCENT = '#f97316'
     const API = '/vidnote/app/api'
+    const HISTORY_KEY = 'dsh-vidnote:history'
+    const HISTORY_LIMIT = 24
     let localeFacade = null
 
     const TEXT = {
       zh: {
-        brand: 'vidnote',
-        viewLabel: 'B站笔记',
+        brand: 'vid2note',
+        viewLabel: 'vid2note',
         fetchNav: '抓取视频',
         searchNav: '搜索',
         loginNav: '登录 B 站',
         downloadNav: '下载',
+        historyNav: '历史',
+        tipsNav: '提示',
         fetchTitle: '抓取视频',
         fetchSub: '把 B 站视频变成带时间戳的 Markdown 笔记',
         searchTitle: '搜索',
@@ -29,12 +34,16 @@ window.__ModuleLoader__.load({
         loginSub: '可选，只用于读取登录后才可见的字幕',
         downloadTitle: '下载',
         downloadSub: 'whisper 依赖与模型下载渠道',
+        historyTitle: '历史记录',
+        historySub: '最近生成的笔记，点开就能重新查看',
+        tipsTitle: '提示',
+        tipsSub: '几个常用技巧',
         target: '链接或编号',
         targetHint: 'BV1xx411c7mD 或 https://www.bilibili.com/video/...',
         page: '分P',
         frames: '关键帧',
         outdir: '输出目录',
-        outdirHint: '留空 = 当前目录',
+        outdirHint: '留空 = 默认目录',
         pick: '选择',
         plan: '解析方案',
         planNone: '不转写 · 只输出元数据',
@@ -47,6 +56,7 @@ window.__ModuleLoader__.load({
         running: '正在抓取…',
         preparing: '准备中…',
         preview: '预览',
+        gallery: '关键帧',
         source: '源文',
         copy: '复制',
         copied: '已复制',
@@ -80,19 +90,35 @@ window.__ModuleLoader__.load({
         depsMissing: '还没有安装 whisper 依赖，装好后才能选 whisper。',
         depsInstall: '安装 whisper 依赖',
         depsInstalling: '正在安装…',
+        historyEmpty: '还没有历史记录，抓一条视频试试。',
+        historyClear: '清空历史',
+        historyDelete: '删除',
+        historyLoad: '载入',
+        historyWhen: '生成于',
+        tips: [
+          '搜到视频后点一下就把编号填进抓取页，按回车直接开始。',
+          '多P 视频在「分P」里填第几集，时间戳链接会自动带上 &p=。',
+          '关键帧数量默认 6 张；填 0 就不抽帧，生成更快。',
+          '没有字幕时用「解析方案」里的 Vosk；whisper 要先在「下载」页装依赖。',
+          '生成后可以切到「关键帧」「源文」，也可以打开文件或文件夹。',
+          '历史记录只存在这个浏览器里，换设备不会同步。',
+        ],
         legacy: '打开原界面',
         opened: '已打开窗口',
         hostStale: '宿主里的插件还是旧版本：请重启 DSH 后再试。',
         noResult: '没有找到结果。',
         error: '出错了',
+        views: '播放',
       },
       en: {
-        brand: 'vidnote',
-        viewLabel: 'Bilibili Notes',
+        brand: 'vid2note',
+        viewLabel: 'vid2note',
         fetchNav: 'Fetch',
         searchNav: 'Search',
         loginNav: 'Sign in',
         downloadNav: 'Downloads',
+        historyNav: 'History',
+        tipsNav: 'Tips',
         fetchTitle: 'Fetch video',
         fetchSub: 'Turn a Bilibili video into timestamped Markdown',
         searchTitle: 'Search',
@@ -101,12 +127,16 @@ window.__ModuleLoader__.load({
         loginSub: 'Optional, only for subtitles that require a login',
         downloadTitle: 'Downloads',
         downloadSub: 'whisper dependencies and model download channel',
+        historyTitle: 'History',
+        historySub: 'Recently generated notes',
+        tipsTitle: 'Tips',
+        tipsSub: 'A few handy notes',
         target: 'Link or ID',
         targetHint: 'BV1xx411c7mD or https://www.bilibili.com/video/...',
         page: 'Part',
         frames: 'Keyframes',
         outdir: 'Output folder',
-        outdirHint: 'Empty = current directory',
+        outdirHint: 'Empty = default folder',
         pick: 'Choose',
         plan: 'Transcription',
         planNone: 'Off · metadata only',
@@ -119,6 +149,7 @@ window.__ModuleLoader__.load({
         running: 'Fetching…',
         preparing: 'Preparing…',
         preview: 'Preview',
+        gallery: 'Keyframes',
         source: 'Source',
         copy: 'Copy',
         copied: 'Copied',
@@ -152,11 +183,25 @@ window.__ModuleLoader__.load({
         depsMissing: 'whisper dependencies are not installed yet.',
         depsInstall: 'Install whisper dependencies',
         depsInstalling: 'Installing…',
+        historyEmpty: 'No history yet. Fetch a video first.',
+        historyClear: 'Clear history',
+        historyDelete: 'Delete',
+        historyLoad: 'Load',
+        historyWhen: 'Saved',
+        tips: [
+          'Click a search result to fill the id, then press Enter.',
+          'For multi-part videos set the part number; links keep &p=.',
+          'Keyframes default to 6; use 0 to skip them for a faster run.',
+          'No subtitles? Pick Vosk; whisper needs its dependencies from Downloads.',
+          'After a fetch, switch to Keyframes or Source, or open the file.',
+          'History stays in this browser only.',
+        ],
         legacy: 'Open app window',
         opened: 'Window opened',
         hostStale: 'The host still runs an older plugin. Restart DSH and try again.',
         noResult: 'Nothing found.',
         error: 'Something went wrong',
+        views: 'plays',
       },
     }
 
@@ -182,11 +227,37 @@ window.__ModuleLoader__.load({
       return String(snapshot?.active ?? 'zh').toLowerCase().startsWith('en') ? TEXT.en : TEXT.zh
     }
 
+    function readHistory() {
+      try {
+        const raw = globalThis.localStorage?.getItem(HISTORY_KEY)
+        const parsed = raw ? JSON.parse(raw) : []
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+
+    function writeHistory(entries) {
+      try {
+        globalThis.localStorage?.setItem(HISTORY_KEY, JSON.stringify(entries))
+        return true
+      } catch {
+        // 容量不够时丢掉正文，只留元数据
+        try {
+          const light = entries.map((entry) => ({ ...entry, note: '' }))
+          globalThis.localStorage?.setItem(HISTORY_KEY, JSON.stringify(light))
+        } catch {
+          // 连元数据都存不下就放弃
+        }
+        return false
+      }
+    }
+
     const STYLES = `
 .vn-view { display: flex; height: 100%; min-height: 0; background: var(--dsw-alias-bg-base, #fff); color: var(--dsw-alias-label-primary, #18181b); font-size: 13px; }
 .vn-side { width: 188px; flex: none; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-2, #f5f5f7)); border-right: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); }
 .vn-brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px 14px; }
-.vn-logo { width: 22px; height: 22px; border-radius: 6px; background: ${ACCENT}; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.vn-logo { width: 22px; height: 22px; border-radius: 6px; background: ${ACCENT}; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
 .vn-brand b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .vn-nav { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary, #52525b); font-size: 13px; text-align: left; cursor: pointer; }
 .vn-nav:hover { background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.04)); color: var(--dsw-alias-label-primary, #18181b); }
@@ -207,6 +278,12 @@ window.__ModuleLoader__.load({
 .vn-preview-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); flex-wrap: wrap; }
 .vn-preview-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
 .vn-preview-scroll { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 20px; }
+.vn-meta { display: flex; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); }
+.vn-cover { width: 120px; height: 68px; flex: none; object-fit: cover; border-radius: 6px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.04)); }
+.vn-meta-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.vn-meta-title { font-size: 14px; font-weight: 600; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vn-chips { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11.5px; color: var(--dsw-alias-label-secondary, #65656e); }
+.vn-chip { padding: 1px 7px; border-radius: 999px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
 .vn-label { display: block; font-size: 12px; color: var(--dsw-alias-label-secondary, #52525b); margin: 0 0 6px; }
 .vn-label:not(:first-child) { margin-top: 12px; }
 .vn-input, .vn-select { width: 100%; box-sizing: border-box; height: 32px; padding: 0 10px; font-size: 13px; color: var(--dsw-alias-label-primary, #18181b); background: var(--dsw-alias-bg-base, #fff); border: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,.16)); border-radius: 6px; outline: none; }
@@ -222,6 +299,10 @@ window.__ModuleLoader__.load({
 .vn-primary:disabled { opacity: .55; cursor: default; }
 .vn-ghost { height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.12)); background: transparent; color: var(--dsw-alias-label-secondary, #52525b); font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .vn-ghost:hover { color: var(--dsw-alias-label-primary, #18181b); border-color: var(--dsw-alias-border-l2, rgba(0,0,0,.2)); }
+.vn-ghost[aria-pressed="true"] { color: var(--dsw-alias-label-primary, #18181b); border-color: var(--dsw-alias-border-l2, rgba(0,0,0,.24)); background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.04)); }
+.vn-tabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
+.vn-tab { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #52525b); font-size: 12px; padding: 4px 11px; border-radius: 6px; cursor: pointer; }
+.vn-tab[aria-selected="true"] { background: var(--dsw-alias-bg-base, #fff); color: var(--dsw-alias-label-primary, #18181b); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
 .vn-progress { margin-top: 12px; }
 .vn-progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--dsw-alias-label-secondary, #65656e); margin-bottom: 6px; gap: 10px; }
 .vn-bar { position: relative; height: 5px; border-radius: 999px; overflow: hidden; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.08)); }
@@ -247,21 +328,35 @@ window.__ModuleLoader__.load({
 .md-link { color: ${ACCENT}; text-decoration: none; }
 .md-link:hover { text-decoration: underline; }
 .md-code-inline { padding: 1px 4px; border-radius: 4px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.06)); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
-.md-img { display: block; max-width: 100%; margin: 8px 0; border-radius: 6px; border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); }
+.md-img { display: block; max-width: 100%; margin: 8px 0; border-radius: 6px; border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); cursor: zoom-in; }
+.vn-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding: 4px; }
+.vn-frame { border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); border-radius: 8px; overflow: hidden; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.03)); cursor: zoom-in; }
+.vn-frame img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.vn-frame span { display: block; padding: 4px 8px; font-size: 11px; color: var(--dsw-alias-label-secondary, #65656e); }
+.vn-history { display: flex; flex-direction: column; gap: 8px; }
+.vn-history-item { display: flex; gap: 10px; padding: 8px; border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); border-radius: 8px; cursor: pointer; align-items: center; }
+.vn-history-item:hover { background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.04)); }
+.vn-history-item img { width: 96px; height: 54px; object-fit: cover; border-radius: 5px; flex: none; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
+.vn-history-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.vn-history-title { font-size: 13px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-history-meta { font-size: 11.5px; color: var(--dsw-alias-label-secondary, #777); display: flex; gap: 8px; flex-wrap: wrap; }
 .vn-list { list-style: none; margin: 10px 0 0; padding: 0; overflow: auto; }
 .vn-item { display: flex; flex-direction: column; gap: 3px; padding: 8px; border-radius: 7px; cursor: pointer; }
 .vn-item:hover { background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.04)); }
 .vn-item-title { font-size: 13px; line-height: 1.45; }
+.vn-search-cover { width: 96px; height: 54px; object-fit: cover; border-radius: 5px; flex: none; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
 .vn-item-meta { font-size: 11.5px; color: var(--dsw-alias-label-secondary, #777); display: flex; flex-wrap: wrap; gap: 8px; }
 .vn-item-meta a { color: ${ACCENT}; text-decoration: none; }
 .vn-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 6px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
 .vn-seg button { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #52525b); font-size: 12px; padding: 3px 10px; border-radius: 5px; cursor: pointer; }
 .vn-seg button[aria-pressed="true"] { background: var(--dsw-alias-bg-base, #fff); color: var(--dsw-alias-label-primary, #18181b); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
 .vn-deps-state { font-size: 12px; color: var(--dsw-alias-label-secondary, #52525b); line-height: 1.6; margin: 6px 0 0; }
+.vn-tips { margin: 0; padding-left: 18px; }
+.vn-tips li { margin: 6px 0; line-height: 1.7; font-size: 13px; }
 `
 
     // ---------------- 会话内持久化的状态 ----------------
-    const DEFAULTS = {
+    const DEFAULT = {
       tab: 'fetch',
       target: '',
       page: '1',
@@ -278,8 +373,12 @@ window.__ModuleLoader__.load({
       note: '',
       blocks: [],
       notePath: '',
+      folder: '',
+      meta: null,
+      resultFrames: [],
       warning: '',
       error: '',
+      previewTab: 'preview',
       searchKind: 'video',
       keyword: '',
       searchStatus: 'idle',
@@ -289,8 +388,9 @@ window.__ModuleLoader__.load({
       deps: null,
       depsBusy: false,
       opened: false,
+      history: readHistory(),
     }
-    let state = { ...DEFAULTS }
+    let state = { ...DEFAULT }
     const listeners = new Set()
 
     function set(patch) {
@@ -324,6 +424,64 @@ window.__ModuleLoader__.load({
       return data ?? {}
     }
 
+    // ---------------- 历史记录 ----------------
+    function saveHistory(result) {
+      if (!result?.note) return
+      const entry = {
+        at: Date.now(),
+        path: result.path ?? '',
+        folder: result.folder ?? '',
+        note: result.note,
+        meta: result.meta ?? null,
+        frames: Array.isArray(result.frames) ? result.frames : [],
+      }
+      const key = entry.path || entry.meta?.bvid || String(entry.at)
+      const rest = state.history.filter((item) => (item.path || item.meta?.bvid) !== key)
+      const history = [entry, ...rest].slice(0, HISTORY_LIMIT)
+      writeHistory(history)
+      set({ history })
+    }
+
+    function removeHistory(entry) {
+      const history = state.history.filter((item) => item !== entry)
+      writeHistory(history)
+      set({ history })
+    }
+
+    function clearHistory() {
+      writeHistory([])
+      set({ history: [] })
+    }
+
+    async function loadHistoryEntry(entry) {
+      set({
+        tab: 'fetch',
+        note: entry.note ?? '',
+        notePath: entry.path ?? '',
+        folder: entry.folder ?? '',
+        meta: entry.meta ?? null,
+        resultFrames: Array.isArray(entry.frames) ? entry.frames : [],
+        previewTab: 'preview',
+        error: '',
+        warning: '',
+      })
+      if (!entry.note) {
+        set({ blocks: [], error: '这条历史没有正文，只能看到元数据。' })
+        return
+      }
+      try {
+        const parsed = await fetch('/vidnote/parse', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ markdown: entry.note }),
+        }).then((response) => response.json())
+        set({ blocks: parsed.blocks ?? [] })
+      } catch {
+        set({ blocks: [] })
+      }
+    }
+
+    // ---------------- 抓取任务 ----------------
     let jobTimer = null
 
     function stopJobPolling() {
@@ -348,6 +506,7 @@ window.__ModuleLoader__.load({
           if (job.status === 'done') {
             stopJobPolling()
             const result = job.result ?? {}
+            saveHistory(result)
             let blocks = []
             try {
               const parsed = await fetch('/vidnote/parse', {
@@ -364,8 +523,12 @@ window.__ModuleLoader__.load({
               note: result.note ?? '',
               blocks,
               notePath: result.path ?? '',
+              folder: result.folder ?? '',
+              meta: result.meta ?? null,
+              resultFrames: Array.isArray(result.frames) ? result.frames : [],
               warning: result.warning ?? '',
               phase: job.phase ?? '',
+              previewTab: 'preview',
             })
           } else if (job.status === 'error') {
             stopJobPolling()
@@ -386,7 +549,8 @@ window.__ModuleLoader__.load({
       }
       set({
         status: 'running', phase: currentText().preparing, done: 0, total: 0,
-        error: '', warning: '', note: '', blocks: [], notePath: '', jobId: '',
+        error: '', warning: '', note: '', blocks: [], notePath: '', folder: '',
+        meta: null, resultFrames: [], jobId: '', previewTab: 'preview',
       })
       try {
         const data = await call('/fetch', {
@@ -417,7 +581,9 @@ window.__ModuleLoader__.load({
       try {
         const data = await call(`/search?q=${encodeURIComponent(keyword)}&type=${state.searchKind}&limit=15`)
         if (data.error) throw new Error(data.error)
-        set({ results: data.results ?? [], searchStatus: 'done' })
+        // 后端可能直接给数组，也可能包一层 { results }
+        const results = Array.isArray(data) ? data : (data.results ?? [])
+        set({ results, searchStatus: 'done' })
       } catch (failure) {
         set({ searchStatus: 'error', searchError: String(failure?.message ?? failure) })
       }
@@ -496,6 +662,10 @@ window.__ModuleLoader__.load({
     // ---------------- Markdown 渲染 ----------------
     const INLINE = /(!\[[^\]]*\]\(<[^>]+>\)|!\[[^\]]*\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\*[^*]+\*)/g
 
+    function frameUrl(notePath, src) {
+      return `${API}/frame?note=${encodeURIComponent(notePath)}&src=${encodeURIComponent(src)}`
+    }
+
     function inline(text, notePath) {
       const source = String(text ?? '')
       const nodes = []
@@ -509,8 +679,15 @@ window.__ModuleLoader__.load({
         if (token.startsWith('!')) {
           const image = /^!\[([^\]]*)\]\(<?([^)>]+)>?\)$/.exec(token)
           if (image && notePath) {
-            const src = `${API}/frame?note=${encodeURIComponent(notePath)}&src=${encodeURIComponent(image[2])}`
-            nodes.push(h('img', { key, className: 'md-img', src, alt: image[1], loading: 'lazy' }))
+            nodes.push(h('img', {
+              key,
+              className: 'md-img',
+              src: frameUrl(notePath, image[2]),
+              alt: image[1],
+              loading: 'lazy',
+              referrerPolicy: 'no-referrer',
+              onClick: () => window.open(frameUrl(notePath, image[2]), '_blank', 'noopener'),
+            }))
           } else if (image) {
             nodes.push(h('span', { key, className: 'md-code-inline' }, image[1] || 'image'))
           } else nodes.push(token)
@@ -576,7 +753,7 @@ window.__ModuleLoader__.load({
       const anchor = document.createElement('a')
       const first = text.match(/^title:\s*(.+)$/m)?.[1]
       anchor.href = url
-      anchor.download = `${(first || 'vidnote').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60)}.md`
+      anchor.download = `${(first || 'vid2note').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60)}.md`
       anchor.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     }
@@ -592,11 +769,95 @@ window.__ModuleLoader__.load({
           h('i', { style: percent === null ? undefined : { width: `${percent}%` } })))
     }
 
-    function FetchPage({ t }) {
-      const [copied, setCopied] = React.useState(false)
-      const [showSource, setShowSource] = React.useState(false)
-      const running = state.status === 'running'
+    function formatDuration(value) {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        const total = Math.max(0, Math.floor(value))
+        const hours = Math.floor(total / 3600)
+        const minutes = Math.floor((total % 3600) / 60)
+        const seconds = total % 60
+        return hours
+          ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+          : `${minutes}:${String(seconds).padStart(2, '0')}`
+      }
+      return String(value ?? '')
+    }
 
+    function MetaHeader({ t }) {
+      const meta = state.meta
+      if (!meta?.title) return null
+      return h('div', { className: 'vn-meta' },
+        meta.cover
+          ? h('img', { className: 'vn-cover', src: meta.cover, alt: '', referrerPolicy: 'no-referrer' })
+          : null,
+        h('div', { className: 'vn-meta-body' },
+          h('div', { className: 'vn-meta-title' }, meta.title),
+          h('div', { className: 'vn-chips' },
+            meta.author ? h('span', { className: 'vn-chip' }, meta.author) : null,
+            meta.bvid ? h('span', { className: 'vn-chip' }, meta.bvid) : null,
+            meta.duration ? h('span', { className: 'vn-chip' }, formatDuration(meta.duration)) : null,
+            meta.views ? h('span', { className: 'vn-chip' }, `${Number(meta.views).toLocaleString()} ${t.views}`) : null)))
+    }
+
+    function galleryFrames() {
+      if (state.resultFrames.length) return state.resultFrames
+      const found = []
+      const pattern = /!\[([^\]]*)\]\(<([^>]+)>\)/g
+      let match
+      while ((match = pattern.exec(state.note)) !== null) {
+        found.push({ path: match[2], timestamp: '', alt: match[1] })
+      }
+      return found
+    }
+
+    function PreviewPane({ t }) {
+      const [copied, setCopied] = React.useState(false)
+      const frames = galleryFrames()
+
+      const body = (() => {
+        if (state.previewTab === 'source') {
+          return state.note
+            ? h('pre', { className: 'md-code', style: { margin: 0, whiteSpace: 'pre-wrap' } }, state.note)
+            : h('div', { className: 'vn-empty' }, t.empty)
+        }
+        if (state.previewTab === 'gallery') {
+          return frames.length
+            ? h('div', { className: 'vn-gallery' },
+                frames.map((frame, index) => h('div', {
+                  key: `${frame.path}-${index}`,
+                  className: 'vn-frame',
+                  onClick: () => window.open(frameUrl(state.notePath, frame.path), '_blank', 'noopener'),
+                },
+                  h('img', { src: frameUrl(state.notePath, frame.path), alt: frame.alt ?? '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
+                  h('span', null, frame.timestamp ?? ''))))
+            : h('div', { className: 'vn-empty' }, t.empty)
+        }
+        return state.blocks.length
+          ? state.blocks.map((block, index) => h(Block, { key: index, block, notePath: state.notePath }))
+          : h('div', { className: 'vn-empty' }, t.empty)
+      })()
+
+      return h('section', { className: 'vn-card vn-preview-card' },
+        h('div', { className: 'vn-preview-head' },
+          h('div', { className: 'vn-tabs', role: 'tablist' },
+            h('button', { className: 'vn-tab', role: 'tab', 'aria-selected': state.previewTab === 'preview', onClick: () => set({ previewTab: 'preview' }) }, t.preview),
+            h('button', { className: 'vn-tab', role: 'tab', 'aria-selected': state.previewTab === 'gallery', onClick: () => set({ previewTab: 'gallery' }) }, t.gallery),
+            h('button', { className: 'vn-tab', role: 'tab', 'aria-selected': state.previewTab === 'source', onClick: () => set({ previewTab: 'source' }) }, t.source)),
+          h('span', { className: 'vn-spacer' }),
+          state.note
+            ? h('button', { className: 'vn-ghost', onClick: () => copyText(state.note).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600) }) },
+                copied ? t.copied : t.copy)
+            : null,
+          state.notePath ? h('button', { className: 'vn-ghost', onClick: () => reveal(state.notePath, false) }, t.openFile) : null,
+          state.notePath ? h('button', { className: 'vn-ghost', onClick: () => reveal(state.notePath, true) }, t.openFolder) : null,
+          state.note ? h('button', { className: 'vn-ghost', onClick: () => downloadMarkdown(state.note) }, t.download) : null),
+        h(MetaHeader, { t }),
+        h('div', { className: 'vn-preview-scroll' },
+          state.warning ? h('p', { className: 'vn-warning' }, `${t.warning}：${state.warning}`) : null,
+          body))
+    }
+
+    function FetchPage({ t }) {
+      const running = state.status === 'running'
       return h(React.Fragment, null,
         h('section', { className: 'vn-card' },
           h('div', { className: 'vn-card-body' },
@@ -631,32 +892,7 @@ window.__ModuleLoader__.load({
                 running ? t.running : t.go)),
             running ? h(Progress, { t }) : null,
             state.status === 'error' && state.error ? h('p', { className: 'vn-error' }, state.error) : null)),
-
-        h('section', { className: 'vn-card vn-preview-card' },
-          h('div', { className: 'vn-preview-head' },
-            h('h2', null, t.preview),
-            h('span', { className: 'vn-spacer' }),
-            state.blocks.length
-              ? h('button', { className: 'vn-ghost', onClick: () => setShowSource(!showSource) }, showSource ? t.preview : t.source)
-              : null,
-            state.note
-              ? h('button', { className: 'vn-ghost', onClick: () => copyText(state.note).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600) }) },
-                  copied ? t.copied : t.copy)
-              : null,
-            state.notePath
-              ? h('button', { className: 'vn-ghost', onClick: () => reveal(state.notePath, false) }, t.openFile)
-              : null,
-            state.notePath
-              ? h('button', { className: 'vn-ghost', onClick: () => reveal(state.notePath, true) }, t.openFolder)
-              : null,
-            state.note ? h('button', { className: 'vn-ghost', onClick: () => downloadMarkdown(state.note) }, t.download) : null),
-          h('div', { className: 'vn-preview-scroll' },
-            state.warning ? h('p', { className: 'vn-warning' }, `${t.warning}：${state.warning}`) : null,
-            !state.blocks.length
-              ? h('div', { className: 'vn-empty' }, t.empty)
-              : showSource
-                ? h('pre', { className: 'md-code', style: { margin: 0, whiteSpace: 'pre-wrap' } }, state.note)
-                : state.blocks.map((block, index) => h(Block, { key: index, block, notePath: state.notePath })))))
+        h(PreviewPane, { t }))
     }
 
     function SearchPage({ t }) {
@@ -684,11 +920,16 @@ window.__ModuleLoader__.load({
                   className: 'vn-item',
                   onClick: () => set({ target: video.bvid, tab: 'fetch' }),
                 },
-                  h('div', { className: 'vn-item-title' }, video.title),
-                  h('div', { className: 'vn-item-meta' },
-                    h('span', null, video.author),
-                    h('span', null, video.duration),
-                    h('span', null, Number(video.play || 0).toLocaleString()))))
+                  h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center' } },
+                    video.cover
+                      ? h('img', { className: 'vn-search-cover', src: video.cover, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' })
+                      : null,
+                    h('div', { style: { minWidth: 0 } },
+                      h('div', { className: 'vn-item-title' }, video.title),
+                      h('div', { className: 'vn-item-meta' },
+                        h('span', null, video.author),
+                        h('span', null, video.duration),
+                        h('span', null, Number(video.play || 0).toLocaleString()))))))
               : results.map((user) => h('li', { key: user.mid, className: 'vn-item' },
                   h('div', { className: 'vn-item-title' }, user.name),
                   h('div', { className: 'vn-item-meta' },
@@ -740,6 +981,41 @@ window.__ModuleLoader__.load({
           deps?.last_error ? h('p', { className: 'vn-error' }, String(deps.last_error)) : null))
     }
 
+    function HistoryPage({ t }) {
+      return h('section', { className: 'vn-card' },
+        h('div', { className: 'vn-card-body', style: { display: 'flex', flexDirection: 'column', minHeight: 0 } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+            h('span', { className: 'vn-hint', style: { margin: 0, flex: 1 } }, t.historySub),
+            h('button', { className: 'vn-ghost', onClick: clearHistory, disabled: state.history.length === 0 }, t.historyClear)),
+          state.history.length === 0
+            ? h('div', { className: 'vn-empty' }, t.historyEmpty)
+            : h('div', { className: 'vn-history', style: { marginTop: '10px' } },
+                state.history.map((entry, index) => h('div', {
+                  key: `${entry.path}-${index}`,
+                  className: 'vn-history-item',
+                  onClick: () => loadHistoryEntry(entry),
+                },
+                  entry.meta?.cover
+                    ? h('img', { src: entry.meta.cover, alt: '', referrerPolicy: 'no-referrer', loading: 'lazy' })
+                    : h('div', { className: 'vn-history-item' , style: { width: '96px', height: '54px', padding: 0, cursor: 'default' } }),
+                  h('div', { className: 'vn-history-body' },
+                    h('div', { className: 'vn-history-title' }, entry.meta?.title || entry.path || '未命名'),
+                    h('div', { className: 'vn-history-meta' },
+                      entry.meta?.author ? h('span', null, entry.meta.author) : null,
+                      entry.meta?.duration ? h('span', null, formatDuration(entry.meta.duration)) : null,
+                      h('span', null, `${t.historyWhen} ${new Date(entry.at).toLocaleString()}`))),
+                  h('button', {
+                    className: 'vn-ghost',
+                    onClick: (event) => { event.stopPropagation(); removeHistory(entry) },
+                  }, t.historyDelete))))))
+    }
+
+    function TipsPage({ t }) {
+      return h('section', { className: 'vn-card' },
+        h('div', { className: 'vn-card-body' },
+          h('ul', { className: 'vn-tips' }, t.tips.map((tip, index) => h('li', { key: index }, tip)))))
+    }
+
     function FetchIcon() {
       return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
         h('path', { d: 'M12 3 20 9l-8 7-8-7 8-6Z' }),
@@ -765,11 +1041,27 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M5 20h14' }))
     }
 
+    function HistoryIcon() {
+      return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+        h('path', { d: 'M3 12a9 9 0 1 0 3-6.7' }),
+        h('path', { d: 'M3 4v5h5' }),
+        h('path', { d: 'M12 8v5l3 2' }))
+    }
+
+    function TipsIcon() {
+      return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+        h('circle', { cx: 12, cy: 12, r: 9 }),
+        h('path', { d: 'M12 11v5' }),
+        h('path', { d: 'M12 8h.01' }))
+    }
+
     const PAGES = {
       fetch: { nav: 'fetchNav', title: 'fetchTitle', sub: 'fetchSub', icon: FetchIcon },
       search: { nav: 'searchNav', title: 'searchTitle', sub: 'searchSub', icon: SearchIcon },
       login: { nav: 'loginNav', title: 'loginTitle', sub: 'loginSub', icon: LoginIcon },
       download: { nav: 'downloadNav', title: 'downloadTitle', sub: 'downloadSub', icon: DownloadIcon },
+      history: { nav: 'historyNav', title: 'historyTitle', sub: 'historySub', icon: HistoryIcon },
+      tips: { nav: 'tipsNav', title: 'tipsTitle', sub: 'tipsSub', icon: TipsIcon },
     }
 
     function VidnoteView() {
@@ -786,10 +1078,21 @@ window.__ModuleLoader__.load({
       }, [])
 
       const page = PAGES[state.tab] ?? PAGES.fetch
+      const pageBody = (() => {
+        switch (state.tab) {
+          case 'search': return h(SearchPage, { t })
+          case 'login': return h(LoginPage, { t })
+          case 'download': return h(DownloadPage, { t })
+          case 'history': return h(HistoryPage, { t })
+          case 'tips': return h(TipsPage, { t })
+          default: return h(FetchPage, { t })
+        }
+      })()
+
       return h('div', { className: 'vn-view' },
         h('aside', { className: 'vn-side' },
           h('div', { className: 'vn-brand' },
-            h('span', { className: 'vn-logo' }, 'V'),
+            h('span', { className: 'vn-logo' }, 'v2'),
             h('b', null, t.brand)),
           Object.entries(PAGES).map(([key, entry]) =>
             h('button', {
@@ -808,14 +1111,7 @@ window.__ModuleLoader__.load({
             h('h1', null, t[page.title]),
             h('span', { className: 'vn-sub' }, t[page.sub]),
             h('span', { className: 'vn-spacer' })),
-          h('div', { className: state.tab === 'fetch' ? 'vn-content' : 'vn-content-single' },
-            state.tab === 'fetch'
-              ? h(FetchPage, { t })
-              : state.tab === 'search'
-                ? h(SearchPage, { t })
-                : state.tab === 'login'
-                  ? h(LoginPage, { t })
-                  : h(DownloadPage, { t }))))
+          h('div', { className: state.tab === 'fetch' ? 'vn-content' : 'vn-content-single' }, pageBody)))
     }
 
     return {

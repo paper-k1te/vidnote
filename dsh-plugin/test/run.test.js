@@ -62,8 +62,8 @@ test('resolveCli 优先用配置里的路径', () => {
 
 test('resolveCli 忽略不存在的路径，回落到可用项', () => {
   const cli = resolveCli({ cliPath: 'C:/definitely/not/here.exe' })
-  // 仓库里构建过时会命中本地产物，没构建过则回落到 PATH 上的 vidnote。
-  assert.ok(cli === 'vidnote' || existsSync(cli), `unexpected: ${cli}`)
+  // 仓库里构建过时会命中本地产物，没构建过则回落到 PATH 上的 vid2note。
+  assert.ok(cli === 'vid2note' || existsSync(cli), `unexpected: ${cli}`)
 })
 
 test('runVidnote 返回 stdout 并去掉尾部空白', async () => {
@@ -100,7 +100,7 @@ test('runVidnote 启动失败给出清晰错误', async () => {
   setImmediate(() => child.emit('error', error))
   await assert.rejects(
     runVidnote(['version'], { cliPath: 'vidnote', spawnImpl: () => child }),
-    /找不到 vidnote 命令行（尝试执行「vidnote」）/,
+    /找不到 vid2note 命令行（尝试执行「vidnote」）/,
   )
 })
 
