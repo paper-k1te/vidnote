@@ -219,11 +219,12 @@ class App:
             self.current_path = Path(result["path"])
             self.show_preview(result["note"])
             self.reveal_button.configure(state="normal")
-            extra = (
-                f"，关键帧 {len(result['frames']) if isinstance(result['frames'], list) else result['frames']} 张"
-                if result.get("frames")
-                else ""
-            )
+            frames_val = result.get("frames")
+            if frames_val:
+                count = len(frames_val) if isinstance(frames_val, list) else frames_val
+                extra = f"，关键帧 {count} 张"
+            else:
+                extra = ""
             self.set_status(f"已保存 {result['path']}{extra}")
 
         self.run_in_background(work, done)

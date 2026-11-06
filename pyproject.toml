@@ -65,3 +65,12 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/vid2note/cli.py" = ["B008"]
+"src/vidnote/cli.py" = ["B008"]
+"src/vid2note/gui.py" = ["E501"]
+"src/vidnote/gui.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
