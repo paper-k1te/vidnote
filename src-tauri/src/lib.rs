@@ -42,7 +42,11 @@ pub fn run() {
             open_file,
             open_external_url,
             hide_to_tray,
-            show_window
+            show_window,
+            minimize_window,
+            toggle_maximize_window,
+            is_window_maximized,
+            close_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running vidnote application");

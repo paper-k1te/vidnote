@@ -12,7 +12,7 @@ import pytest
 av = pytest.importorskip("av")
 PIL_Image = pytest.importorskip("PIL.Image")
 
-from vidnote.frames import export_frames, select_keyframes  # noqa: E402
+from vid2note.frames import export_frames, select_keyframes  # noqa: E402
 
 WIDTH, HEIGHT, FPS, SECONDS = 128, 72, 2, 10
 COLORS = [(220, 30, 30), (30, 200, 60), (40, 60, 220)]

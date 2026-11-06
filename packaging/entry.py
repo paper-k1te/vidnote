@@ -2,12 +2,9 @@
 
 产物：
 
-- ``vidnote.exe``    —— 命令行版（带控制台），支持 fetch / search / gui 等所有命令；
-- ``vidnote-server.exe`` —— 同一个程序，供桌面外壳 ``vidnote-app.exe`` 调用
+- ``vid2note.exe``        —— 命令行版（带控制台），支持 fetch / search / gui 等所有命令；
+- ``vid2note-server.exe`` —— 同一个程序，供桌面外壳调用
   （``serve-ui`` 模式：只起后端，不开浏览器）。
-
-注意：这里**延迟导入** ``vidnote.cli``。窗口版 exe 没有 stdout/stderr，而 cli
-模块在导入时会创建 rich 的 Console 对象，早期导入会在启动阶段就崩掉。
 """
 
 import sys
@@ -17,7 +14,7 @@ from pathlib import Path
 
 def _trace(message: str) -> None:
     try:
-        path = Path(tempfile.gettempdir()) / "vidnote-ui.log"
+        path = Path(tempfile.gettempdir()) / "vid2note-ui.log"
         with path.open("a", encoding="utf-8") as handle:
             handle.write(f"[entry] {message}\n")
     except OSError:
@@ -30,15 +27,22 @@ def main() -> int:
     _trace(f"start frozen={frozen} name={name} argv={sys.argv[1:]}")
 
     if frozen and name.endswith("-ui"):
-        from vidnote.gui import serve
+        try:
+            from vid2note.gui import serve
+        except ImportError:
+            from vidnote.gui import serve
 
         _trace("legacy ui build -> browser mode")
         serve()
         return 0
 
-    from vidnote.cli import app
+    try:
+        from vid2note.cli import app
+    except ImportError:
+        from vidnote.cli import app
 
-    return app(prog_name="vidnote")
+    prog = "vid2note" if "vid2note" in name else "vidnote"
+    return app(prog_name=prog)
 
 
 if __name__ == "__main__":

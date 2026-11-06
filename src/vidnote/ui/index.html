@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>vidnote v0.3.4</title>
+<title>vid2note v0.4.0</title>
 <style>
   :root {
     --bg-sidebar: #f5f5f7;
@@ -62,9 +62,142 @@
     color: var(--text-1);
     font: 13.5px/1.5 var(--font-sans);
     display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
     -webkit-font-smoothing: antialiased;
     user-select: none;
   }
+
+  /* ---------- Custom Frameless Titlebar ---------- */
+  .custom-titlebar {
+    height: 36px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 0 14px;
+    user-select: none;
+    flex-shrink: 0;
+    z-index: 999;
+    -webkit-app-region: drag;
+  }
+
+  .titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    cursor: default;
+  }
+
+  .titlebar-app-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--action-gradient);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
+  }
+
+  .titlebar-app-name {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    color: var(--text-1);
+  }
+
+  .titlebar-app-ver {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-3);
+    font-family: var(--font-mono);
+  }
+
+  .titlebar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    cursor: default;
+  }
+
+  .titlebar-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+
+  .status-indicator-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+  }
+
+  .titlebar-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    -webkit-app-region: no-drag;
+  }
+
+  .titlebar-win-controls {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  .win-btn {
+    width: 46px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--text-2);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+    outline: none;
+    padding: 0;
+    -webkit-app-region: no-drag;
+  }
+
+  .win-btn:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-1);
+  }
+
+  .win-btn-close:hover {
+    background: #e81123 !important;
+    color: #ffffff !important;
+  }
+
+  .win-btn:active {
+    opacity: 0.8;
+  }
+
+  .app-body {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 36px);
+    overflow: hidden;
+  }
+
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -535,13 +668,41 @@
 </head>
 <body>
 
+<!-- Custom Frameless Titlebar -->
+<header class="custom-titlebar" data-tauri-drag-region>
+  <div class="titlebar-left" data-tauri-drag-region>
+    <div class="titlebar-app-icon" data-tauri-drag-region>v</div>
+    <span class="titlebar-app-name" data-tauri-drag-region>vid2note</span>
+    <span class="titlebar-app-ver" data-tauri-drag-region>v0.4.0</span>
+  </div>
+  <div class="titlebar-center" data-tauri-drag-region>
+    <span class="titlebar-status-chip" id="titlebar-status" data-tauri-drag-region>
+      <span class="status-indicator-dot"></span>
+      <span id="titlebar-status-text" data-tauri-drag-region>就绪</span>
+    </span>
+  </div>
+  <div class="titlebar-right">
+    <div class="titlebar-win-controls" id="win-controls">
+      <button class="win-btn win-btn-min" id="win-min" title="最小化" type="button" tabindex="-1">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+      </button>
+      <button class="win-btn win-btn-max" id="win-max" title="最大化 / 还原" type="button" tabindex="-1">
+        <svg id="win-max-icon" width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+      <button class="win-btn win-btn-close" id="win-close" title="关闭 (最小化到托盘)" type="button" tabindex="-1">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<div class="app-body">
 <!-- Sidebar -->
 <aside>
   <div class="brand">
     <div class="brand-logo">v</div>
     <div class="brand-text">
-      <span class="brand-name">vidnote</span>
-      <span class="brand-badge">v0.3.4 · 原生桌面端</span>
+      <span class="brand-name">vid2note</span>
+      <span class="brand-badge">v0.4.0 · 原生桌面端</span>
     </div>
   </div>
 
@@ -793,9 +954,9 @@
     <!-- View 6: 说明与设置 -->
     <div class="pane-left hidden" id="view-tips">
       <div class="card">
-        <span class="card-title">关于 vidnote v0.3.4</span>
+        <span class="card-title">关于 vid2note v0.4.0</span>
         <p style="font-size:12.5px;color:var(--text-2);line-height:1.7">
-          vidnote 是一款专为知识提炼与归档设计的 B 站视频笔记工具。
+          vid2note 是一款专为知识提炼与归档设计的 B 站视频笔记工具。
           本版本采用 <b>Tauri 2.0</b> 编译原生 Rust 桌面端与后台托盘核心，大幅优化内存占用与渲染流畅度。
         </p>
         <ul style="margin-left:18px;font-size:12px;color:var(--text-2);line-height:1.8">
@@ -854,6 +1015,8 @@
   </div>
 </main>
 
+</div>
+
 <!-- Lightbox Modal -->
 <div class="lightbox-overlay hidden" id="lightbox-modal">
   <div class="lightbox-content">
@@ -884,7 +1047,7 @@
   // 静态页面直接打开提示
   if (location.protocol === "file:") {
     setTimeout(() => {
-      toast("静态页面：请先运行 vidnote gui，或双击桌面客户端打开", "err");
+      toast("静态页面：请先运行 vid2note gui，或双击桌面客户端打开", "err");
     }, 400);
   }
 
@@ -966,9 +1129,9 @@
     root.dataset.theme = t;
     $('theme-icon').textContent = t === 'dark' ? '☀️' : '🌙';
     $('theme-text').textContent = t === 'dark' ? '浅色外观' : '深色外观';
-    localStorage.setItem('vidnote-theme', t);
+    localStorage.setItem('vid2note-theme', t);
   }
-  applyTheme(localStorage.getItem('vidnote-theme') || 'dark');
+  applyTheme((localStorage.getItem('vid2note-theme') || localStorage.getItem('vidnote-theme')) || 'dark');
   $('btn-theme').onclick = () => applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark');
 
   // 导航切换
@@ -978,7 +1141,7 @@
     login: { title: '登录 B 站', sub: '填写 SESSDATA 以解锁登录后才可见的私有/高清字幕' },
     download: { title: '下载渠道', sub: 'whisper 依赖与模型下载渠道' },
     history: { title: '历史记录', sub: '浏览与重新查看本地已生成的笔记与关键帧' },
-    tips: { title: '说明与设置', sub: '关于 vidnote 0.3.4 与 Tauri 2.0 桌面端架构特性' },
+    tips: { title: '说明与设置', sub: '关于 vid2note 0.4.0 与 Tauri 2.0 桌面端架构特性' },
   };
 
   document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
@@ -1662,7 +1825,7 @@
   };
 
   // 账号凭据 Cookie
-  $('cookie').value = localStorage.getItem('vidnote-cookie') || "";
+  $('cookie').value = (localStorage.getItem('vid2note-cookie') || localStorage.getItem('vidnote-cookie')) || "";
   $('btn-toggle-cookie').onclick = () => {
     const input = $('cookie');
     if (input.type === 'password') {
@@ -1675,19 +1838,19 @@
   };
   $('btn-save-cookie').onclick = () => {
     const val = $('cookie').value.trim();
-    localStorage.setItem('vidnote-cookie', val);
+    localStorage.setItem('vid2note-cookie', val);
     toast('凭据已保存到本地存储', 'ok');
   };
   $('btn-clear-cookie').onclick = () => {
     $('cookie').value = "";
-    localStorage.removeItem('vidnote-cookie');
+    localStorage.removeItem('vid2note-cookie');
     toast('已清除凭据', 'info');
   };
 
   // 历史记录
   function saveHistory(result) {
     let hist = [];
-    try { hist = JSON.parse(localStorage.getItem('vidnote-history') || '[]'); } catch (e) {}
+    try { hist = JSON.parse((localStorage.getItem('vid2note-history') || localStorage.getItem('vidnote-history')) || '[]'); } catch (e) {}
 
     let meta = result.meta || {};
     let md = result.markdown || result.note || "";
@@ -1729,14 +1892,14 @@
       frames: Array.isArray(result.frames) && result.frames.length > 0 ? result.frames : currentFrames,
     });
     if (hist.length > 30) hist = hist.slice(0, 30);
-    localStorage.setItem('vidnote-history', JSON.stringify(hist));
+    localStorage.setItem('vid2note-history', JSON.stringify(hist));
   }
 
   function loadHistory() {
     const container = $('history-list');
     container.innerHTML = "";
     let hist = [];
-    try { hist = JSON.parse(localStorage.getItem('vidnote-history') || '[]'); } catch (e) {}
+    try { hist = JSON.parse((localStorage.getItem('vid2note-history') || localStorage.getItem('vidnote-history')) || '[]'); } catch (e) {}
 
     // 自动过滤早期未记录元数据的空白损坏项
     hist = hist.filter(item => item && (item.title !== '无标题' || item.bvid));
@@ -1773,7 +1936,7 @@
       card.querySelector('.btn-del-hist').onclick = (e) => {
         e.stopPropagation();
         hist.splice(index, 1);
-        localStorage.setItem('vidnote-history', JSON.stringify(hist));
+        localStorage.setItem('vid2note-history', JSON.stringify(hist));
         loadHistory();
         toast('已删除该条历史记录', 'info');
       };
@@ -1788,7 +1951,7 @@
   }
 
   $('btn-clear-history').onclick = () => {
-    localStorage.removeItem('vidnote-history');
+    localStorage.removeItem('vid2note-history');
     loadHistory();
     toast('历史记录已清空', 'info');
   };
@@ -1804,6 +1967,68 @@
     if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
     if (n >= 10000) return (n / 10000).toFixed(1) + '万';
     return n.toLocaleString();
+  }
+
+
+  // 窗口无边框控制逻辑
+  const btnWinMin = $('win-min');
+  const btnWinMax = $('win-max');
+  const btnWinClose = $('win-close');
+  const winMaxIcon = $('win-max-icon');
+
+  if (isTauri && tauriInvoke) {
+    if (btnWinMin) {
+      btnWinMin.onclick = async () => {
+        try { await tauriInvoke('minimize_window'); } catch (e) { console.warn(e); }
+      };
+    }
+
+    const updateMaxIcon = (maximized) => {
+      const curIcon = $('win-max-icon');
+      if (!curIcon) return;
+      if (maximized) {
+        curIcon.outerHTML = '<svg id="win-max-icon" width="10" height="10" viewBox="0 0 10 10"><rect x="2.5" y="0.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.1"/><rect x="0.5" y="2.5" width="7" height="7" fill="var(--bg-surface)" stroke="currentColor" stroke-width="1.1"/></svg>';
+      } else {
+        curIcon.outerHTML = '<svg id="win-max-icon" width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+      }
+    };
+
+    if (btnWinMax) {
+      btnWinMax.onclick = async () => {
+        try {
+          const res = await tauriInvoke('toggle_maximize_window');
+          updateMaxIcon(Boolean(res));
+        } catch (e) { console.warn(e); }
+      };
+    }
+
+    if (btnWinClose) {
+      btnWinClose.onclick = async () => {
+        try {
+          await tauriInvoke('close_window');
+          toast('已最小化至系统托盘，右键托盘图标可退出或呼出', 'info');
+        } catch (e) {
+          window.close();
+        }
+      };
+    }
+
+    tauriInvoke('is_window_maximized').then(res => {
+      if (typeof res === 'boolean') updateMaxIcon(res);
+    }).catch(() => {});
+
+    // 双击自定义标题栏进行最大化与还原
+    const titlebarEl = document.querySelector('.custom-titlebar');
+    if (titlebarEl) {
+      titlebarEl.ondblclick = (e) => {
+        if (e.target.closest('.titlebar-win-controls')) return;
+        if (btnWinMax) btnWinMax.click();
+      };
+    }
+  } else {
+    // 纯网页模式下隐藏原生窗口控制按钮
+    const wc = $('win-controls');
+    if (wc) wc.style.display = 'none';
   }
 
   // Tauri 全局事件监听

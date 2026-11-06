@@ -2,7 +2,7 @@
 
 import sys
 
-from vidnote.asr import _group_words, _sentence_end, ensure_model
+from vid2note.asr import _group_words, _sentence_end, ensure_model
 
 
 def _word(text: str, start: float, end: float) -> dict:

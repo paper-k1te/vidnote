@@ -1,3 +1,16 @@
-"""vidnote — B 站视频 → 带时间戳的 Markdown 笔记。"""
+"""Compatibility shim: vidnote was renamed to vid2note in v0.4.0."""
 
-__version__ = "0.3.4"
+from vid2note import __version__
+from vid2note.bilibili import BilibiliClient, BiliError, VideoId, VideoMeta
+from vid2note.note import NoteOptions, build_note, filename
+
+__all__ = [
+    "__version__",
+    "BilibiliClient",
+    "BiliError",
+    "NoteOptions",
+    "VideoId",
+    "VideoMeta",
+    "build_note",
+    "filename",
+]

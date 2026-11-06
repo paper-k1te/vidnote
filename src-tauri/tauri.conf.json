@@ -1,16 +1,16 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "vidnote",
-  "version": "0.3.4",
-  "identifier": "com.paperkite.vidnote",
+  "productName": "vid2note",
+  "version": "0.4.0",
+  "identifier": "com.paperkite.vid2note",
   "build": {
-    "frontendDist": "../src/vidnote/ui"
+    "frontendDist": "../src/vid2note/ui"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "vidnote",
+        "title": "vid2note",
         "label": "main",
         "width": 1220,
         "height": 820,
@@ -18,7 +18,7 @@
         "minHeight": 620,
         "center": true,
         "resizable": true,
-        "decorations": true
+        "decorations": false
       }
     ],
     "security": {

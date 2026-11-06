@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from vidnote import whisper_deps
+from vid2note import whisper_deps
 
 
 def _make_deps_zip(path: Path, *, include_required: bool = True) -> Path:

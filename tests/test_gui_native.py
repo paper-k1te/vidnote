@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from vidnote import gui_native
+from vid2note import gui_native
 
 pytest.importorskip("tkinter")
 
@@ -29,14 +29,14 @@ def test_build_note_file_rejects_out_of_range_page(monkeypatch) -> None:
             return False
 
         def resolve(self, target):
-            from vidnote.bilibili import VideoId
+            from vid2note.bilibili import VideoId
 
             return VideoId(bvid="BV1")
 
         def view(self, video_id):
             from datetime import datetime, timezone
 
-            from vidnote.bilibili import Page, VideoMeta
+            from vid2note.bilibili import Page, VideoMeta
 
             return VideoMeta(
                 bvid="BV1",
@@ -73,14 +73,14 @@ def test_build_note_file_writes_preview(monkeypatch, tmp_path: Path) -> None:
             return False
 
         def resolve(self, target):
-            from vidnote.bilibili import VideoId
+            from vid2note.bilibili import VideoId
 
             return VideoId(bvid="BV1xx411c7mD")
 
         def view(self, video_id):
             from datetime import datetime, timezone
 
-            from vidnote.bilibili import Page, VideoMeta
+            from vid2note.bilibili import Page, VideoMeta
 
             return VideoMeta(
                 bvid="BV1xx411c7mD",

@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from vidnote.bilibili import (
+from vid2note.bilibili import (
     Cue,
     Page,
     Season,
@@ -10,7 +10,7 @@ from vidnote.bilibili import (
     SubtitleTrack,
     VideoMeta,
 )
-from vidnote.note import NoteOptions, build_note, filename, fmt_ts, slugify, ts_link
+from vid2note.note import NoteOptions, build_note, filename, fmt_ts, slugify, ts_link
 
 META = VideoMeta(
     bvid="BV1xx411c7mD",

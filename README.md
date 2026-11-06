@@ -2,7 +2,7 @@
   <img src="assets/banner.svg" alt="vidnote" width="100%">
 </p>
 
-<h1 align="center">vidnote</h1>
+<h1 align="center">vid2note</h1>
 
 <p align="center">
   <b>把 B 站视频变成一篇带时间戳的 Markdown 笔记。</b><br>
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/paper-k1te/vidnote/actions/workflows/ci.yml"><img src="https://github.com/paper-k1te/vidnote/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/paper-k1te/vid2note/actions/workflows/ci.yml"><img src="https://github.com/paper-k1te/vid2note/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/license-MIT-07C160" alt="MIT License">
   <img src="https://img.shields.io/badge/MCP-ready-00A1D6" alt="MCP ready">
@@ -30,7 +30,7 @@
 ---
 
 ```console
-$ vidnote fetch BV1xx411c7mD --whisper
+$ vid2note fetch BV1xx411c7mD --whisper
 ✓ 已生成 2026-11-04_标题_BV1xx411c7mD.md  （本地转写，412 条）
 ```
 
@@ -64,7 +64,7 @@ tags:
 
 - **一条命令归档**：链接、BV 号、av 号、b23.tv 短链都支持识别，自动抓标题、UP 主、分区、时长、发布时间、简介、标签，以及播放 / 点赞 / 投币 / 收藏 / 弹幕 / 评论数据。
 - **分P 不迷路**：多P 视频会记录当前在第几集，时间戳链接自动添加 `&p=`。
-- **先搜再抓**：`vidnote search "关键词"` 直接列出候选视频，挑中 BV 号再归档。
+- **先搜再抓**：`vid2note search "关键词"` 直接列出候选视频，挑中 BV 号再归档。
 - **字幕优先，转写兜底**：视频有字幕就直接用；没有就在本机跑 Vosk 或 Whisper，音频不出你的电脑。
 - **自动关键帧**：默认取 6 张，用 B 站现成的缩略图切出画面，按时间插在对应字幕后面；`--frames 0` 关闭，加 `--scene` 则按画面变化重新选帧。
 - **时间戳可点**：`[12:34](…?t=754)`，在 Obsidian、Logseq、浏览器里都能跳转。
@@ -73,36 +73,36 @@ tags:
 ## 🚀 快速开始
 
 ```bash
-pip install vidnote
+pip install vid2note
 ```
 
 ```bash
 # 先搜，看看有哪些视频
-vidnote search "Python 异步编程"
+vid2note search "Python 异步编程"
 
 # 链接、BV 号、av 号都行
-vidnote fetch "https://www.bilibili.com/video/BV1xx411c7mD"
+vid2note fetch "https://www.bilibili.com/video/BV1xx411c7mD"
 
 # 第 2 个分P
-vidnote fetch "https://www.bilibili.com/video/BV1xx411c7mD/?p=2"
+vid2note fetch "https://www.bilibili.com/video/BV1xx411c7mD/?p=2"
 
 # 只打印，不写文件
-vidnote fetch BV1xx411c7mD --stdout
+vid2note fetch BV1xx411c7mD --stdout
 
 # 存到笔记库，并标记来源
-vidnote fetch BV1xx411c7mD --dir ~/Notes/videos --source my-blog
+vid2note fetch BV1xx411c7mD --dir ~/Notes/videos --source my-blog
 ```
 
 没装包也可以直接跑：
 
 ```bash
-uvx vidnote fetch BV1xx411c7mD
+uvx vid2note fetch BV1xx411c7mD
 ```
 
 ### 图形界面
 
 ```bash
-vidnote gui
+vid2note gui
 ```
 
 会起一个只监听 `127.0.0.1` 的本地服务，用浏览器打开界面：左边是抓取 / 搜索 / 登录 / 下载四个入口，右边实时预览渲染后的笔记，支持复制 Markdown、打开文件、深浅色切换。搜索页可以在「视频 / 作者」之间切换，作者结果会显示粉丝数和签名，点一下直接打开 B 站空间。
@@ -120,7 +120,7 @@ v0.3.4 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托
 
 ```powershell
 powershell -File scripts/build_tauri.ps1
-# 产物：dist-app/vidnote.exe （纯 Rust 编译原生桌面端，约 8.8 MB）
+# 产物：dist-app/vid2note.exe （纯 Rust 编译原生桌面端，约 8.8 MB）
 ```
 
 | | Tauri 2.0 桌面版 |
@@ -141,7 +141,7 @@ powershell -File scripts/build_tauri.ps1
 | whisper `base` | 145 MB | 平衡 |
 | whisper `small` | 485 MB | 中文最好 |
 
-`vidnote.exe` 采用 **Tauri 2.0 原生桌面框架**：
+`vid2note.exe` 采用 **Tauri 2.0 原生桌面框架**：
 - **原生系统托盘**：常驻 Windows 托盘区，支持最小化到托盘、一键从剪贴板抓取、定位输出目录。
 - **窗口关闭拦截**：点击右上角关闭按钮默认优雅隐藏至托盘，不中断后台抓取与长转写。
 - **超轻体积与内存优化**：告别以往百兆外壳，二进制仅 ~8.8 MB，内存占用大幅减少。
@@ -154,7 +154,7 @@ powershell -File scripts/build_tauri.ps1
 ```powershell
 powershell -File scripts/build_exe.ps1
 # 产物：dist-exe\vidnote-ui.exe（双击开界面，无命令行窗口）
-#       dist-exe\vidnote.exe（命令行版）
+#       dist-exe\vid2note.exe（命令行版）
 ```
 
 这个 exe 是**核心版**：抓取、搜索、笔记生成、缩略帧（`--frames`）都在里面。不含两项重型能力：
@@ -186,7 +186,7 @@ B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到�
 ```bash
 pip install 'vidnote[vosk]'     # 命令行版：首次使用下载 42 MB 模型
 pip install 'vidnote[whisper]'  # whisper
-vidnote fetch BV1xx411c7mD --vosk
+vid2note fetch BV1xx411c7mD --vosk
 ```
 
 流程：`yt-dlp` 取音频 → 在本机转写 → 生成带时间戳的笔记。**音频不会上传到任何服务器。**
@@ -203,7 +203,7 @@ whisper 的模型大小：
 | `medium`        | 1.5 GB | 慢   | 对准确率要求高                 |
 
 ```bash
-vidnote fetch BV1xx411c7mD --whisper --model medium
+vid2note fetch BV1xx411c7mD --whisper --model medium
 ```
 
 转写结果按 `视频 + 分P + 模型` 缓存在本地（Windows 在 `%LOCALAPPDATA%\vidnote`，其他系统在 `~/.cache/vidnote`），同一个视频第二次跑秒出。加 `--no-cache` 可跳过。
@@ -211,13 +211,13 @@ vidnote fetch BV1xx411c7mD --whisper --model medium
 ## 🔍 搜索视频
 
 ```bash
-vidnote search "Rust 所有权" --limit 5
+vid2note search "Rust 所有权" --limit 5
 ```
 
 输出一张表：BV 号、标题、UP 主、时长、播放量。加 `--json` 可以直接喂给脚本：
 
 ```bash
-vidnote search "Rust 所有权" --json | jq -r '.[].bvid'
+vid2note search "Rust 所有权" --json | jq -r '.[].bvid'
 ```
 
 搜索走的是 B 站公开的 `search/all/v2` 接口，**不需要登录**。如果返回 `-352`，说明触发了风控，等一会儿或降低频率再试。
@@ -225,8 +225,8 @@ vidnote search "Rust 所有权" --json | jq -r '.[].bvid'
 ## 🖼 关键帧
 
 ```bash
-vidnote fetch BV1xx411c7mD           # 默认 6 张
-vidnote fetch BV1xx411c7mD --frames 0  # 关闭关键帧
+vid2note fetch BV1xx411c7mD           # 默认 6 张
+vid2note fetch BV1xx411c7mD --frames 0  # 关闭关键帧
 ```
 
 关键帧导出到笔记旁边的 `<笔记名>_frames/` 目录。有字幕时，每张图会插在它前面最近的那句字幕后面——读到哪里，画面就在哪里；没有字幕时才单独成「关键帧」一节。
@@ -237,7 +237,7 @@ vidnote fetch BV1xx411c7mD --frames 0  # 关闭关键帧
 
 ```bash
 pip install 'vidnote[scene]'
-vidnote fetch BV1xx411c7mD --frames 6 --scene
+vid2note fetch BV1xx411c7mD --frames 6 --scene
 ```
 
 它按每秒 2 帧采样成 64×36 的灰度缩略图，比较相邻帧差异，抓 PPT 翻页、代码切换这类真正的信息点，全程本地计算，不调用任何 AI 服务。
@@ -245,7 +245,7 @@ vidnote fetch BV1xx411c7mD --frames 6 --scene
 网络拿不到视频流时（B 站的视频 CDN 在部分网络下不可达），可以先自己下载，再用本地文件：
 
 ```bash
-vidnote fetch BV1xx411c7mD --frames 6 --video ~/Downloads/lecture.mp4
+vid2note fetch BV1xx411c7mD --frames 6 --video ~/Downloads/lecture.mp4
 ```
 
 ## 🤖 给 agent 用
@@ -254,7 +254,7 @@ vidnote fetch BV1xx411c7mD --frames 6 --video ~/Downloads/lecture.mp4
 
 ```bash
 pip install 'vidnote[mcp]'
-vidnote serve
+vid2note serve
 ```
 
 Claude Code / Codex / Cursor 的配置：
@@ -295,7 +295,7 @@ agent 会多出一个工具 `fetch_note`：
 dsh plugin --profile desktop add ./dsh-plugin
 ```
 
-插件调用本机的 vidnote 命令行，按「配置里的 `cliPath` → `VIDNOTE_CLI` → 仓库构建产物 → 常见安装位置 → PATH」的顺序查找。安装后在「插件」页显示为 **vidnote — B 站视频转 Markdown 笔记**。完整参数和配置见 [`dsh-plugin/README.md`](dsh-plugin/README.md)。
+插件调用本机的 vidnote 命令行，按「配置里的 `cliPath` → `VIDNOTE_CLI` → 仓库构建产物 → 常见安装位置 → PATH」的顺序查找。安装后在「插件」页显示为 **vid2note — B 站视频转 Markdown 笔记**。完整参数和配置见 [`dsh-plugin/README.md`](dsh-plugin/README.md)。
 
 ## 🧭 设计原则
 
@@ -360,7 +360,7 @@ dsh plugin --profile desktop add ./dsh-plugin
 ## 🛠 开发
 
 ```bash
-git clone https://github.com/paper-k1te/vidnote.git
+git clone https://github.com/paper-k1te/vid2note.git
 cd vidnote
 pip install -e '.[dev]'
 
@@ -380,21 +380,21 @@ CI 覆盖 Ubuntu 与 Windows，Python 3.10 / 3.12 / 3.13。
 
 ## English
 
-**vidnote** turns a Bilibili video into a timestamped Markdown note: title, uploader,
+**vid2note** turns a Bilibili video into a timestamped Markdown note: title, uploader,
 multi-part awareness, description, and a transcript — all in one portable file with
 clickable timestamps.
 
 ```bash
-vidnote fetch "https://www.bilibili.com/video/BV1xx411c7mD" --whisper
+vid2note fetch "https://www.bilibili.com/video/BV1xx411c7mD" --whisper
 ```
 
 - Uses Bilibili's public web API; no login, no scraping workarounds.
-- Search first (`vidnote search "keyword"`), then archive the BV ids you care about.
+- Search first (`vid2note search "keyword"`), then archive the BV ids you care about.
 - If a video has no captions (most don't without a session), transcribe locally with
   `faster-whisper` — audio never leaves your machine.
 - `--frames N` crops N thumbnails from Bilibili's storyboard sprites (no video download,
   no ffmpeg). Add `--scene` to pick frames by actual scene changes instead.
 - Output is plain Markdown with YAML frontmatter, ready for Obsidian or any tool.
-- Ships a CLI, an MCP server (`vidnote serve`), and a 15 MB standalone Windows exe.
+- Ships a CLI, an MCP server (`vid2note serve`), and a 15 MB standalone Windows exe.
 
 MIT licensed.

@@ -1,8 +1,8 @@
 import httpx
 import pytest
 
-from vidnote.bilibili import BiliError
-from vidnote.search import BilibiliSearch
+from vid2note.bilibili import BiliError
+from vid2note.search import BilibiliSearch
 
 RESPONSE = {
     "code": 0,

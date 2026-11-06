@@ -28,7 +28,7 @@ impl ServerManager {
 
         // 2. 分配端口并启动服务
         let port = find_free_port();
-        log::info!("正在为 vidnote 后端服务分配端口: {}", port);
+        log::info!("正在为 vid2note 后端服务分配端口: {}", port);
 
         let child = spawn_server(port);
         let child_arc = Arc::new(Mutex::new(child));
@@ -45,9 +45,9 @@ impl ServerManager {
         }
 
         if ready {
-            log::info!("vidnote 后端服务已就绪: http://127.0.0.1:{}/", port);
+            log::info!("vid2note 后端服务已就绪: http://127.0.0.1:{}/", port);
         } else {
-            log::warn!("vidnote 后端服务未在 15 秒内响应 health，继续启动前端");
+            log::warn!("vid2note 后端服务未在 15 秒内响应 health，继续启动前端");
         }
 
         // 4. 启动保活心跳线程，每 4 秒向 /api/ping 发送请求，防止后端 watchdog 退出
@@ -112,7 +112,7 @@ fn spawn_server(port: u16) -> Option<Child> {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(parent) = exe.parent() {
             candidates.push((
-                parent.join("vidnote-server.exe"),
+                parent.join("vid2note-server.exe"),
                 vec!["serve-ui".into(), "--port".into(), port.to_string()],
             ));
         }
@@ -122,9 +122,9 @@ fn spawn_server(port: u16) -> Option<Child> {
     if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
         candidates.push((
             Path::new(&local_app_data)
-                .join("vidnote")
+                .join("vid2note")
                 .join("runtime")
-                .join("vidnote-server.exe"),
+                .join("vid2note-server.exe"),
             vec!["serve-ui".into(), "--port".into(), port.to_string()],
         ));
     }
@@ -135,7 +135,7 @@ fn spawn_server(port: u16) -> Option<Child> {
         dev_python,
         vec![
             "-m".into(),
-            "vidnote.cli".into(),
+            "vid2note.cli".into(),
             "serve-ui".into(),
             "--port".into(),
             port.to_string(),
@@ -147,7 +147,7 @@ fn spawn_server(port: u16) -> Option<Child> {
         PathBuf::from("python"),
         vec![
             "-m".into(),
-            "vidnote.cli".into(),
+            "vid2note.cli".into(),
             "serve-ui".into(),
             "--port".into(),
             port.to_string(),

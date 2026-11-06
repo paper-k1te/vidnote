@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import httpx
 import pytest
 
-from vidnote.bilibili import BilibiliClient, BiliError, VideoId, parse_video_id
+from vid2note.bilibili import BilibiliClient, BiliError, VideoId, parse_video_id
 
 
 def test_parse_full_url_with_page() -> None:

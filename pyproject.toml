@@ -1,11 +1,11 @@
 [project]
-name = "vidnote"
-version = "0.3.4"
+name = "vid2note"
+version = "0.4.0"
 description = "把 B 站视频变成带时间戳的 Markdown 笔记。"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "vidnote contributors" }]
+authors = [{ name = "vid2note contributors" }]
 keywords = ["bilibili", "markdown", "notes", "transcript", "obsidian", "mcp"]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -28,7 +28,14 @@ scene = ["av>=11,<14", "yt-dlp>=2025.1"]
 dev = ["pytest>=8.0", "ruff>=0.6", "mcp>=1.2"]
 
 [project.scripts]
-vidnote = "vidnote.cli:app"
+vid2note = "vid2note.cli:app"
+vidnote = "vid2note.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/paper-k1te/vid2note"
+Repository = "https://github.com/paper-k1te/vid2note"
+Issues = "https://github.com/paper-k1te/vid2note/issues"
+Changelog = "https://github.com/paper-k1te/vid2note/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
@@ -42,7 +49,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vidnote"]
+packages = ["src/vid2note", "src/vidnote"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -58,12 +65,3 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-
-[tool.ruff.lint.per-file-ignores]
-# Typer 的惯用写法就是直接在默认值里调用 Option/Argument。
-"src/vidnote/cli.py" = ["B008"]
-# 内嵌的 HTML/CSS 模板不按 Python 的换行规则排版。
-"src/vidnote/gui.py" = ["E501"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

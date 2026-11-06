@@ -22,8 +22,8 @@ pub fn get_server_port(server: State<Arc<ServerManager>>) -> u16 {
 #[tauri::command]
 pub fn get_app_info() -> AppInfo {
     AppInfo {
-        name: "vidnote".into(),
-        version: "0.3.4".into(),
+        name: "vid2note".into(),
+        version: "0.4.0".into(),
         platform: std::env::consts::OS.into(),
         tauri: true,
     }
@@ -186,4 +186,31 @@ pub fn show_window(window: WebviewWindow) -> Result<(), String> {
     window.unminimize().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn minimize_window(window: WebviewWindow) -> Result<(), String> {
+    window.minimize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn toggle_maximize_window(window: WebviewWindow) -> Result<bool, String> {
+    let is_max = window.is_maximized().map_err(|e| e.to_string())?;
+    if is_max {
+        window.unmaximize().map_err(|e| e.to_string())?;
+        Ok(false)
+    } else {
+        window.maximize().map_err(|e| e.to_string())?;
+        Ok(true)
+    }
+}
+
+#[tauri::command]
+pub fn is_window_maximized(window: WebviewWindow) -> Result<bool, String> {
+    window.is_maximized().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn close_window(window: WebviewWindow) -> Result<(), String> {
+    window.hide().map_err(|e| e.to_string())
 }

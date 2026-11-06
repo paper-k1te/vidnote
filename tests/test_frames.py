@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from vidnote.frames import KeyFrame, pick_frames
+from vid2note.frames import KeyFrame, pick_frames
 
 
 def test_pick_prefers_high_scores() -> None:

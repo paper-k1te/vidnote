@@ -1,12 +1,12 @@
 [package]
-name = "vidnote-desktop"
-version = "0.3.4"
-description = "vidnote - B站视频带时间戳笔记桌面端"
-authors = ["Paperkite Studio", "vidnote contributors"]
+name = "vid2note-desktop"
+version = "0.4.0"
+description = "vid2note - B站视频带时间戳笔记桌面端"
+authors = ["Paperkite Studio", "vid2note contributors"]
 edition = "2021"
 
 [lib]
-name = "vidnote_lib"
+name = "vid2note_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -5,9 +5,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from vidnote.bilibili import BiliError
-from vidnote.frames import KeyFrame
-from vidnote.storyboard import (
+from vid2note.bilibili import BiliError
+from vid2note.frames import KeyFrame
+from vid2note.storyboard import (
     Storyboard,
     choose_cells,
     fetch_storyboard,

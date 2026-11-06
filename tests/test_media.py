@@ -1,8 +1,8 @@
 import json
 from types import SimpleNamespace
 
-from vidnote.bilibili import Cue
-from vidnote.media import (
+from vid2note.bilibili import Cue
+from vid2note.media import (
     cache_dir,
     cues_from_segments,
     load_cached,

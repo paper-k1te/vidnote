@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from vidnote.gui import (
+from vid2note.gui import (
     fetch_video,
     index_html,
     job_state,
@@ -13,7 +13,7 @@ from vidnote.gui import (
     reveal_folder,
     whisper_deps_state,
 )
-from vidnote.media import hf_endpoint
+from vid2note.media import hf_endpoint
 
 
 def test_index_has_core_controls() -> None:
@@ -85,7 +85,7 @@ def test_index_explains_static_file_mode() -> None:
     """直接双击 HTML 时没有本地服务，页面要给出明确提示。"""
     html = index_html()
     assert 'location.protocol === "file:"' in html
-    assert "vidnote gui" in html
+    assert "vid2note gui" in html
 
 
 def test_index_uses_design_tokens() -> None:
@@ -170,3 +170,10 @@ def test_parse_transcribe_options() -> None:
     assert parse_transcribe_options({"transcribe": ""}) == (False, "")
     assert parse_transcribe_options({}) == (False, "")
     assert parse_transcribe_options({"transcribe": True}) == (True, "small")
+
+
+def test_vidnote_backwards_compat() -> None:
+    import vidnote
+    assert vidnote.__version__ == "0.4.0"
+    assert hasattr(vidnote, "BilibiliClient")
+    assert hasattr(vidnote, "build_note")
