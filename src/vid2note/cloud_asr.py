@@ -89,7 +89,8 @@ def resolve_provider(requested: str | None, *, api_key: str | None = None) -> st
     if value in ("whisper", "openai", "whisper-api"):
         return "whisper"
     if api_key:
-        return "whisper" if not (api_key.startswith("AIza") or api_key.startswith("AQ.")) else "gemini"
+        is_gemini = api_key.startswith("AIza") or api_key.startswith("AQ.")
+        return "gemini" if is_gemini else "whisper"
     if _env_key("gemini"):
         return "gemini"
     if _env_key("whisper"):
@@ -287,7 +288,8 @@ def _post_gemini(body: dict, *, key: str, model: str, retry_delay: float = 1.0) 
                     json=body,
                 )
             except httpx.HTTPError as exc:
-                raise CloudAsrError(f"连不上 Gemini（{exc}）。如果在中国大陆，请先开启代理。") from exc
+                msg = f"连不上 Gemini（{exc}）。如果在中国大陆，请先开启代理。"
+                raise CloudAsrError(msg) from exc
             if response.status_code in (429, 500, 502, 503, 504) and attempt < 2:
                 delay = retry_delay * (2**attempt)
                 retry_after = response.headers.get("Retry-After")
@@ -301,10 +303,12 @@ def _post_gemini(body: dict, *, key: str, model: str, retry_delay: float = 1.0) 
             try:
                 data = response.json()
             except ValueError as exc:
-                raise CloudAsrError(f"Gemini 返回了无法解析的内容（HTTP {response.status_code}）") from exc
+                msg = f"Gemini 返回了无法解析的内容（HTTP {response.status_code}）"
+                raise CloudAsrError(msg) from exc
             if response.status_code >= 400:
                 error = data.get("error") if isinstance(data, dict) else None
-                message = error.get("message") if isinstance(error, dict) else str(error or response.text[:200])
+                fallback = str(error or response.text[:200])
+                message = error.get("message") if isinstance(error, dict) else fallback
                 raise CloudAsrError(f"Gemini API 错误（HTTP {response.status_code}）：{message}")
             return data
     raise CloudAsrError("Gemini API 连续失败，请稍后重试。")
@@ -460,7 +464,8 @@ def _transcribe_whisper(
         )
     else:
         text = str(data.get("text") or "").strip()
-        cues = [Cue(start=0.0, end=float(data.get("duration") or 0.0) or 1.0, text=text)] if text else []
+        dur = float(data.get("duration") or 0.0) or 1.0
+        cues = [Cue(start=0.0, end=dur, text=text)] if text else []
     if not cues:
         raise CloudAsrError("转写接口没有返回文字。")
     return str(data.get("language") or "zh"), cues
@@ -481,7 +486,9 @@ def transcribe_audio(
     key = _key_for(provider, api_key)
     base = base_url or os.environ.get("VID2NOTE_ASR_BASE") or ""
     if provider == "gemini":
-        return _transcribe_gemini(audio, key=key, model=selected, on_progress=on_progress, on_status=on_status)
+        return _transcribe_gemini(
+            audio, key=key, model=selected, on_progress=on_progress, on_status=on_status
+        )
     return _transcribe_whisper(audio, key=key, base_url=base, model=selected, on_status=on_status)
 
 
