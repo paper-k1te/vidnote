@@ -45,6 +45,7 @@ window.__ModuleLoader__.load({
         outdir: '输出目录',
         outdirHint: '留空 = 默认目录',
         pick: '选择',
+        paste: '粘贴',
         plan: '解析方案',
         planNone: '不转写 · 只输出元数据',
         planVosk: 'Vosk 小模型 · 快、占用小、自动分句',
@@ -109,6 +110,9 @@ window.__ModuleLoader__.load({
         noResult: '没有找到结果。',
         error: '出错了',
         views: '播放',
+        ready: '就绪',
+        doneLabel: '完成',
+        failed: '出错',
       },
       en: {
         brand: 'vid2note',
@@ -138,6 +142,7 @@ window.__ModuleLoader__.load({
         outdir: 'Output folder',
         outdirHint: 'Empty = default folder',
         pick: 'Choose',
+        paste: 'Paste',
         plan: 'Transcription',
         planNone: 'Off · metadata only',
         planVosk: 'Vosk small · fast and small',
@@ -202,6 +207,9 @@ window.__ModuleLoader__.load({
         noResult: 'Nothing found.',
         error: 'Something went wrong',
         views: 'plays',
+        ready: 'Ready',
+        doneLabel: 'Done',
+        failed: 'Failed',
       },
     }
 
@@ -353,6 +361,47 @@ window.__ModuleLoader__.load({
 .vn-deps-state { font-size: 12px; color: var(--dsw-alias-label-secondary, #52525b); line-height: 1.6; margin: 6px 0 0; }
 .vn-tips { margin: 0; padding-left: 18px; }
 .vn-tips li { margin: 6px 0; line-height: 1.7; font-size: 13px; }
+
+/* ---- 0.4.0 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
+.vn-view { background: radial-gradient(1100px 380px at 18% -12%, rgba(251,114,153,.10), transparent 62%), radial-gradient(900px 320px at 92% 0%, rgba(249,115,22,.10), transparent 58%), var(--dsw-alias-bg-base, #fff); }
+.vn-side { width: 184px; gap: 3px; }
+.vn-brand { padding-bottom: 16px; }
+.vn-logo { background: linear-gradient(135deg, #fb7299 0%, #f97316 100%); box-shadow: 0 6px 16px rgba(249,115,22,.32); }
+.vn-nav { border-radius: 8px; position: relative; }
+.vn-nav[aria-current="true"] { background: linear-gradient(90deg, rgba(249,115,22,.14), rgba(249,115,22,0)); font-weight: 600; }
+.vn-nav[aria-current="true"]::before { content: ''; position: absolute; left: 2px; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, #fb7299, #f97316); }
+.vn-topbar { height: 58px; }
+.vn-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); color: var(--dsw-alias-label-secondary, #65656e); }
+.vn-status i { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; display: inline-block; }
+.vn-status.running i { background: #f97316; animation: vn-pulse 1.2s infinite; }
+.vn-status.done i { background: #10b981; }
+.vn-status.error i { background: #ef4444; }
+@keyframes vn-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+.vn-card { border-radius: 14px; box-shadow: 0 10px 30px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04); }
+.vn-primary { background: linear-gradient(135deg, #fb7299 0%, #f97316 100%); box-shadow: 0 6px 16px rgba(249,115,22,.28); border-radius: 8px; }
+.vn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #fb7299 0%, #f97316 100%); filter: brightness(1.05); }
+.vn-ghost { border-radius: 8px; }
+.vn-chip { background: rgba(249,115,22,.12); color: var(--dsw-alias-label-primary, #18181b); }
+.vn-hero { position: relative; margin: 12px 14px 0; height: 132px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, rgba(251,114,153,.20), rgba(249,115,22,.20)); }
+.vn-hero-cover { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vn-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.68) 100%); }
+.vn-hero-body { position: absolute; left: 14px; right: 14px; bottom: 10px; z-index: 1; color: #fff; display: flex; flex-direction: column; gap: 4px; text-shadow: 0 1px 6px rgba(0,0,0,.4); }
+.vn-hero-title { font-size: 15px; font-weight: 650; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vn-hero-chips { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
+.vn-hero-chips span { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.22); padding: 1px 8px; border-radius: 999px; }
+.vn-steps { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.vn-step { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11px; color: var(--dsw-alias-label-secondary, #65656e); background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
+.vn-step b { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .35; }
+.vn-step.active { color: #c2410c; background: rgba(249,115,22,.14); font-weight: 600; }
+.vn-step.active b { opacity: 1; background: #f97316; }
+.vn-step.done { color: #047857; background: rgba(16,185,129,.12); }
+.vn-step.done b { opacity: 1; background: #10b981; }
+.vn-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.vn-pill { border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.12)); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--dsw-alias-label-secondary, #52525b); cursor: pointer; }
+.vn-pill[aria-pressed="true"] { border-color: transparent; background: linear-gradient(135deg, #fb7299, #f97316); color: #fff; font-weight: 600; }
+.vn-version { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 9px; border-radius: 999px; font-size: 11px; color: var(--dsw-alias-label-secondary, #777); background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
+.vn-frame { transition: transform .18s ease, box-shadow .18s ease; }
+.vn-frame:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,.12); }
 `
 
     // ---------------- 会话内持久化的状态 ----------------
@@ -760,14 +809,32 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------- 页面 ----------------
+    const STEP_NAMES = ['元数据', '字幕/转写', '关键帧', '组装']
+
+    /** 从后端 phase 文本猜当前在第几步，只用于进度展示。 */
+    function stepOf(phase) {
+      const text = String(phase ?? '')
+      if (/关键帧/.test(text)) return 2
+      if (/字幕|转写|音频|模型|下载/.test(text)) return 1
+      if (/组装|写入|完成|笔记/.test(text)) return 3
+      return 0
+    }
+
     function Progress({ t }) {
       const percent = state.total > 0 ? Math.max(0, Math.min(100, Math.round((state.done / state.total) * 100))) : null
+      const active = stepOf(state.phase)
+      const finished = state.status === 'done'
       return h('div', { className: 'vn-progress' },
         h('div', { className: 'vn-progress-label' },
           h('span', null, state.phase || t.preparing),
           h('span', null, percent === null ? '' : `${percent}%`)),
         h('div', { className: 'vn-bar' + (percent === null ? ' indeterminate' : '') },
-          h('i', { style: percent === null ? undefined : { width: `${percent}%` } })))
+          h('i', { style: percent === null ? undefined : { width: `${percent}%` } })),
+        h('div', { className: 'vn-steps' },
+          STEP_NAMES.map((name, index) => h('span', {
+            key: name,
+            className: 'vn-step' + (finished || index < active ? ' done' : index === active ? ' active' : ''),
+          }, h('b'), name))))
     }
 
     function formatDuration(value) {
@@ -786,17 +853,17 @@ window.__ModuleLoader__.load({
     function MetaHeader({ t }) {
       const meta = state.meta
       if (!meta?.title) return null
-      return h('div', { className: 'vn-meta' },
+      return h('div', { className: 'vn-hero' },
         meta.cover
-          ? h('img', { className: 'vn-cover', src: meta.cover, alt: '', referrerPolicy: 'no-referrer' })
+          ? h('img', { className: 'vn-hero-cover', src: meta.cover, alt: '', referrerPolicy: 'no-referrer' })
           : null,
-        h('div', { className: 'vn-meta-body' },
-          h('div', { className: 'vn-meta-title' }, meta.title),
-          h('div', { className: 'vn-chips' },
-            meta.author ? h('span', { className: 'vn-chip' }, meta.author) : null,
-            meta.bvid ? h('span', { className: 'vn-chip' }, meta.bvid) : null,
-            meta.duration ? h('span', { className: 'vn-chip' }, formatDuration(meta.duration)) : null,
-            meta.views ? h('span', { className: 'vn-chip' }, `${Number(meta.views).toLocaleString()} ${t.views}`) : null)))
+        h('div', { className: 'vn-hero-body' },
+          h('div', { className: 'vn-hero-title' }, meta.title),
+          h('div', { className: 'vn-hero-chips' },
+            meta.author ? h('span', null, meta.author) : null,
+            meta.bvid ? h('span', null, meta.bvid) : null,
+            meta.duration ? h('span', null, formatDuration(meta.duration)) : null,
+            meta.views ? h('span', null, `${Number(meta.views).toLocaleString()} ${t.views}`) : null)))
     }
 
     function galleryFrames() {
@@ -859,23 +926,40 @@ window.__ModuleLoader__.load({
 
     function FetchPage({ t }) {
       const running = state.status === 'running'
+      const paste = async () => {
+        try {
+          const text = await navigator.clipboard?.readText?.()
+          if (text) set({ target: text.trim() })
+        } catch {
+          // 没有剪贴板权限时忽略
+        }
+      }
       return h(React.Fragment, null,
         h('section', { className: 'vn-card' },
           h('div', { className: 'vn-card-body' },
             h('label', { className: 'vn-label', htmlFor: 'vn-target' }, t.target),
-            h('input', {
-              id: 'vn-target', className: 'vn-input', value: state.target, placeholder: t.targetHint,
-              spellCheck: false,
-              onChange: (event) => set({ target: event.target.value }),
-              onKeyDown: (event) => { if (event.key === 'Enter') startFetch() },
-            }),
+            h('div', { className: 'vn-outdir' },
+              h('input', {
+                id: 'vn-target', className: 'vn-input', value: state.target, placeholder: t.targetHint,
+                spellCheck: false,
+                onChange: (event) => set({ target: event.target.value }),
+                onKeyDown: (event) => { if (event.key === 'Enter') startFetch() },
+              }),
+              h('button', { type: 'button', className: 'vn-ghost', onClick: paste }, t.paste)),
             h('div', { className: 'vn-row' },
               h('div', null,
                 h('label', { className: 'vn-label', htmlFor: 'vn-page' }, t.page),
                 h('input', { id: 'vn-page', className: 'vn-input', type: 'number', min: 1, value: state.page, onChange: (event) => set({ page: event.target.value }) })),
               h('div', null,
-                h('label', { className: 'vn-label', htmlFor: 'vn-frames' }, t.frames),
-                h('input', { id: 'vn-frames', className: 'vn-input', type: 'number', min: 0, max: 30, value: state.frames, onChange: (event) => set({ frames: event.target.value }) }))),
+                h('label', { className: 'vn-label' }, t.frames),
+                h('div', { className: 'vn-pills' },
+                  ['0', '3', '6', '12'].map((value) => h('button', {
+                    key: value,
+                    type: 'button',
+                    className: 'vn-pill',
+                    'aria-pressed': String(state.frames) === value,
+                    onClick: () => set({ frames: value }),
+                  }, value))))),
             h('label', { className: 'vn-label', htmlFor: 'vn-outdir' }, t.outdir),
             h('div', { className: 'vn-outdir' },
               h('input', { id: 'vn-outdir', className: 'vn-input', value: state.outdir, placeholder: t.outdirHint, onChange: (event) => set({ outdir: event.target.value }) }),
@@ -1091,6 +1175,10 @@ window.__ModuleLoader__.load({
         }
       })()
 
+      const statusText = state.status === 'running'
+        ? `${t.running}${state.total > 0 ? ` ${Math.round((state.done / state.total) * 100)}%` : ''}`
+        : state.status === 'done' ? t.doneLabel : state.status === 'error' ? t.failed : t.ready
+
       return h('div', { className: 'vn-view' },
         h('aside', { className: 'vn-side' },
           h('div', { className: 'vn-brand' },
@@ -1107,12 +1195,14 @@ window.__ModuleLoader__.load({
               h(entry.icon),
               h('span', null, t[entry.nav]))),
           h('div', { className: 'vn-side-foot' },
+            h('span', { className: 'vn-version' }, 'v0.4.0 · Tauri'),
             h('button', { type: 'button', className: 'vn-ghost', onClick: openWindow }, state.opened ? t.opened : t.legacy))),
         h('main', { className: 'vn-main' },
           h('div', { className: 'vn-topbar' },
             h('h1', null, t[page.title]),
             h('span', { className: 'vn-sub' }, t[page.sub]),
-            h('span', { className: 'vn-spacer' })),
+            h('span', { className: 'vn-spacer' }),
+            h('span', { className: `vn-status ${state.status}` }, h('i'), statusText)),
           h('div', { className: state.tab === 'fetch' ? 'vn-content' : 'vn-content-single' }, pageBody)))
     }
 
