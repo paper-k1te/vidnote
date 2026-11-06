@@ -384,6 +384,43 @@ def start_deps_install() -> dict[str, Any]:
     return whisper_deps_state()
 
 
+def parse_transcribe_options(payload: dict[str, Any]) -> tuple[bool, str]:
+    """从请求体解析是否转写以及转写模型。
+
+    兼容多种传入形态：
+    - transcribe: True/False, model: "vosk-cn" / "tiny" / "base" / "small"
+    - transcribe: "vosk" / "vosk-cn" / "whisper-tiny" / "tiny" / "none" / ""
+    - model: "vosk" / "vosk-cn" / "whisper-tiny" / "tiny"
+    """
+    raw_transcribe = payload.get("transcribe")
+    raw_model = str(payload.get("model") or "").strip()
+
+    if raw_model:
+        m = raw_model.strip()
+        if m in ("none", "false", "0"):
+            return False, ""
+        if m in ("vosk", "vosk-cn") or "vosk" in m.lower():
+            return True, "vosk-cn"
+        if m.startswith("whisper-"):
+            return True, m.removeprefix("whisper-")
+        return True, m
+
+    if isinstance(raw_transcribe, str):
+        t = raw_transcribe.strip()
+        if t in ("none", "false", "0", ""):
+            return False, ""
+        if t in ("vosk", "vosk-cn") or "vosk" in t.lower():
+            return True, "vosk-cn"
+        if t.startswith("whisper-"):
+            return True, t.removeprefix("whisper-")
+        if t in ("tiny", "base", "small", "medium", "large-v3"):
+            return True, t
+        return True, t
+
+    transcribe = bool(raw_transcribe)
+    return transcribe, ("small" if transcribe else "")
+
+
 def fetch_video(
     payload: dict[str, Any],
     *,
@@ -394,9 +431,7 @@ def fetch_video(
     page = int(payload.get("page") or 1)
     frames = int(payload.get("frames") or 0)
     outdir = str(payload.get("outdir", "")).strip()
-    transcribe = bool(payload.get("transcribe"))
-    # 空字符串表示不转写；给了值就按这个模型转写。
-    model = str(payload.get("model") or "").strip() or ("small" if transcribe else "")
+    transcribe, model = parse_transcribe_options(payload)
     cookie = str(payload.get("cookie") or "").strip()
     channel = str(payload.get("channel") or "auto").strip()
 

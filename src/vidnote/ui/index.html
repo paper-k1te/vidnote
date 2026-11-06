@@ -583,11 +583,11 @@
         <div class="field">
           <label class="field-label">解析方案 (无字幕时兜底)</label>
           <select id="transcribe">
-            <option value="none" selected>字幕优先 / 无字幕则报错</option>
-            <option value="vosk">Vosk 离线引擎 (内置中文模型 42MB · 极速)</option>
-            <option value="whisper-tiny">Whisper Tiny (轻量 75MB)</option>
-            <option value="whisper-base">Whisper Base (平衡 145MB)</option>
-            <option value="whisper-small">Whisper Small (高精 485MB)</option>
+            <option value="" selected>字幕优先 / 无字幕则不转写</option>
+            <option value="vosk-cn">Vosk 离线引擎 (内置中文模型 42MB · 极速)</option>
+            <option value="tiny">Whisper Tiny (轻量 75MB)</option>
+            <option value="base">Whisper Base (平衡 145MB)</option>
+            <option value="small">Whisper Small (高精 485MB)</option>
           </select>
         </div>
         <div class="field">
@@ -1025,11 +1025,14 @@
       return;
     }
 
+    const transcribeVal = $('transcribe').value;
+    const isTranscribe = Boolean(transcribeVal && transcribeVal !== 'none');
     const payload = {
       target,
       page: parseInt($('page').value || '1', 10),
       frames: parseInt($('frames').value || '6', 10),
-      transcribe: $('transcribe').value,
+      transcribe: isTranscribe,
+      model: isTranscribe ? transcribeVal : '',
       outdir: $('outdir').value.trim(),
       cookie: $('cookie').value.trim(),
       channel: $('channel').value,
@@ -1364,6 +1367,22 @@
         badge.style.borderColor = 'var(--danger)';
         desc.textContent = '检测到当前尚未安装 faster-whisper 运行库，点击下方按钮开始下载安装。';
         btn.classList.remove('hidden');
+      }
+
+      const box = $('transcribe');
+      if (box) {
+        [...box.options].forEach((option) => {
+          if (!option.value || option.value === 'none') return;
+          const isVosk = option.value.startsWith('vosk');
+          if (!isVosk) {
+            if (!option.dataset.origText) option.dataset.origText = option.textContent;
+            if (!res.installed) {
+              option.textContent = option.dataset.origText.replace(/\s*\(需安装依赖\)/, '') + ' (需安装依赖)';
+            } else {
+              option.textContent = option.dataset.origText.replace(/\s*\(需安装依赖\)/, '');
+            }
+          }
+        });
       }
     } catch (e) {
       console.warn('检测 whisper 依赖失败:', e);

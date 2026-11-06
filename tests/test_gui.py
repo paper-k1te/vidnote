@@ -7,6 +7,7 @@ from vidnote.gui import (
     index_html,
     job_state,
     open_url,
+    parse_transcribe_options,
     read_frame,
     reveal,
     reveal_folder,
@@ -154,3 +155,15 @@ def test_read_frame_blocks_path_traversal(tmp_path: Path) -> None:
 
 def test_job_state_rejects_unknown_id() -> None:
     assert "error" in job_state("missing")
+
+
+def test_parse_transcribe_options() -> None:
+    assert parse_transcribe_options({"transcribe": "vosk"}) == (True, "vosk-cn")
+    assert parse_transcribe_options({"transcribe": "vosk-cn"}) == (True, "vosk-cn")
+    assert parse_transcribe_options({"transcribe": True, "model": "vosk"}) == (True, "vosk-cn")
+    assert parse_transcribe_options({"transcribe": "whisper-tiny"}) == (True, "tiny")
+    assert parse_transcribe_options({"transcribe": True, "model": "tiny"}) == (True, "tiny")
+    assert parse_transcribe_options({"transcribe": "none"}) == (False, "")
+    assert parse_transcribe_options({"transcribe": ""}) == (False, "")
+    assert parse_transcribe_options({}) == (False, "")
+    assert parse_transcribe_options({"transcribe": True}) == (True, "small")
