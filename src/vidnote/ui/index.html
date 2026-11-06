@@ -480,6 +480,57 @@
   .hidden { display: none !important; }
   .spin { animation: spin 0.8s linear infinite; }
   @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* Lightbox Modal */
+  .lightbox-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; animation: fadeIn 0.15s ease-out;
+  }
+  .lightbox-overlay.hidden { display: none !important; }
+  .lightbox-content {
+    position: relative; max-width: 90vw; max-height: 90vh;
+    display: flex; flex-direction: column; background: var(--bg-surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  }
+  .lightbox-content img {
+    max-width: 90vw; max-height: 80vh; object-fit: contain;
+    display: block; background: #000;
+  }
+  .lightbox-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: var(--bg-surface);
+    border-top: 1px solid var(--border); font-size: 13px; color: var(--text-2);
+  }
+
+  /* History Enhancements */
+  .history-card { position: relative; }
+  .search-cover-fallback {
+    width: 120px; height: 75px; border-radius: var(--radius-sm);
+    background: var(--bg-surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex: none;
+  }
+  .badge-mini {
+    font-family: var(--font-mono); font-size: 11px; background: var(--bg-surface);
+    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border);
+  }
+  .history-path {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+    margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;
+  }
+  .history-actions {
+    display: flex; align-items: center; margin-left: auto; align-self: center;
+    opacity: 0.6; transition: opacity var(--transition);
+  }
+  .history-card:hover .history-actions { opacity: 1; }
+  .btn-del-hist {
+    width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-3); border-radius: 50%;
+  }
+  .btn-del-hist:hover { color: var(--danger); background: rgba(239, 68, 68, 0.15); }
 </style>
 </head>
 <body>
@@ -803,6 +854,17 @@
   </div>
 </main>
 
+<!-- Lightbox Modal -->
+<div class="lightbox-overlay hidden" id="lightbox-modal">
+  <div class="lightbox-content">
+    <img id="lightbox-img" src="" alt="关键帧预览">
+    <div class="lightbox-bar">
+      <span id="lightbox-caption" style="font-weight:600">关键帧预览</span>
+      <button class="btn btn-secondary btn-sm" id="btn-lightbox-close" type="button">关闭 (Esc)</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -827,12 +889,24 @@
   }
 
   let serverPort = null;
+  setTimeout(() => { if (typeof getServerPort === 'function') getServerPort(); }, 50);
   let activeJobId = null;
   let pollTimer = null;
   let currentMarkdown = "";
   let currentFilePath = "";
   let currentMeta = null;
   let currentFrames = [];
+
+  function getFrameUrl(notePath, srcPath) {
+    if (!srcPath) return '';
+    const clean = srcPath.replace(/^<|>$/g, '').trim();
+    if (clean.startsWith('http:') || clean.startsWith('https:') || clean.startsWith('data:')) {
+      return clean;
+    }
+    const port = serverPort || (location.port ? parseInt(location.port, 10) : 18233);
+    const scheme = 'http:';
+    return `${scheme}//127.0.0.1:${port}/api/frame?note=${encodeURIComponent(notePath || '')}&src=${encodeURIComponent(clean)}`;
+  }
 
   function toast(message, kind = 'info') {
     const el = $('toast');
@@ -1153,6 +1227,27 @@
     }, 800);
   }
 
+  // Lightbox 控制
+  window.__zoomImage = (src, caption = "关键帧预览") => {
+    if (!src) return;
+    $('lightbox-img').src = src;
+    $('lightbox-caption').textContent = caption;
+    $('lightbox-modal').classList.remove('hidden');
+  };
+  const closeLightbox = () => {
+    $('lightbox-modal').classList.add('hidden');
+    $('lightbox-img').src = "";
+  };
+  $('btn-lightbox-close').onclick = closeLightbox;
+  $('lightbox-modal').onclick = (e) => {
+    if (e.target === $('lightbox-modal')) closeLightbox();
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('lightbox-modal').classList.contains('hidden')) {
+      closeLightbox();
+    }
+  });
+
   // 渲染结果
   function renderResult(result) {
     currentMarkdown = result.markdown || result.note || "";
@@ -1170,8 +1265,29 @@
       if (bvidM) currentMeta.bvid = bvidM[1];
       const durM = currentMarkdown.match(/duration:\s*['"]?([^\r\n'"]+)/);
       if (durM) currentMeta.duration_text = durM[1];
-      const coverM = currentMarkdown.match(/\|\s*封面\s*\|\s*!\[[^\]]*\]\(([^)]+)\)/);
-      if (coverM) currentMeta.cover = coverM[1].replace(/^<|>$/g, '');
+      const coverM = currentMarkdown.match(/\|\s*封面\s*\|\s*!\[[^\]]*\]\(([^)]+)\)/) || currentMarkdown.match(/cover:\s*['"]?([^\r\n'"]+)/);
+      if (coverM) currentMeta.cover = coverM[1].replace(/^<|>$/g, '').trim();
+    }
+
+    // 若当前没有传入关键帧列表，但 markdown 内包含关键帧图片，从正文中提取
+    if ((!currentFrames || currentFrames.length === 0) && currentMarkdown) {
+      const frameRegex = /!\[([^\]]*)\]\((<[^>]+>|[^)]+)\)/g;
+      let m;
+      const extracted = [];
+      while ((m = frameRegex.exec(currentMarkdown)) !== null) {
+        const alt = m[1] || '';
+        const rawSrc = m[2].replace(/^<|>$/g, '').trim();
+        if (rawSrc.startsWith('http:') || rawSrc.startsWith('https:') || rawSrc.startsWith('data:')) continue;
+        const tsMatch = alt.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+        extracted.push({
+          timestamp: tsMatch ? tsMatch[1] : alt,
+          path: rawSrc,
+          seconds: 0,
+        });
+      }
+      if (extracted.length > 0) {
+        currentFrames = extracted;
+      }
     }
 
     $('btn-copy').disabled = false;
@@ -1184,6 +1300,7 @@
 
     if (currentMeta.cover) {
       $('hero-cover').src = currentMeta.cover;
+      $('hero-cover').referrerPolicy = "no-referrer";
       $('hero-cover').style.display = 'block';
     } else {
       $('hero-cover').style.display = 'none';
@@ -1265,11 +1382,8 @@
       // 处理关键帧与通用图片：![alt](<path>) 或 ![alt](path)
       text = text.replace(/!\[([^\]]*)\]\((<[^>]+>|[^)]+)\)/g, (m, alt, src) => {
         let cleanSrc = src.replace(/^<|>$/g, '').trim();
-        let imgSrc = cleanSrc;
-        if (!cleanSrc.startsWith('http') && !cleanSrc.startsWith('data:')) {
-          imgSrc = `/api/frame?note=${encodeURIComponent(currentFilePath)}&src=${encodeURIComponent(cleanSrc)}`;
-        }
-        return `<div class="keyframe-card"><img src="${imgSrc}" alt="${alt}" loading="lazy" onclick="window.__zoomImage && window.__zoomImage('${imgSrc}')"><div class="keyframe-caption">${alt || '关键帧'}</div></div>`;
+        let imgSrc = getFrameUrl(currentFilePath, cleanSrc);
+        return `<div class="keyframe-card"><img src="${imgSrc}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" onclick="window.__zoomImage && window.__zoomImage('${imgSrc}', '${alt || '关键帧'}')"><div class="keyframe-caption">${alt || '关键帧'}</div></div>`;
       });
       // 处理粗体 **text**
       text = text.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
@@ -1337,6 +1451,8 @@
         html += '<h3>' + formatInline(line.slice(4)) + '</h3>';
       } else if (/^---$/.test(line)) {
         html += '<hr style="border:none;border-top:1px solid var(--border);margin:20px 0">';
+      } else if (line.trim().startsWith('![')) {
+        html += formatInline(line.trim());
       } else if (line.trim()) {
         html += '<p>' + formatInline(line) + '</p>';
       }
@@ -1360,15 +1476,17 @@
     currentFrames.forEach((f) => {
       const card = document.createElement('div');
       card.className = 'gallery-card';
-      const imgSrc = `/api/frame?note=${encodeURIComponent(currentFilePath)}&src=${encodeURIComponent(f.path || f.src || f)}`;
+      const cleanPath = (f.path || f.src || f).replace(/^<|>$/g, '').trim();
+      const imgSrc = getFrameUrl(currentFilePath, cleanPath);
+      const caption = f.timestamp || f.ts || (typeof f.seconds === 'number' ? formatSeconds(f.seconds) : '关键帧');
       card.innerHTML = `
-        <img src="${imgSrc}" loading="lazy">
+        <img src="${imgSrc}" loading="lazy" referrerpolicy="no-referrer" alt="${caption}">
         <div class="gallery-card-foot">
-          <span style="font-family:var(--font-mono);font-weight:600">${f.timestamp || f.ts || '帧'}</span>
+          <span style="font-family:var(--font-mono);font-weight:600">${caption}</span>
           <span style="color:var(--text-3);font-size:11px">点击放大</span>
         </div>
       `;
-      card.onclick = () => window.open(imgSrc);
+      card.onclick = () => window.__zoomImage(imgSrc, `关键帧 ${caption}`);
       container.appendChild(card);
     });
   }
@@ -1570,17 +1688,47 @@
   function saveHistory(result) {
     let hist = [];
     try { hist = JSON.parse(localStorage.getItem('vidnote-history') || '[]'); } catch (e) {}
-    hist.unshift({
-      title: result.meta?.title || '无标题',
-      bvid: result.meta?.bvid || '',
-      cover: result.meta?.cover || '',
-      path: result.path || '',
-      time: new Date().toLocaleString(),
-      markdown: result.markdown || '',
-      meta: result.meta || {},
-      frames: result.frames || [],
+
+    let meta = result.meta || {};
+    let md = result.markdown || result.note || "";
+    if (!meta.title && md) {
+      const titleM = md.match(/title:\s*['"]?([^\r\n'"]+)/);
+      if (titleM) meta.title = titleM[1];
+      const ownerM = md.match(/owner:\s*['"]?([^\r\n'"]+)/);
+      if (ownerM) meta.author = ownerM[1];
+      const bvidM = md.match(/bvid:\s*['"]?([^\r\n'"]+)/);
+      if (bvidM) meta.bvid = bvidM[1];
+      const durM = md.match(/duration:\s*['"]?([^\r\n'"]+)/);
+      if (durM) meta.duration_text = durM[1];
+      const coverM = md.match(/\|\s*封面\s*\|\s*!\[[^\]]*\]\(([^)]+)\)/) || md.match(/cover:\s*['"]?([^\r\n'"]+)/);
+      if (coverM) meta.cover = coverM[1].replace(/^<|>$/g, '').trim();
+    }
+
+    const title = meta.title || '无标题';
+    const bvid = meta.bvid || '';
+    const cover = meta.cover || '';
+    const path = result.path || '';
+
+    // 过滤掉同 bvid 或同 path 的旧记录，防止重复
+    hist = hist.filter(item => {
+      if (bvid && item.bvid === bvid) return false;
+      if (path && item.path === path) return false;
+      return true;
     });
-    if (hist.length > 20) hist = hist.slice(0, 20);
+
+    hist.unshift({
+      title,
+      bvid,
+      cover,
+      author: meta.author || '',
+      duration: meta.duration_text || (meta.duration ? formatSeconds(meta.duration) : ''),
+      path,
+      time: new Date().toLocaleString('zh-CN', { hour12: false }),
+      markdown: md,
+      meta,
+      frames: Array.isArray(result.frames) && result.frames.length > 0 ? result.frames : currentFrames,
+    });
+    if (hist.length > 30) hist = hist.slice(0, 30);
     localStorage.setItem('vidnote-history', JSON.stringify(hist));
   }
 
@@ -1590,28 +1738,50 @@
     let hist = [];
     try { hist = JSON.parse(localStorage.getItem('vidnote-history') || '[]'); } catch (e) {}
 
+    // 自动过滤早期未记录元数据的空白损坏项
+    hist = hist.filter(item => item && (item.title !== '无标题' || item.bvid));
+
     if (hist.length === 0) {
       container.innerHTML = '<div class="empty-state"><p>还没有生成过的笔记历史</p></div>';
       return;
     }
 
-    hist.forEach((item) => {
+    hist.forEach((item, index) => {
       const card = document.createElement('div');
-      card.className = 'search-card';
+      card.className = 'search-card history-card';
+      const coverHtml = item.cover
+        ? `<img class="search-cover" src="${item.cover}" loading="lazy" referrerpolicy="no-referrer">`
+        : `<div class="search-cover-fallback"><span>📄</span></div>`;
+
       card.innerHTML = `
-        <img class="search-cover" src="${item.cover || ''}" loading="lazy">
+        ${coverHtml}
         <div class="search-info">
           <div class="search-title">${item.title}</div>
           <div class="search-meta">
-            <span>${item.bvid}</span>
+            ${item.author ? `<span>UP: ${item.author}</span>` : ''}
+            ${item.bvid ? `<span class="badge-mini">${item.bvid}</span>` : ''}
+            ${item.duration ? `<span>${item.duration}</span>` : ''}
             <span>${item.time}</span>
           </div>
+          ${item.path ? `<div class="history-path" title="${item.path}">${item.path.split(/[\\/]/).pop()}</div>` : ''}
+        </div>
+        <div class="history-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm btn-del-hist" title="删除记录">✕</button>
         </div>
       `;
+
+      card.querySelector('.btn-del-hist').onclick = (e) => {
+        e.stopPropagation();
+        hist.splice(index, 1);
+        localStorage.setItem('vidnote-history', JSON.stringify(hist));
+        loadHistory();
+        toast('已删除该条历史记录', 'info');
+      };
+
       card.onclick = () => {
         renderResult(item);
         document.querySelector('.nav-item[data-view="fetch"]').click();
-        toast('已重新载入笔记: ' + item.title, 'ok');
+        toast('已载入笔记: ' + item.title, 'ok');
       };
       container.appendChild(card);
     });

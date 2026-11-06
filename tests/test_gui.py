@@ -140,6 +140,9 @@ def test_read_frame_serves_image_next_to_note(tmp_path: Path) -> None:
     body, content_type = found
     assert body == b"\xff\xd8\xff"
     assert content_type == "image/jpeg"
+    assert read_frame(str(note), "<note_frames/01.jpg>") == found
+    assert read_frame(str(note), "/note_frames/01.jpg") == found
+    assert read_frame(str(note), "</note_frames/01.jpg>") == found
 
 
 def test_read_frame_blocks_path_traversal(tmp_path: Path) -> None:

@@ -31,7 +31,7 @@ from urllib.parse import parse_qs, urlparse
 from . import __version__, whisper_deps
 from .bilibili import BilibiliClient, BiliError
 from .media import ProgressFn, StatusFn, hf_endpoint
-from .note import NoteOptions, build_note, filename
+from .note import NoteOptions, build_note, filename, fmt_ts
 from .search import BilibiliSearch
 from .storyboard import storyboard_frames
 
@@ -535,7 +535,25 @@ def fetch_video(
         "markdown": note,
         "path": str(destination),
         "folder": str(destination.parent),
-        "frames": len(keyframes),
+        "frames_count": len(keyframes),
+        "frames": [
+            {
+                "seconds": sec,
+                "path": rel_path,
+                "timestamp": fmt_ts(int(sec)),
+            }
+            for sec, rel_path in keyframes
+        ],
+        "meta": {
+            "bvid": meta.bvid,
+            "aid": meta.aid,
+            "title": meta.title,
+            "author": meta.owner,
+            "cover": meta.cover,
+            "duration": meta.duration,
+            "pubdate": meta.pubdate.isoformat(),
+            "views": meta.stats.view if meta.stats else 0,
+        },
     }
     if warning:
         result["warning"] = warning
@@ -558,10 +576,15 @@ def read_frame(note_path: str, src: str) -> tuple[bytes, str] | None:
     if not note_path or not src:
         return None
     note = Path(note_path)
-    if not note.exists():
+    clean_src = src.strip().removeprefix("<").removesuffix(">").strip().lstrip("/\\")
+    if note.is_file():
+        base = note.parent.resolve()
+    elif note.is_dir():
+        base = note.resolve()
+    elif note.parent.exists():
+        base = note.parent.resolve()
+    else:
         return None
-    base = note.parent.resolve()
-    clean_src = src.strip().removeprefix("<").removesuffix(">").strip()
     try:
         target = (base / clean_src).resolve()
         target.relative_to(base)
