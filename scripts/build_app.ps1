@@ -1,11 +1,13 @@
 ﻿# 构建桌面应用（原生窗口 + WebView2 外壳）
 #
+# 唯一的桌面构建：Vosk 引擎和中文模型内置，第一次转写不用下载；
+# whisper 的依赖仍然按需下载。
+#
 # 用法：
-#   powershell -File scripts/build_app.ps1          # 轻量版（约 16 MB）
-#   powershell -File scripts/build_app.ps1 -Full    # 完整版（Vosk 模型内置 + whisper 转写）
+#   powershell -File scripts/build_app.ps1
 #
 # 产物：
-#   dist-app\vidnote-app.exe 或 dist-app-full\vidnote-app.exe
+#   dist-app\vidnote-app.exe
 #     单文件：内置后端、WebView2 库和窗口外壳；首次运行释放到
 #     %LOCALAPPDATA%\vidnote\runtime，用户目录里只保留一个 exe。
 #
@@ -15,6 +17,7 @@
 #   3. 首次构建需要能访问 nuget.org 下载 WebView2 SDK
 
 param(
+    # 已废弃：完整版目标已合并进唯一的桌面构建，保留参数只为旧命令不报错。
     [switch]$Full
 )
 
@@ -24,11 +27,11 @@ Set-Location (Split-Path -Parent $PSScriptRoot)
 $python = ".\.venv\Scripts\python.exe"
 $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 
-$spec = if ($Full) { "vidnote-full.spec" } else { "vidnote.spec" }
-$exeDir = if ($Full) { "dist-exe-full" } else { "dist-exe" }
-$workDir = if ($Full) { "build-exe-full" } else { "build-exe" }
-$appDir = if ($Full) { "dist-app-full" } else { "dist-app" }
-$serverName = if ($Full) { "vidnote-server.exe" } else { "vidnote.exe" }
+$spec = "vidnote-app.spec"
+$exeDir = "dist-exe"
+$workDir = "build-exe"
+$appDir = "dist-app"
+$serverName = "vidnote-server.exe"
 
 # 应用版本号：写进 exe 的版本信息，跟 pyproject.toml 保持一致。
 $pyproject = Get-Content pyproject.toml -Raw
@@ -40,23 +43,21 @@ $four = (@($pieces + @('0', '0', '0', '0'))[0..3]) -join '.'
 $icon = "assets\vidnote.ico"
 if (-not (Test-Path $icon)) { throw "缺少图标：$icon" }
 
-# 完整版把 Vosk 模型打进 exe；本地有缓存就复制，没有就下载。
-if ($Full) {
-    $modelFolder = "vosk-model-small-cn-0.22"
-    $modelDir = "assets\$modelFolder"
-    if (-not (Test-Path "$modelDir\am")) {
-        $cached = Join-Path $env:LOCALAPPDATA "vidnote\vosk\$modelFolder"
-        New-Item -ItemType Directory -Force -Path "assets" | Out-Null
-        if (Test-Path "$cached\am") {
-            Write-Host "==> 复制 Vosk 模型"
-            Copy-Item $cached $modelDir -Recurse -Force
-        } else {
-            Write-Host "==> 下载 Vosk 模型"
-            $zip = "assets\$modelFolder.zip"
-            Invoke-WebRequest "https://alphacephei.com/vosk/models/$modelFolder.zip" -OutFile $zip -UseBasicParsing
-            Expand-Archive $zip -DestinationPath "assets" -Force
-            Remove-Item $zip -Force
-        }
+# Vosk 引擎和模型都打进 exe；本地有缓存就复制，没有就下载。
+$modelFolder = "vosk-model-small-cn-0.22"
+$modelDir = "assets\$modelFolder"
+if (-not (Test-Path "$modelDir\am")) {
+    $cached = Join-Path $env:LOCALAPPDATA "vidnote\vosk\$modelFolder"
+    New-Item -ItemType Directory -Force -Path "assets" | Out-Null
+    if (Test-Path "$cached\am") {
+        Write-Host "==> 复制 Vosk 模型"
+        Copy-Item $cached $modelDir -Recurse -Force
+    } else {
+        Write-Host "==> 下载 Vosk 模型"
+        $zip = "assets\$modelFolder.zip"
+        Invoke-WebRequest "https://alphacephei.com/vosk/models/$modelFolder.zip" -OutFile $zip -UseBasicParsing
+        Expand-Archive $zip -DestinationPath "assets" -Force
+        Remove-Item $zip -Force
     }
 }
 

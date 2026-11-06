@@ -1,12 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""完整版打包配置：核心功能 + Vosk 本地转写 + yt-dlp。
+"""桌面版打包配置：核心功能 + Vosk 本地转写 + yt-dlp。
 
-Vosk 小引擎和中文模型（约 65 MB）直接打进 exe，第一次转写不用再下载；
+Vosk 引擎和中文模型（约 65 MB）直接打进 exe，第一次转写不用再下载；
 whisper 的推理引擎（ctranslate2 / onnxruntime / tokenizers 等）默认不打进
 exe，第一次要用 whisper 时由界面单独下载 ``vidnote-whisper-deps-<版本>.zip``。
 
+这是唯一发布的桌面构建（轻量版）；完整版目标已合并进来，不再单独构建。
+
 用法：
-    pyinstaller vidnote-full.spec --noconfirm --distpath dist-exe-full --workpath build-exe-full
+    pyinstaller vidnote-app.spec --noconfirm --distpath dist-exe --workpath build-exe
 """
 
 import os

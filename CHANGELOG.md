@@ -12,7 +12,7 @@
 
 ### 变更
 
-- **桌面端只发布轻量版**：GitHub Release 不再提供完整版 exe，`vidnote-app-full-*.zip` 停止更新；需要 Vosk / whisper 时用 pip 版，或本地 `scripts/build_app.ps1 -Full` 构建。
+- **桌面端统一为一个构建**：唯一的桌面发布包内置 Vosk 引擎和中文模型，第一次转写不用下载；完整版不再单独构建/发布，whisper 依赖仍按需安装。
 - **DSH 插件按默认设置工作**：安装后无需配置，自动按 `cliPath` → `VIDNOTE_CLI` → 仓库构建产物 → 常见安装位置 → PATH 的顺序找命令行，默认超时 180 秒；只有需要固定路径或长视频转写时才改 `cliPath` / `timeoutMs`。
 
 ## [0.3.1] - 2026-11-05

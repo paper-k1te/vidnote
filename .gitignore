@@ -31,3 +31,4 @@ docs/screenshots/*.tmp
 
 # 本地打包用的语音模型（可重新下载）
 assets/vosk-model-*/
+vidnote-app-*.zip

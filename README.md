@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/banner.svg" alt="vidnote" width="100%">
 </p>
 
@@ -116,19 +116,18 @@ vidnote gui
 
 ### 桌面应用（真窗口，不是浏览器）
 
-从 **0.3.2** 起，GitHub Release 只发布**轻量版**（约 16 MB）：抓取、搜索、笔记、缩略帧都在，本地转写不再随安装包发布。需要本地转写时用 pip 版，或自己构建完整版：
+只有一个桌面构建：**Vosk 引擎和中文模型内置**，第一次转写不用下载；whisper 的依赖仍然按需安装。
 
 ```powershell
-powershell -File scripts/build_app.ps1          # 轻量版（与 Release 一致）
-powershell -File scripts/build_app.ps1 -Full    # 完整版：Vosk 模型内置 + whisper 依赖，仅本地构建，不再发布
+powershell -File scripts/build_app.ps1
 ```
 
-| | 轻量版（Release） | 完整版（本地构建） |
-| --- | --- | --- |
-| 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ | ✅ |
-| 本地转写 | 需要 pip 版或完整版 | ✅ Vosk（模型内置）；whisper（依赖按需安装） |
-| 体积 | ~16 MB | ~101 MB（Vosk 模型已打包） |
-| 首次转写 | — | Vosk 无需下载；whisper 先装依赖（约 66 MB），再下载模型 75 MB 起 |
+| | 桌面版 |
+| --- | --- |
+| 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ |
+| 本地转写 | ✅ Vosk（模型内置）；whisper（依赖按需安装） |
+| 体积 | 约 100 MB（Vosk 模型已打包） |
+| 首次转写 | Vosk 无需下载；whisper 先装依赖（约 66 MB），再下载模型 75 MB 起 |
 
 转写引擎可选：
 
@@ -139,11 +138,11 @@ powershell -File scripts/build_app.ps1 -Full    # 完整版：Vosk 模型内置 
 | whisper `base` | 145 MB | 平衡 |
 | whisper `small` | 485 MB | 中文最好 |
 
-轻量版 exe 不内置转写引擎；要用本地转写，装 pip 版（`pip install 'vidnote[vosk]'` 或 `'vidnote[whisper]'`），或用 `-Full` 本地构建。完整版/完整依赖下，Vosk 模型内置、whisper 的推理引擎按需安装（约 66 MB），whisper 模型仍按需下载。
+Vosk 模型已经打进 exe；whisper 的推理引擎按需安装（约 66 MB），whisper 模型也仍然按需下载。pip 安装的版本需要 `pip install 'vidnote[vosk]'` 或 `'vidnote[whisper]'`。
 
 `vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序，而且只有这一个文件：窗口外壳、Python 后端和 WebView2 库全部内置。首次启动时会把运行时释放到 `%LOCALAPPDATA%\vidnote\runtime`，之后复用；用户目录里始终只看到一个 exe。
 
-轻量版约 16 MB；完整版（本地构建）包含 Vosk 模型和音频解码，约 101 MB。双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。首次启动会多花几秒解压，之后正常。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
+桌面版包含 Vosk 模型和音频解码，约 100 MB。双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。首次启动会多花几秒解压，之后正常。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
 
 ### Windows 免安装 exe
 
@@ -179,7 +178,7 @@ powershell -File scripts/build_exe.ps1
 
 ## 🔊 没有字幕怎么办
 
-B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以真正的主力是本地转写。发布版桌面应用（轻量版）不含转写引擎；用 pip 版或本地完整版构建，界面里也可以单独安装 whisper 依赖。命令行按需安装：
+B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以真正的主力是本地转写。桌面应用已经内置 Vosk；whisper 的依赖可以在界面里单独安装，装好后直接选。命令行按需安装：
 
 ```bash
 pip install 'vidnote[vosk]'     # 命令行版：首次使用下载 42 MB 模型
@@ -189,7 +188,7 @@ vidnote fetch BV1xx411c7mD --vosk
 
 流程：`yt-dlp` 取音频 → 在本机转写 → 生成带时间戳的笔记。**音频不会上传到任何服务器。**
 
-完整版（本地构建）的 Vosk 模型已经打包进去，第一次转写直接可用；whisper 的推理引擎需要先在界面里点一次「安装 whisper 依赖」（约 66 MB），之后和 pip 安装的版本一样按需下载模型。命令行进度条会依次显示「下载音频 → 下载模型 → 本地转写」，网页界面在按钮下方显示阶段和百分比。
+桌面版的 Vosk 模型已经打包进去，第一次转写直接可用；whisper 的推理引擎需要先在界面里点一次「安装 whisper 依赖」（约 66 MB），之后和 pip 安装的版本一样按需下载模型。命令行进度条会依次显示「下载音频 → 下载模型 → 本地转写」，网页界面在按钮下方显示阶段和百分比。
 
 whisper 的模型大小：
 
