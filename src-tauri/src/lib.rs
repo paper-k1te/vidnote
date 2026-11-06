@@ -38,6 +38,7 @@ pub fn run() {
             tauri_api,
             pick_folder,
             reveal_path,
+            open_folder,
             open_file,
             open_external_url,
             hide_to_tray,

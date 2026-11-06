@@ -34,6 +34,7 @@ class SearchResult:
     duration: str
     play: int
     pubdate: int
+    cover: str = ""
 
     @property
     def url(self) -> str:
@@ -126,6 +127,7 @@ class BilibiliSearch:
             bvid = str(item.get("bvid", ""))
             if not bvid:
                 continue
+            pic = str(item.get("pic", "") or item.get("cover", "")).strip()
             results.append(
                 SearchResult(
                     bvid=bvid,
@@ -134,6 +136,7 @@ class BilibiliSearch:
                     duration=str(item.get("duration", "")),
                     play=int(item.get("play", 0) or 0),
                     pubdate=int(item.get("pubdate", 0) or 0),
+                    cover=_https(pic),
                 )
             )
         return results

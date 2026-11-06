@@ -269,6 +269,9 @@ def search_videos(keyword: str, limit: int = 8) -> dict[str, Any]:
                 "author": item.author,
                 "duration": item.duration,
                 "play": item.play,
+                "pubdate": item.pubdate,
+                "url": item.url,
+                "cover": item.cover,
             }
             for item in results
         ]
@@ -497,8 +500,8 @@ def fetch_video(
             except MediaError as exc:
                 return {"error": f"本地转写失败：{exc}"}
 
-    directory = Path(outdir) if outdir else Path.cwd()
-    destination = directory / filename(meta)
+    directory = Path(outdir).resolve() if outdir else Path.cwd().resolve()
+    destination = (directory / filename(meta)).resolve()
 
     keyframes: list[tuple[float, str]] = []
     if frames:
@@ -529,7 +532,9 @@ def fetch_video(
 
     result: dict[str, Any] = {
         "note": note,
+        "markdown": note,
         "path": str(destination),
+        "folder": str(destination.parent),
         "frames": len(keyframes),
     }
     if warning:
@@ -556,8 +561,9 @@ def read_frame(note_path: str, src: str) -> tuple[bytes, str] | None:
     if not note.exists():
         return None
     base = note.parent.resolve()
+    clean_src = src.strip().removeprefix("<").removesuffix(">").strip()
     try:
-        target = (base / src).resolve()
+        target = (base / clean_src).resolve()
         target.relative_to(base)
     except (OSError, ValueError):
         return None
@@ -633,21 +639,16 @@ def pick_folder() -> dict[str, Any]:
 
 
 def reveal_folder(path: str) -> dict[str, Any]:
-    """打开笔记所在的文件夹；如果是文件，就在资源管理器里选中它。"""
+    """打开笔记所在的文件夹。"""
     if not path:
         return {"error": "没有可打开的文件夹"}
-    target = Path(path)
+    target = Path(path).resolve()
     folder = target if target.is_dir() else target.parent
     if not folder.exists():
         return {"error": f"文件夹不存在：{folder}"}
     try:
         if os.name == "nt":
-            if target.is_file():
-                subprocess.Popen(  # noqa: S603
-                    ["explorer.exe", f"/select,{target}"]
-                )
-            else:
-                os.startfile(folder)  # type: ignore[attr-defined]  # noqa: S606
+            os.startfile(folder)  # type: ignore[attr-defined]  # noqa: S606
         else:
             opener = "open" if sys.platform == "darwin" else "xdg-open"
             subprocess.Popen([opener, str(folder)])  # noqa: S603

@@ -119,7 +119,7 @@ pub fn reveal_path(path: String) -> Result<(), String> {
         let win_path = path.replace('/', "\\");
         if p.is_file() {
             std::process::Command::new("explorer")
-                .arg(format!("/select,\"{}\"", win_path))
+                .arg(format!("/select,{}", win_path))
                 .spawn()
                 .map_err(|e| format!("无法在文件管理器中定位: {}", e))?;
         } else {
@@ -134,6 +134,34 @@ pub fn reveal_path(path: String) -> Result<(), String> {
     #[cfg(not(windows))]
     {
         open::that(&path).map_err(|e| format!("无法打开: {}", e))
+    }
+}
+
+#[tauri::command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    let target = if p.is_file() {
+        p.parent().unwrap_or(p)
+    } else {
+        p
+    };
+    if !target.exists() {
+        return Err(format!("目录不存在: {}", target.display()));
+    }
+
+    #[cfg(windows)]
+    {
+        let win_path = target.to_string_lossy().replace('/', "\\");
+        std::process::Command::new("explorer")
+            .arg(&win_path)
+            .spawn()
+            .map_err(|e| format!("无法打开目录: {}", e))?;
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    {
+        open::that(target).map_err(|e| format!("无法打开目录: {}", e))
     }
 }
 

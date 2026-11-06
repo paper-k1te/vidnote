@@ -409,14 +409,33 @@
   .video-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 11.5px; color: var(--text-2); }
   .badge { padding: 2px 7px; border-radius: 4px; background: var(--bg-surface); border: 1px solid var(--border); font-size: 11px; font-weight: 500; }
 
-  .markdown-body { line-height: 1.7; font-size: 13.5px; color: var(--text-1); }
-  .markdown-body h1, .markdown-body h2, .markdown-body h3 { margin-top: 20px; margin-bottom: 10px; font-weight: 700; line-height: 1.3; }
-  .markdown-body h1 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-  .markdown-body h2 { font-size: 15px; }
-  .markdown-body h3 { font-size: 14px; }
-  .markdown-body p { margin-bottom: 10px; }
-  .markdown-body ul, .markdown-body ol { margin: 8px 0 12px 20px; }
-  .markdown-body blockquote { border-left: 3px solid var(--action-bg); padding: 6px 14px; background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--text-2); margin: 12px 0; }
+  .markdown-body { line-height: 1.75; font-size: 14px; color: var(--text-1); word-break: break-word; }
+  .markdown-body h1 { font-size: 20px; font-weight: 700; margin: 24px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .markdown-body h2 { font-size: 16px; font-weight: 700; margin: 22px 0 12px; color: var(--text-1); display: flex; align-items: center; gap: 8px; }
+  .markdown-body h2::before { content: ""; display: inline-block; width: 4px; height: 16px; background: var(--action-bg); border-radius: 2px; }
+  .markdown-body h3 { font-size: 14.5px; font-weight: 600; margin: 18px 0 10px; }
+  .markdown-body p { margin-bottom: 12px; }
+  .markdown-body ul, .markdown-body ol { margin: 8px 0 14px 22px; }
+  .markdown-body li { margin-bottom: 6px; }
+  .markdown-body blockquote { border-left: 3px solid var(--action-bg); padding: 10px 16px; background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--text-2); margin: 14px 0; font-size: 13.5px; }
+  .markdown-body blockquote p { margin: 0; }
+  .markdown-body blockquote p + p { margin-top: 6px; }
+  .note-table-wrap { overflow-x: auto; margin: 14px 0 18px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); }
+  .note-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .note-table th, .note-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+  .note-table th { background: var(--bg-input); font-weight: 600; color: var(--text-2); font-size: 12px; }
+  .note-table tr:last-child td { border-bottom: none; }
+  .note-table tr:hover td { background: var(--bg-surface-hover); }
+  .inline-code { background: var(--bg-input); border: 1px solid var(--border); padding: 2px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; color: var(--action-bg); }
+  .note-link { color: var(--action-bg); text-decoration: none; border-bottom: 1px dashed var(--action-bg); }
+  .note-link:hover { opacity: 0.8; }
+  .keyframe-card { margin: 14px 0 18px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; background: #000; max-width: 560px; cursor: zoom-in; box-shadow: var(--shadow-sm); transition: transform var(--transition); }
+  .keyframe-card:hover { transform: scale(1.01); border-color: var(--action-bg); }
+  .keyframe-card img { width: 100%; display: block; }
+  .keyframe-caption { padding: 6px 12px; font-size: 11.5px; color: var(--text-3); background: var(--bg-surface); border-top: 1px solid var(--border); }
+  .note-meta-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 12px; border-radius: var(--radius-md); background: var(--bg-surface); border: 1px solid var(--border); }
+  .meta-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 12px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-2); }
+  .meta-chip b { color: var(--text-1); }
 
   .ts-chip {
     display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--action-bg);
@@ -1003,9 +1022,9 @@
     if (!currentFilePath) return;
     if (isTauri && tauriInvoke) {
       try {
-        await tauriInvoke('reveal_path', { path: currentFilePath });
+        await tauriInvoke('open_folder', { path: currentFilePath });
       } catch (e) {
-        toast('定位文件失败: ' + e.message, 'err');
+        toast('打开目录失败: ' + e.message, 'err');
       }
     } else {
       api('/api/reveal-folder', {
@@ -1136,10 +1155,24 @@
 
   // 渲染结果
   function renderResult(result) {
-    currentMarkdown = result.markdown || "";
+    currentMarkdown = result.markdown || result.note || "";
     currentFilePath = result.path || "";
     currentMeta = result.meta || {};
-    currentFrames = result.frames || [];
+    currentFrames = Array.isArray(result.frames) ? result.frames : [];
+
+    // 若无 meta，从 frontmatter 中智能提取
+    if (!currentMeta.title && currentMarkdown) {
+      const titleM = currentMarkdown.match(/title:\s*['"]?([^\r\n'"]+)/);
+      if (titleM) currentMeta.title = titleM[1];
+      const ownerM = currentMarkdown.match(/owner:\s*['"]?([^\r\n'"]+)/);
+      if (ownerM) currentMeta.author = ownerM[1];
+      const bvidM = currentMarkdown.match(/bvid:\s*['"]?([^\r\n'"]+)/);
+      if (bvidM) currentMeta.bvid = bvidM[1];
+      const durM = currentMarkdown.match(/duration:\s*['"]?([^\r\n'"]+)/);
+      if (durM) currentMeta.duration_text = durM[1];
+      const coverM = currentMarkdown.match(/\|\s*封面\s*\|\s*!\[[^\]]*\]\(([^)]+)\)/);
+      if (coverM) currentMeta.cover = coverM[1].replace(/^<|>$/g, '');
+    }
 
     $('btn-copy').disabled = false;
     $('btn-open-file').disabled = false;
@@ -1149,12 +1182,17 @@
     $('studio-empty').classList.add('hidden');
     $('studio-content').classList.remove('hidden');
 
-    $('hero-cover').src = currentMeta.cover || "";
-    $('hero-title').textContent = currentMeta.title || "未知标题";
-    $('hero-author').textContent = `UP: ${currentMeta.author || "未知"}`;
+    if (currentMeta.cover) {
+      $('hero-cover').src = currentMeta.cover;
+      $('hero-cover').style.display = 'block';
+    } else {
+      $('hero-cover').style.display = 'none';
+    }
+    $('hero-title').textContent = currentMeta.title || "已生成笔记";
+    $('hero-author').textContent = currentMeta.author ? `UP: ${currentMeta.author}` : "UP: 未知";
     $('hero-bvid').textContent = currentMeta.bvid || "";
-    $('hero-duration').textContent = formatSeconds(currentMeta.duration || 0);
-    $('hero-views').textContent = `${formatCount(currentMeta.views || 0)} 播放`;
+    $('hero-duration').textContent = currentMeta.duration_text || (currentMeta.duration ? formatSeconds(currentMeta.duration) : "");
+    $('hero-views').textContent = currentMeta.views ? `${formatCount(currentMeta.views)} 播放` : "";
 
     renderMarkdownView();
     renderGalleryView();
@@ -1163,47 +1201,151 @@
 
   function renderMarkdownView() {
     const container = $('md-render-container');
-    let md = currentMarkdown;
+    let md = currentMarkdown || "";
+    if (!md.trim()) {
+      container.innerHTML = '<div class="empty-state"><p>笔记内容为空</p></div>';
+      return;
+    }
 
-    md = md.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]\((https:\/\/www\.bilibili\.com\/video\/[^\s)]+)\)/g, (match, ts, link) => {
-      return `<a class="ts-chip" href="${link}" target="_blank" onclick="window.__openExternal && window.__openExternal(event, '${link}')">▶ ${ts}</a>`;
-    });
-
-    md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-      let imgSrc = src;
-      if (src.startsWith('keyframes/') || (!src.startsWith('http') && !src.startsWith('data:'))) {
-        imgSrc = `/api/frame?note=${encodeURIComponent(currentFilePath)}&src=${encodeURIComponent(src)}`;
-      }
-      return `<div class="keyframe-img-wrap" onclick="window.open('${imgSrc}')"><img src="${imgSrc}" alt="${alt}" loading="lazy"></div>`;
-    });
-
-    let html = "";
-    const lines = md.split('\n');
-    let inList = false;
-
-    for (let line of lines) {
-      if (line.startsWith('# ')) {
-        html += `<h1>${line.slice(2)}</h1>`;
-      } else if (line.startsWith('## ')) {
-        html += `<h2>${line.slice(3)}</h2>`;
-      } else if (line.startsWith('### ')) {
-        html += `<h3>${line.slice(4)}</h3>`;
-      } else if (line.startsWith('> ')) {
-        html += `<blockquote>${line.slice(2)}</blockquote>`;
-      } else if (line.startsWith('- ')) {
-        if (!inList) { html += '<ul>'; inList = true; }
-        html += `<li>${line.slice(2)}</li>`;
-      } else if (line.trim() === '---') {
-        if (inList) { html += '</ul>'; inList = false; }
-        html += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">';
-      } else {
-        if (inList) { html += '</ul>'; inList = false; }
-        if (line.trim()) {
-          html += `<p>${line}</p>`;
+    // 1. 提取 YAML Frontmatter
+    let frontmatter = null;
+    const fmMatch = md.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+    if (fmMatch) {
+      const fmLines = fmMatch[1].split(/\r?\n/);
+      const fmObj = {};
+      for (const l of fmLines) {
+        const idx = l.indexOf(':');
+        if (idx > 0) {
+          const k = l.slice(0, idx).trim();
+          const v = l.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '');
+          fmObj[k] = v;
         }
       }
+      frontmatter = fmObj;
+      md = md.slice(fmMatch[0].length);
     }
-    if (inList) html += '</ul>';
+
+    const lines = md.split(/\r?\n/);
+    let html = '';
+    let inTable = false;
+    let inList = false;
+    let quoteBuffer = [];
+
+    const flushQuote = () => {
+      if (quoteBuffer.length > 0) {
+        html += '<blockquote>' + quoteBuffer.map(q => '<p>' + formatInline(q) + '</p>').join('') + '</blockquote>';
+        quoteBuffer = [];
+      }
+    };
+
+    const flushList = () => {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+    };
+
+    const flushTable = () => {
+      if (inTable) {
+        html += '</tbody></table></div>';
+        inTable = false;
+      }
+    };
+
+    function formatInline(text) {
+      if (!text) return '';
+      // 处理粗体包裹的 timestamp: **[00:00](https://...)**
+      text = text.replace(/\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\((https:\/\/www\.bilibili\.com\/video\/[^\s)]+)\)\*\*/g, (m, ts, link) => {
+        return `<a class="ts-chip" href="${link}" target="_blank" onclick="window.__openExternal && window.__openExternal(event, '${link}')">▶ ${ts}</a>`;
+      });
+      // 处理普通 timestamp: [00:00](https://...)
+      text = text.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]\((https:\/\/www\.bilibili\.com\/video\/[^\s)]+)\)/g, (m, ts, link) => {
+        return `<a class="ts-chip" href="${link}" target="_blank" onclick="window.__openExternal && window.__openExternal(event, '${link}')">▶ ${ts}</a>`;
+      });
+      // 处理关键帧与通用图片：![alt](<path>) 或 ![alt](path)
+      text = text.replace(/!\[([^\]]*)\]\((<[^>]+>|[^)]+)\)/g, (m, alt, src) => {
+        let cleanSrc = src.replace(/^<|>$/g, '').trim();
+        let imgSrc = cleanSrc;
+        if (!cleanSrc.startsWith('http') && !cleanSrc.startsWith('data:')) {
+          imgSrc = `/api/frame?note=${encodeURIComponent(currentFilePath)}&src=${encodeURIComponent(cleanSrc)}`;
+        }
+        return `<div class="keyframe-card"><img src="${imgSrc}" alt="${alt}" loading="lazy" onclick="window.__zoomImage && window.__zoomImage('${imgSrc}')"><div class="keyframe-caption">${alt || '关键帧'}</div></div>`;
+      });
+      // 处理粗体 **text**
+      text = text.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+      // 处理行内代码 `code`
+      text = text.replace(/\`([^\`]+)\`/g, '<code class="inline-code">$1</code>');
+      // 处理普通链接 [text](url)
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, label, href) => {
+        return `<a class="note-link" href="${href}" target="_blank" onclick="window.__openExternal && window.__openExternal(event, '${href}')">${label}</a>`;
+      });
+      return text;
+    }
+
+    // 渲染 Frontmatter 属性微型信息徽章栏
+    if (frontmatter && (frontmatter.published || frontmatter.duration || frontmatter.subtitle)) {
+      html += '<div class="note-meta-badges">';
+      if (frontmatter.bvid) html += `<span class="meta-chip">BV <b>${frontmatter.bvid}</b></span>`;
+      if (frontmatter.published) html += `<span class="meta-chip">发布 <b>${frontmatter.published}</b></span>`;
+      if (frontmatter.duration) html += `<span class="meta-chip">时长 <b>${frontmatter.duration}</b></span>`;
+      if (frontmatter.subtitle) html += `<span class="meta-chip">字幕 <b>${frontmatter.subtitle === 'available' ? '官方字幕' : frontmatter.subtitle}</b></span>`;
+      html += '</div>';
+    }
+
+    for (let raw of lines) {
+      const line = raw.trimEnd();
+
+      if (line.startsWith('>')) {
+        flushTable();
+        flushList();
+        quoteBuffer.push(line.replace(/^>\s?/, ''));
+        continue;
+      } else {
+        flushQuote();
+      }
+
+      if (/^\|/.test(line)) {
+        flushList();
+        const cells = line.split('|').slice(1, -1).map(c => c.trim());
+        if (/^[-: ]+$/.test(cells.join(''))) {
+          continue;
+        }
+        if (!inTable) {
+          html += '<div class="note-table-wrap"><table class="note-table"><thead><tr>' + cells.map(c => '<th>' + formatInline(c) + '</th>').join('') + '</tr></thead><tbody>';
+          inTable = true;
+        } else {
+          html += '<tr>' + cells.map(c => '<td>' + formatInline(c) + '</td>').join('') + '</tr>';
+        }
+        continue;
+      } else {
+        flushTable();
+      }
+
+      if (line.startsWith('- ')) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += '<li>' + formatInline(line.slice(2)) + '</li>';
+        continue;
+      } else {
+        flushList();
+      }
+
+      if (line.startsWith('# ')) {
+        html += '<h1>' + formatInline(line.slice(2)) + '</h1>';
+      } else if (line.startsWith('## ')) {
+        html += '<h2>' + formatInline(line.slice(3)) + '</h2>';
+      } else if (line.startsWith('### ')) {
+        html += '<h3>' + formatInline(line.slice(4)) + '</h3>';
+      } else if (/^---$/.test(line)) {
+        html += '<hr style="border:none;border-top:1px solid var(--border);margin:20px 0">';
+      } else if (line.trim()) {
+        html += '<p>' + formatInline(line) + '</p>';
+      }
+    }
+
+    flushQuote();
+    flushTable();
+    flushList();
+
     container.innerHTML = html;
   }
 
