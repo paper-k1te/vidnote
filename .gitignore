@@ -33,6 +33,7 @@ docs/screenshots/*.tmp
 assets/vosk-model-*/
 vidnote-app-*.zip
 vid2note-*-win-x64.zip
+vid2note-desktop-*.zip
 vidnote-unsigned.zip
 package-win/
 signed/
