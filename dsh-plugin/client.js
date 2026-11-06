@@ -388,7 +388,8 @@ window.__ModuleLoader__.load({
       deps: null,
       depsBusy: false,
       opened: false,
-      history: readHistory(),
+      history: [],
+      historyLoaded: false,
     }
     let state = { ...DEFAULT }
     const listeners = new Set()
@@ -1070,6 +1071,7 @@ window.__ModuleLoader__.load({
 
       React.useEffect(() => {
         if (!state.health) loadHealth()
+        if (!state.historyLoaded) set({ history: readHistory(), historyLoaded: true })
         if (state.status === 'running' && state.jobId) pollJob(state.jobId)
         const heartbeat = setInterval(() => {
           fetch(`${API}/ping`).catch(() => {})
@@ -1117,26 +1119,35 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots'],
       apply(ctx) {
-        const locale = ctx.get('locale')
-        localeFacade = locale
-          ? {
-              subscribe: (listener) => locale.subscribe(listener),
-              getSnapshot: () => locale.getSnapshot(),
-            }
-          : null
-
-        ctx.effect(() => {
-          const style = document.createElement('style')
-          style.textContent = STYLES
-          document.head.appendChild(style)
-          return () => style.remove()
-        }, 'vidnote: styles')
-
+        // 先把视图注册上，再处理样式/语言：任何一步出问题都不该让标签消失。
         ctx.slots.inject('conversation.view', () =>
           ctx.slots.register(
             { name: 'conversation.view', id: 'vidnote', order: 20, label: () => currentText().viewLabel, locale: NS },
             VidnoteView,
           ))
+
+        try {
+          const locale = ctx.get('locale')
+          localeFacade = locale
+            ? {
+                subscribe: (listener) => locale.subscribe(listener),
+                getSnapshot: () => locale.getSnapshot(),
+              }
+            : null
+        } catch {
+          localeFacade = null
+        }
+
+        try {
+          ctx.effect(() => {
+            const style = document.createElement('style')
+            style.textContent = STYLES
+            document.head.appendChild(style)
+            return () => style.remove()
+          }, 'vidnote: styles')
+        } catch {
+          // 样式注入失败时仍然保留视图
+        }
       },
     }
   },

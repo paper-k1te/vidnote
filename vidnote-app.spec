@@ -30,8 +30,8 @@ a = Analysis(
     # vosk 用 ctypes 加载自带的 libvosk.dll；原生库不会被自动收集。
     binaries=collect_dynamic_libs("vosk"),
     datas=[
-        ("src/vidnote/ui/index.html", "vidnote/ui"),
-        (_MODEL_DIR, f"vidnote/models/{_MODEL_FOLDER}"),
+        ("src/vid2note/ui/index.html", "vid2note/ui"),
+        (_MODEL_DIR, f"vid2note/models/{_MODEL_FOLDER}"),
     ]
     + collect_data_files("vosk")
     + collect_data_files("srt"),
@@ -122,4 +122,4 @@ def build_exe(name: str, console: bool):
     )
 
 
-exe_cli = build_exe("vidnote-server", console=True)
+exe_cli = build_exe("vid2note-server", console=True)

@@ -7,8 +7,8 @@
 #      predefined "GitHub.com" trusted build system to the project.
 #   3. Install the SignPath GitHub App and grant it access to this repository.
 #   4. Create an artifact configuration for a ZIP archive that contains
-#      `vidnote-app.exe` at the archive root, with a PE Authenticode signature.
-#      (Upload one of our unsigned exes as a sample and let SignPath generate it.)
+#      `vid2note.exe` at the archive root, with a PE Authenticode signature.
+#      (The unsigned ZIP is produced by this workflow; upload it as a sample.)
 #   5. Create a signing policy (e.g. `release-signing`) and an API token for a
 #      user with submitter permission.
 #   6. Add these repository variables:
@@ -20,10 +20,10 @@
 #        SIGNPATH_API_TOKEN
 #
 # Run this workflow manually with the release tag after the GitHub Release has
-# been created. It rebuilds the lite exe, signs it through SignPath, verifies
-# the signature, re-packs the release ZIP and replaces the asset.
-#
-# Releases ship a single desktop asset; the older split build is gone.
+# been created. It builds the Tauri desktop exe plus the Python backend
+# (`vid2note-server.exe`), signs the desktop exe through SignPath, verifies the
+# signature, packs both into `vid2note-<version>-win-x64.zip` and replaces the
+# release asset.
 
 name: Sign Windows release
 
@@ -98,28 +98,56 @@ jobs:
           cache: 'pip'
           cache-dependency-path: pyproject.toml
 
-      - name: Install build dependencies
+      - name: Install Python build dependencies
         shell: pwsh
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
           .\.venv\Scripts\python.exe -m pip install -e ".[vosk]" pyinstaller
 
-      - name: Build lite app
+      - name: Ensure the Vosk model
         shell: pwsh
-        run: powershell -NoProfile -File scripts\build_app.ps1
+        run: |
+          $model = "assets\vosk-model-small-cn-0.22"
+          if (-not (Test-Path "$model\am")) {
+            $zip = "assets\vosk-model-small-cn-0.22.zip"
+            Invoke-WebRequest "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip" -OutFile $zip -UseBasicParsing
+            Expand-Archive $zip -DestinationPath "assets" -Force
+            Remove-Item $zip -Force
+          }
 
-      - name: Upload unsigned lite exe
-        id: unsigned-lite
+      - name: Build Python backend
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\python.exe -m PyInstaller vidnote-app.spec `
+            --noconfirm --distpath dist-exe --workpath build-exe --log-level ERROR
+          if (-not (Test-Path "dist-exe\vid2note-server.exe")) {
+            throw "构建失败：dist-exe\vid2note-server.exe 不存在"
+          }
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Tauri desktop
+        shell: pwsh
+        run: powershell -NoProfile -File scripts\build_tauri.ps1
+
+      - name: Package unsigned desktop exe
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist-app\vid2note.exe -DestinationPath "vid2note-unsigned.zip" -Force
+
+      - name: Upload unsigned desktop exe
+        id: unsigned
         uses: actions/upload-artifact@v4
         with:
-          name: vidnote-unsigned-lite-${{ github.run_id }}
-          path: dist-app\vidnote-app.exe
+          name: vid2note-unsigned-${{ github.run_id }}
+          path: vid2note-unsigned.zip
           if-no-files-found: error
           retention-days: 1
 
-      - name: Sign lite exe
-        id: sign-lite
+      - name: Sign desktop exe
+        id: sign
         uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -127,29 +155,29 @@ jobs:
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.unsigned-lite.outputs.artifact-id }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 900
-          output-artifact-directory: signed-lite
+          output-artifact-directory: signed
 
-      - name: Verify signature
+      - name: Verify signature and repack
         shell: pwsh
         run: |
-          $file = Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1
-          if (-not $file) {
-            throw "SignPath 返回的产物里找不到 vidnote-app.exe"
-          }
-          $signature = Get-AuthenticodeSignature -FilePath $file.FullName
+          $signed = Get-ChildItem signed -Recurse -Filter vid2note.exe | Select-Object -First 1
+          if (-not $signed) { throw "SignPath 返回的产物里找不到 vid2note.exe" }
+          $signature = Get-AuthenticodeSignature -FilePath $signed.FullName
           if ($signature.Status -ne 'Valid') {
-            throw "签名校验失败：$($file.FullName) ($($signature.Status))"
+            throw "签名校验失败：$($signed.FullName) ($($signature.Status))"
           }
-          "已签名：$($file.FullName) / $($signature.SignerCertificate.Subject)"
+          "已签名：$($signed.FullName) / $($signature.SignerCertificate.Subject)"
 
-      - name: Re-pack signed release asset
-        shell: pwsh
-        run: |
-          $lite = Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1
-          Compress-Archive -Path $lite.FullName -DestinationPath "vidnote-app-lite-$env:VERSION.zip" -Force
+          $package = "package"
+          Remove-Item $package -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item $signed.FullName "$package\vid2note.exe" -Force
+          Copy-Item "dist-app\vid2note-server.exe" "$package\vid2note-server.exe" -Force
+          Copy-Item README.md "$package\README.md" -Force
+          Compress-Archive -Path "$package\*" -DestinationPath "vid2note-$env:VERSION-win-x64.zip" -Force
 
       - name: Replace release asset
         shell: pwsh
@@ -157,7 +185,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ inputs.tag }}" `
-            "vidnote-app-lite-$env:VERSION.zip" `
+            "vid2note-$env:VERSION-win-x64.zip" `
             --clobber -R "${{ github.repository }}"
 
       - name: Write signing summary
@@ -167,5 +195,5 @@ jobs:
           @"
           ## SignPath
 
-          - Lite signing request: ${{ steps.sign-lite.outputs.signing-request-web-url }}
+          - Signing request: ${{ steps.sign.outputs.signing-request-web-url }}
           "@ >> $env:GITHUB_STEP_SUMMARY
