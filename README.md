@@ -114,20 +114,23 @@ vidnote gui
 
 界面沿用 cc-switch 的设计语言（浅底灰阶 + 单一橙色强调色 + 13px 字号）。想用独立窗口而不是浏览器标签页，加 `--app`（Edge 未运行时更可靠）。
 
-### 桌面应用（真窗口，不是浏览器）
+### 桌面应用（Tauri 2.0 原生 Rust 桌面端 + 系统托盘）
 
-只有一个桌面构建：**Vosk 引擎和中文模型内置**，第一次转写不用下载；whisper 的依赖仍然按需安装。
+v0.3.4 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
 
 ```powershell
-powershell -File scripts/build_app.ps1
+powershell -File scripts/build_tauri.ps1
+# 产物：dist-app/vidnote.exe （纯 Rust 编译原生桌面端，约 8.8 MB）
 ```
 
-| | 桌面版 |
+| | Tauri 2.0 桌面版 |
 | --- | --- |
+| 架构 | Rust 原生桌面外壳 + 系统托盘核心 (`src-tauri`) |
+| 托盘能力 | 支持最小化到托盘、托盘右键菜单、单击平滑显隐、快速抓取剪贴板 |
+| 界面设计 | 全新高颜值现代流体工作台（深浅色无缝切换、交互式时间戳、关键帧画廊） |
 | 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ |
 | 本地转写 | ✅ Vosk（模型内置）；whisper（依赖按需安装） |
-| 体积 | 约 100 MB（Vosk 模型已打包） |
-| 首次转写 | Vosk 无需下载；whisper 先装依赖（约 66 MB），再下载模型 75 MB 起 |
+| 核心体积 | 约 8.8 MB（轻巧极速，秒级冷启动） |
 
 转写引擎可选：
 
@@ -138,11 +141,11 @@ powershell -File scripts/build_app.ps1
 | whisper `base` | 145 MB | 平衡 |
 | whisper `small` | 485 MB | 中文最好 |
 
-Vosk 模型已经打进 exe；whisper 的推理引擎按需安装（约 66 MB），whisper 模型也仍然按需下载。pip 安装的版本需要 `pip install 'vidnote[vosk]'` 或 `'vidnote[whisper]'`。
-
-`vidnote-app.exe` 是一个 **WinForms + WebView2** 的原生窗口程序，而且只有这一个文件：窗口外壳、Python 后端和 WebView2 库全部内置。首次启动时会把运行时释放到 `%LOCALAPPDATA%\vidnote\runtime`，之后复用；用户目录里始终只看到一个 exe。
-
-桌面版包含 Vosk 模型和音频解码，约 100 MB。双击即用，没有地址栏、没有标签页，任务栏里就是一个普通应用。首次启动会多花几秒解压，之后正常。要求系统装有 **WebView2 运行时**（Windows 11 自带，Windows 10 一般随 Edge 一起装了）。
+`vidnote.exe` 采用 **Tauri 2.0 原生桌面框架**：
+- **原生系统托盘**：常驻 Windows 托盘区，支持最小化到托盘、一键从剪贴板抓取、定位输出目录。
+- **窗口关闭拦截**：点击右上角关闭按钮默认优雅隐藏至托盘，不中断后台抓取与长转写。
+- **超轻体积与内存优化**：告别以往百兆外壳，二进制仅 ~8.8 MB，内存占用大幅减少。
+- **现代化视觉体验**：支持沉浸式深暗色/轻盈浅色主题、四阶段进度动效、关键帧画廊与交互式时间戳芯片。
 
 ### Windows 免安装 exe
 

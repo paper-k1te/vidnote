@@ -1,346 +1,784 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>vidnote</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vidnote v0.3.4</title>
 <style>
   :root {
-    --bg-app: #ffffff;
     --bg-sidebar: #f5f5f7;
-    --bg-subtle: #efeff2;
-    --bg-selected: #e4e4ea;
-    --bg-card: #ffffff;
-    --border: #e4e4e7;
-    --border-strong: #cfcfd6;
-    --text-1: #18181b;
-    --text-2: #52525b;
-    --text-3: #65656e;
     --action-bg: #f97316;
     --action-fg: #ffffff;
-    --action-hover: #ea620a;
-    --action-text: #c2410c;
-    --action-soft: #fff1e6;
-    --success: #16a34a;
-    --success-text: #007634;
-    --success-soft: #e8f7ee;
-    --danger: #dc2626;
-    --danger-text: #b91c1c;
-    --danger-soft: #fee2e2;
-    --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
-    --shadow-md: 0 4px 12px rgba(16,24,40,.08), 0 1px 3px rgba(16,24,40,.06);
-    --control: 6px;
-    --panel: 10px;
+    --action-hover: #ea580c;
+    --action-gradient: linear-gradient(135deg, #fb7299 0%, #f97316 100%);
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", "Segoe UI Mono", Menlo, Consolas, monospace;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --transition: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
   html[data-theme="dark"] {
-    --bg-app: #1c1c1e;
-    --bg-sidebar: #161618;
-    --bg-subtle: #26262a;
-    --bg-selected: #313136;
-    --bg-card: #2e2e33;
-    --border: #3a3a40;
-    --border-strong: #4a4a52;
-    --text-1: #e4e4e7;
-    --text-2: #ababb3;
-    --text-3: #9a9aa2;
-    --action-bg: #ea580c;
-    --action-fg: #ffffff;
-    --action-hover: #f06d1f;
-    --action-text: #fb923c;
-    --action-soft: rgba(249,115,21,.12);
-    --success: #4ade80;
-    --success-text: #4ade80;
-    --success-soft: #0f2b1a;
-    --danger: #f87171;
-    --danger-text: #fca5a5;
-    --danger-soft: #3a1414;
-    --shadow-sm: 0 0 0 1px rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.4);
-    --shadow-md: 0 4px 12px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.4);
+    --bg-app: #0d1117;
+    --bg-sidebar: #131720;
+    --bg-surface: #171d28;
+    --bg-surface-hover: #1f2735;
+    --bg-input: #10141d;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.18);
+    --text-1: #f1f5f9;
+    --text-2: #94a3b8;
+    --text-3: #64748b;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --accent-soft: rgba(249, 115, 22, 0.14);
+    --success: #10b981;
+    --danger: #ef4444;
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
+
+  html[data-theme="light"] {
+    --bg-app: #f8fafc;
+    --bg-sidebar: #f5f5f7;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #f1f5f9;
+    --bg-input: #f8fafc;
+    --border: #e2e8f0;
+    --border-hover: #cbd5e1;
+    --text-1: #0f172a;
+    --text-2: #475569;
+    --text-3: #94a3b8;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+    --accent-soft: rgba(249, 115, 22, 0.1);
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
   body {
-    margin: 0; background: var(--bg-app); color: var(--text-1);
-    font: 13px/20px -apple-system, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", Roboto, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased; display: flex; overflow: hidden;
+    background: var(--bg-app);
+    color: var(--text-1);
+    font: 13.5px/1.5 var(--font-sans);
+    display: flex;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
   }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
-  ::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 9999px; background-clip: padding-box; background-color: var(--border-strong); }
 
-  /* ---------- 侧栏 ---------- */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.45); }
+
+  /* ---------- Sidebar ---------- */
   aside {
-    width: 212px; flex: none; background: var(--bg-sidebar); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; padding: 12px 10px;
+    width: 220px;
+    flex: none;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 14px 10px;
+    transition: background var(--transition);
   }
-  .brand { display: flex; align-items: center; gap: 8px; padding: 6px 8px 14px; }
-  .brand .mark {
-    width: 22px; height: 22px; border-radius: var(--control); background: var(--action-bg);
-    display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700;
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
   }
-  .brand b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
-  .nav { display: flex; flex-direction: column; gap: 2px; }
+
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: var(--action-gradient);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  }
+
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    background: var(--action-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand-badge { font-size: 10.5px; color: var(--text-3); font-weight: 500; }
+
+  .tray-status-pill {
+    margin: 0 6px 14px;
+    padding: 4px 8px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--action-bg);
+    font-weight: 500;
+  }
+
+  .tray-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+    animation: pulse-dot 2s infinite ease-in-out;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
   .nav-item {
-    display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: var(--control);
-    color: var(--text-2); cursor: pointer; user-select: none; font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-2);
+    transition: all var(--transition);
   }
-  .nav-item:hover { background: var(--bg-subtle); color: var(--text-1); }
-  .nav-item.active { background: var(--bg-selected); color: var(--text-1); font-weight: 500; }
-  .nav-item svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.7; }
-  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
-  .meta { padding: 8px 9px; color: var(--text-3); font-size: 11px; }
 
-  /* ---------- 主区 ---------- */
-  main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .nav-item svg { width: 17px; height: 17px; opacity: 0.75; }
+  .nav-item:hover { color: var(--text-1); background: var(--bg-surface-hover); }
+  .nav-item:hover svg { opacity: 1; }
+  .nav-item.active {
+    color: #fff;
+    background: var(--action-gradient);
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+  }
+  .nav-item.active svg { opacity: 1; }
+
+  .sidebar-foot {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .side-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 12.5px;
+    transition: all var(--transition);
+  }
+  .side-btn:hover { color: var(--text-1); background: var(--bg-surface-hover); }
+
+  /* ---------- Main View ---------- */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
   .topbar {
-    height: 52px; flex: none; display: flex; align-items: center; gap: 10px;
-    padding: 0 20px; border-bottom: 1px solid var(--border);
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex: none;
   }
-  .topbar h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
-  .topbar .sub { color: var(--text-3); font-size: 12px; }
-  .topbar .spacer { flex: 1; }
-  .content { flex: 1; min-height: 0; display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 16px 20px 20px; }
-  @media (max-width: 900px) { .content { grid-template-columns: 1fr; overflow: auto; } aside { width: 64px; } .brand b, .nav-item span, .meta { display: none; } }
 
-  .col { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
-  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--panel); box-shadow: var(--shadow-sm); }
-  .card-head { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-  .card-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
-  .card-head .hint { margin-left: auto; color: var(--text-3); font-size: 11px; }
-  .card-body { padding: 14px; }
-  .card.grow { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-  .card.grow .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .topbar-left { display: flex; align-items: baseline; gap: 12px; }
+  .topbar-title { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  .topbar-sub { font-size: 12px; color: var(--text-3); }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
 
-  label { display: block; font-size: 12px; color: var(--text-2); margin: 12px 0 6px; }
-  label:first-child { margin-top: 0; }
-  input, select {
-    width: 100%; height: 32px; padding: 0 10px; border-radius: var(--control);
-    border: 1px solid var(--border-strong); background: var(--bg-app); color: var(--text-1); font-size: 13px;
-    transition: border-color .15s, box-shadow .15s;
+  button, .btn {
+    appearance: none;
+    border: none;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: var(--radius-md);
+    transition: all var(--transition);
+    outline: none;
   }
-  input::placeholder { color: var(--text-3); }
-  input:focus, select:focus { outline: none; border-color: var(--action-bg); box-shadow: 0 0 0 3px var(--action-soft); }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .input-row { display: flex; gap: 8px; }
-  .input-row input { flex: 1; min-width: 0; }
-  .input-row button { flex: none; }
-  .actions { display: flex; gap: 8px; margin-top: 16px; }
 
-  button {
-    height: 32px; padding: 0 14px; border-radius: var(--control); border: 1px solid transparent;
-    font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-    transition: background .15s, border-color .15s, color .15s;
+  .btn-sm { padding: 5px 11px; font-size: 12px; font-weight: 500; }
+  .btn-primary {
+    background: var(--action-gradient);
+    color: #ffffff;
+    font-weight: 600;
+    padding: 10px 18px;
+    font-size: 13.5px;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
   }
-  button:disabled { opacity: .45; cursor: default; }
-  .btn-primary { background: var(--action-bg); color: var(--action-fg); }
-  .btn-primary:hover:not(:disabled) { background: var(--action-hover); }
-  .btn-ghost { background: var(--bg-card); border-color: var(--border-strong); color: var(--text-1); }
-  .btn-ghost:hover:not(:disabled) { background: var(--bg-subtle); }
-  .btn-link { background: none; color: var(--text-2); padding: 0 8px; }
-  .btn-link:hover { color: var(--text-1); background: var(--bg-subtle); }
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.45);
+  }
+  .btn-primary:active:not(:disabled) { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  ul.results { list-style: none; margin: 0; padding: 0; overflow: auto; min-height: 0; flex: 1; }
-  ul.results li { padding: 8px 10px; border-radius: var(--control); cursor: pointer; }
-  ul.results li:hover { background: var(--bg-subtle); }
-  ul.results li b { display: block; font-size: 13px; font-weight: 500; color: var(--text-1); }
-  ul.results li small { color: var(--text-3); font-size: 11.5px; }
-  ul.results li.author { display: flex; align-items: center; gap: 10px; }
-  ul.results li.author img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--bg-subtle); flex: none; }
-  ul.results li.author .info { flex: 1; min-width: 0; }
-  ul.results li.author .info b,
-  ul.results li.author .info small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  ul.results li.author .btn-ghost { flex: none; height: 26px; padding: 0 10px; font-size: 12px; }
-  .mode-row { display: flex; gap: 6px; margin-bottom: 10px; }
-  .mode-btn { height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text-2); font-size: 12px; cursor: pointer; }
-  .mode-btn.active { background: var(--action-soft); border-color: var(--action-bg); color: var(--action-text); }
-  .empty { color: var(--text-3); font-size: 12px; padding: 10px; }
+  .btn-secondary {
+    background: var(--bg-surface-hover);
+    color: var(--text-1);
+    border: 1px solid var(--border);
+    padding: 7px 13px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--border-hover); background: var(--bg-surface); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .preview-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-  .path { color: var(--text-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-  .doc { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px; }
-  .doc h1 { font-size: 18px; margin: 0 0 12px; }
-  .doc h2 { font-size: 15px; margin: 20px 0 8px; }
-  .doc p { margin: 0 0 10px; color: var(--text-2); }
-  .doc table { border-collapse: collapse; width: 100%; margin: 0 0 12px; font-size: 12px; }
-  .doc th, .doc td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
-  .doc th { background: var(--bg-subtle); color: var(--text-2); font-weight: 500; }
-  .doc a { color: var(--action-text); text-decoration: none; }
-  .doc a:hover { text-decoration: underline; }
-  .doc code { background: var(--bg-subtle); padding: 1px 4px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-  .doc img { max-width: 100%; border-radius: var(--control); }
+  .btn-ghost { color: var(--text-2); padding: 6px 10px; font-size: 12px; }
+  .btn-ghost:hover { color: var(--text-1); background: var(--bg-surface-hover); }
+
+  .content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    padding: 16px 20px;
+    gap: 16px;
+  }
+
+  .pane-left {
+    width: 440px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .pane-right {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: all var(--transition);
+  }
+
+  .card-header { display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text-1); display: flex; align-items: center; gap: 8px; }
+  .card-hint { font-size: 11.5px; color: var(--text-3); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; justify-content: space-between; }
+
+  .input-wrap { position: relative; display: flex; align-items: center; }
+  input[type="text"], input[type="password"], input[type="number"], select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text-1);
+    outline: none;
+    transition: all var(--transition);
+  }
+  input:focus, select:focus {
+    border-color: var(--action-bg);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    background: var(--bg-surface);
+  }
+
+  .input-wrap .inner-btn {
+    position: absolute;
+    right: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+  }
+  .input-wrap .inner-btn:hover { color: var(--action-bg); border-color: var(--action-bg); }
+
+  .row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .pills-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .pill {
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .pill:hover { color: var(--text-1); border-color: var(--action-bg); }
+  .pill.active {
+    background: var(--accent-soft);
+    border-color: var(--action-bg);
+    color: var(--action-bg);
+    font-weight: 600;
+  }
+
+  /* Stepper Progress Card */
+  .progress-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .stepper { display: flex; align-items: center; justify-content: space-between; position: relative; margin-bottom: 6px; }
+  .step-node { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--text-3); z-index: 1; }
+  .step-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bg-input); border: 1.5px solid var(--border);
+    display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--text-3);
+    transition: all var(--transition);
+  }
+  .step-node.active .step-dot { background: var(--action-bg); border-color: var(--action-bg); color: #fff; box-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
+  .step-node.done .step-dot { background: var(--success); border-color: var(--success); color: #fff; }
+  .step-node.active { color: var(--text-1); font-weight: 600; }
+  .step-node.done { color: var(--success); }
+
+  .progress-bar-wrap { height: 8px; background: var(--bg-input); border-radius: 9999px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+  .progress-bar-inner { height: 100%; width: 0%; background: var(--action-gradient); border-radius: 9999px; transition: width 0.3s ease; }
+  .progress-meta { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-2); }
+
+  /* ---------- Preview Studio ---------- */
+  .preview-topbar {
+    height: 44px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--bg-surface);
+  }
+  .view-tabs { display: flex; gap: 4px; background: var(--bg-input); padding: 3px; border-radius: var(--radius-md); }
+  .view-tab { padding: 4px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all var(--transition); }
+  .view-tab.active { background: var(--bg-surface); color: var(--text-1); box-shadow: var(--shadow-sm); font-weight: 600; }
+  .preview-scroll { flex: 1; overflow-y: auto; padding: 20px; user-select: text; }
+
+  .video-hero { display: flex; gap: 16px; padding: 14px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 18px; }
+  .video-cover { width: 140px; height: 88px; border-radius: var(--radius-sm); object-fit: cover; background: #000; flex: none; }
+  .video-info { display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+  .video-title { font-size: 15px; font-weight: 700; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .video-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 11.5px; color: var(--text-2); }
+  .badge { padding: 2px 7px; border-radius: 4px; background: var(--bg-surface); border: 1px solid var(--border); font-size: 11px; font-weight: 500; }
+
+  .markdown-body { line-height: 1.7; font-size: 13.5px; color: var(--text-1); }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 { margin-top: 20px; margin-bottom: 10px; font-weight: 700; line-height: 1.3; }
+  .markdown-body h1 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .markdown-body h2 { font-size: 15px; }
+  .markdown-body h3 { font-size: 14px; }
+  .markdown-body p { margin-bottom: 10px; }
+  .markdown-body ul, .markdown-body ol { margin: 8px 0 12px 20px; }
+  .markdown-body blockquote { border-left: 3px solid var(--action-bg); padding: 6px 14px; background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--text-2); margin: 12px 0; }
+
+  .ts-chip {
+    display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--action-bg);
+    padding: 1px 7px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+    cursor: pointer; text-decoration: none; border: 1px solid rgba(249, 115, 22, 0.25); transition: all var(--transition); user-select: none;
+  }
+  .ts-chip:hover { background: var(--action-bg); color: #fff; box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4); }
+
+  .keyframe-img-wrap { margin: 12px 0; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); background: #000; max-width: 520px; cursor: zoom-in; }
+  .keyframe-img-wrap img { width: 100%; display: block; }
+
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .gallery-card { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; cursor: zoom-in; transition: all var(--transition); }
+  .gallery-card:hover { border-color: var(--action-bg); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .gallery-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .gallery-card-foot { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+
+  .raw-code { width: 100%; height: 100%; background: #0b0e14; border: none; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; color: var(--text-1); padding: 16px; resize: none; outline: none; white-space: pre-wrap; }
+
+  .search-results { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: calc(100vh - 220px); }
+  .search-card { display: flex; gap: 14px; padding: 12px; border-radius: var(--radius-md); background: var(--bg-input); border: 1px solid var(--border); cursor: pointer; transition: all var(--transition); }
+  .search-card:hover { background: var(--bg-surface-hover); border-color: var(--action-bg); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .search-cover { width: 120px; height: 75px; border-radius: var(--radius-sm); object-fit: cover; flex: none; }
+  .search-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  .search-title { font-size: 13.5px; font-weight: 600; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .search-meta { font-size: 11.5px; color: var(--text-3); display: flex; gap: 12px; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-3); gap: 12px; text-align: center; padding: 40px; }
+  .empty-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--bg-input); display: grid; place-items: center; color: var(--text-3); border: 1px dashed var(--border); }
 
   .toast {
-    position: fixed; right: 18px; bottom: 18px; padding: 9px 14px; border-radius: var(--control);
-    background: var(--bg-card); border: 1px solid var(--border-strong); box-shadow: var(--shadow-md);
-    font-size: 12.5px; color: var(--text-1); opacity: 0; transform: translateY(6px);
-    transition: opacity .18s, transform .18s; pointer-events: none;
+    position: fixed; bottom: 24px; right: 24px; padding: 10px 18px;
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    color: var(--text-1); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-md);
+    display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateY(12px);
+    transition: all var(--transition); pointer-events: none; z-index: 1000;
   }
-  .toast.show { opacity: 1; transform: none; }
-  .toast.ok { border-color: var(--success); color: var(--success-text); }
-  .toast.err { border-color: var(--danger); color: var(--danger-text); }
-  .tips p { margin: 0 0 8px; color: var(--text-2); font-size: 12px; line-height: 18px; }
-  .tips p:last-child { margin-bottom: 0; }
-  .tips b { color: var(--text-1); font-weight: 500; }
-  .tips code { background: var(--bg-subtle); padding: 1px 4px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
-  .check-line { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 12.5px; color: var(--text-2); cursor: pointer; }
-  .check-line input { width: 15px; height: 15px; accent-color: var(--action-bg); margin: 0; }
-  .check-line.off { color: var(--text-3); cursor: default; }
-  .field-hint { margin: 6px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 16px; }
-  .deps-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-  .deps-row .field-hint { margin: 0; }
-  .spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .progress { margin-top: 14px; }
-  .progress-label { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-3); margin-bottom: 6px; }
-  .bar { height: 6px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
-  .bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--action-bg); transition: width .2s; }
-  .bar.indet i { width: 34% !important; animation: indet 1.2s ease-in-out infinite; }
-  @keyframes indet { 0% { transform: translateX(-110%); } 100% { transform: translateX(330%); } }
+  .toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .toast.ok { border-color: var(--success); }
+  .toast.err { border-color: var(--danger); }
+
   .hidden { display: none !important; }
+  .spin { animation: spin 0.8s linear infinite; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
+
+<!-- Sidebar -->
 <aside>
-  <div class="brand"><div class="mark">v</div><b>vidnote</b></div>
-  <div class="nav">
-    <div class="nav-item active" data-view="fetch">
-      <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-      <span>抓取</span>
-    </div>
-    <div class="nav-item" data-view="search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-      <span>搜索</span>
-    </div>
-    <div class="nav-item" data-view="login">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-      <span>登录</span>
-    </div>
-    <div class="nav-item" data-view="download">
-      <svg viewBox="0 0 24 24"><path d="M12 4v9m0 0 3.5-3.5M12 13 8.5 9.5"/><rect x="4" y="16" width="16" height="4" rx="1"/></svg>
-      <span>下载</span>
+  <div class="brand">
+    <div class="brand-logo">v</div>
+    <div class="brand-text">
+      <span class="brand-name">vidnote</span>
+      <span class="brand-badge">v0.3.4 · 原生桌面端</span>
     </div>
   </div>
-  <div class="side-foot">
-    <div class="nav-item" id="theme">
-      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
-      <span id="theme-label">深色模式</span>
+
+  <div class="tray-status-pill" id="tray-pill">
+    <span class="tray-status-dot"></span>
+    <span>Rust 托盘核心已就绪</span>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-item active" data-view="fetch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>抓取视频</span>
     </div>
-    <div class="meta">v__VERSION__</div>
+    <div class="nav-item" data-view="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>搜索视频</span>
+    </div>
+    <div class="nav-item" data-view="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>登录 B 站</span>
+    </div>
+    <div class="nav-item" data-view="download">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>下载渠道</span>
+    </div>
+    <div class="nav-item" data-view="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>历史记录</span>
+    </div>
+    <div class="nav-item" data-view="tips">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>说明与设置</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-foot">
+    <div class="side-btn" id="btn-theme">
+      <span id="theme-text">切换外观</span>
+      <span id="theme-icon">🌙</span>
+    </div>
+    <div class="side-btn" id="btn-minimize-tray">
+      <span>最小化到托盘</span>
+      <span>🔕</span>
+    </div>
   </div>
 </aside>
 
+<!-- Main Workspace -->
 <main>
-  <div class="topbar">
-    <h1 id="page-title">抓取视频</h1>
-    <span class="sub" id="page-sub">把 B 站视频变成带时间戳的 Markdown 笔记</span>
-    <span class="spacer"></span>
-    <button class="btn-link" id="reveal" disabled>打开文件</button>
-    <button class="btn-link" id="reveal-folder" disabled>打开文件夹</button>
-    <button class="btn-link" id="copy" disabled>复制 Markdown</button>
-  </div>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="topbar-title" id="page-title">抓取视频</h1>
+      <span class="topbar-sub" id="page-sub">将 B 站视频变成带时间戳的 Markdown 笔记</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" id="btn-copy" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>复制 Markdown</span>
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btn-open-file" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>打开文件</span>
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btn-open-folder" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>打开文件夹</span>
+      </button>
+    </div>
+  </header>
 
   <div class="content">
-    <div class="col">
-      <!-- 抓取 -->
-      <section class="card" id="view-fetch">
-        <div class="card-head"><h2>视频</h2><span class="hint">支持链接 / BV 号 / av 号</span></div>
-        <div class="card-body">
-          <label>链接或编号</label>
-          <input id="target" placeholder="BV1xx411c7mD 或 https://www.bilibili.com/video/...">
-          <div class="grid2">
-            <div><label>分P</label><input id="page" type="number" min="1" value="1"></div>
-            <div><label>关键帧</label><input id="frames" type="number" min="0" max="30" value="6"></div>
+    <!-- View 1: 抓取与生成 (id="view-fetch") -->
+    <div class="pane-left" id="view-fetch">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">目标视频</span>
+          <span class="card-hint">支持链接 / BV 号 / av 号 / 分P</span>
+        </div>
+        <div class="field">
+          <div class="input-wrap">
+            <input id="target" type="text" placeholder="例如：BV1xx411c7mD 或粘贴 B 站链接">
+            <button class="inner-btn" id="btn-paste-clip" type="button">📋 剪贴板</button>
           </div>
-          <label>输出目录</label>
-          <div class="input-row">
-            <input id="outdir" placeholder="留空 = 当前目录">
-            <button class="btn-ghost" id="pick-folder" type="button">选择</button>
+        </div>
+        <div class="row-grid">
+          <div class="field">
+            <label class="field-label">分 P 序号</label>
+            <input id="page" type="number" min="1" value="1">
           </div>
-          <label>解析方案</label>
+          <div class="field">
+            <label class="field-label">关键帧数量</label>
+            <input id="frames" type="number" min="0" max="30" value="6">
+          </div>
+        </div>
+        <div class="pills-row">
+          <span style="font-size:11px;color:var(--text-3)">常用预设:</span>
+          <span class="pill" data-frames="0">不抽图 (0)</span>
+          <span class="pill" data-frames="4">精简 (4)</span>
+          <span class="pill active" data-frames="6">标准 (6)</span>
+          <span class="pill" data-frames="12">详尽 (12)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">解析方案与输出设置</span>
+        </div>
+        <div class="field">
+          <label class="field-label">解析方案 (无字幕时兜底)</label>
           <select id="transcribe">
-            <option value="" selected>不转写 · 只输出元数据</option>
-            <option value="vosk-cn">Vosk 小模型 · 快、占用小、自动分句</option>
-            <option value="tiny">whisper tiny · 最快，质量一般</option>
-            <option value="base">whisper base · 速度与质量平衡</option>
-            <option value="small">whisper small · 中文质量最好</option>
+            <option value="none" selected>字幕优先 / 无字幕则报错</option>
+            <option value="vosk">Vosk 离线引擎 (内置中文模型 42MB · 极速)</option>
+            <option value="whisper-tiny">Whisper Tiny (轻量 75MB)</option>
+            <option value="whisper-base">Whisper Base (平衡 145MB)</option>
+            <option value="whisper-small">Whisper Small (高精 485MB)</option>
           </select>
-          <p class="field-hint">whisper 的依赖安装和模型下载渠道在左侧「下载」页。</p>
-          <div class="actions"><button class="btn-primary" id="go">生成笔记</button></div>
-          <div class="progress hidden" id="progress">
-            <div class="progress-label"><span id="phase">准备中…</span><span id="pct"></span></div>
-            <div class="bar" id="bar-track"><i id="bar"></i></div>
+        </div>
+        <div class="field">
+          <label class="field-label">笔记保存目录</label>
+          <div class="input-wrap">
+            <input id="outdir" type="text" placeholder="留空 = 默认当前目录">
+            <button class="inner-btn" id="pick-folder" type="button">选择路径</button>
           </div>
         </div>
-      </section>
+        <button class="btn btn-primary" id="go" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="go-text">生成笔记</span>
+        </button>
+      </div>
 
-      <!-- 搜索 -->
-      <section class="card grow hidden" id="view-search">
-        <div class="card-head"><h2>搜索</h2><span class="hint" id="search-hint">点击视频填入编号</span></div>
-        <div class="card-body">
-          <div class="mode-row">
-            <button class="mode-btn active" data-search-type="video" type="button">视频</button>
-            <button class="mode-btn" data-search-type="author" type="button">作者</button>
-          </div>
-          <input id="q" placeholder="输入关键词后回车，例如：Python 异步">
-          <ul class="results" id="results"><li class="empty">还没有搜索结果</li></ul>
+      <!-- Stepper Progress Card -->
+      <div class="progress-card hidden" id="progress-card">
+        <div class="stepper">
+          <div class="step-node active" id="step-1"><div class="step-dot">1</div><span>元数据</span></div>
+          <div class="step-node" id="step-2"><div class="step-dot">2</div><span>字幕提取</span></div>
+          <div class="step-node" id="step-3"><div class="step-dot">3</div><span>关键帧</span></div>
+          <div class="step-node" id="step-4"><div class="step-dot">4</div><span>文档生成</span></div>
         </div>
-      </section>
-
-      <!-- 登录 -->
-      <section class="card grow hidden" id="view-login">
-        <div class="card-head"><h2>登录 B 站</h2><span class="hint">可选，只用于字幕</span></div>
-        <div class="card-body">
-          <label>Cookie</label>
-          <input id="cookie" type="password" placeholder="SESSDATA=...">
-          <p class="field-hint">大部分字幕需要登录态。粘贴 SESSDATA=... 或整段 Cookie；只用于本次抓取，不写进笔记，也不保存。</p>
-          <p class="field-hint">填好后回「抓取」页生成笔记即可。</p>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-inner" id="progress-bar"></div>
         </div>
-      </section>
-
-      <!-- 下载 -->
-      <section class="card grow hidden" id="view-download">
-        <div class="card-head"><h2>下载</h2><span class="hint">whisper 依赖与模型</span></div>
-        <div class="card-body">
-          <label>下载渠道</label>
-          <select id="channel">
-            <option value="auto" selected>自动（完整版内置优先）</option>
-            <option value="official">HuggingFace 官方</option>
-            <option value="mirror">hf-mirror 国内镜像</option>
-          </select>
-          <p class="field-hint">whisper 模型第一次使用时按这里的渠道下载；Vosk 模型完整版已内置。</p>
-          <label>whisper 依赖</label>
-          <p class="field-hint" id="deps-state">正在检查…</p>
-          <div class="deps-row hidden" id="deps-row">
-            <button class="btn-ghost" id="install-whisper" type="button">安装 whisper 依赖</button>
-            <span class="field-hint">装好后才能选 whisper</span>
-          </div>
-          <div class="progress hidden" id="deps-progress">
-            <div class="progress-label"><span id="deps-phase">准备中…</span><span id="deps-pct"></span></div>
-            <div class="bar"><i id="deps-bar"></i></div>
-          </div>
-          <p class="field-hint">模型大小：tiny 75 MB · base 145 MB · small 485 MB。</p>
+        <div class="progress-meta">
+          <span id="progress-phase">准备中…</span>
+          <span id="progress-pct">0%</span>
         </div>
-      </section>
-
-      <section class="card" id="tips">
-        <div class="card-head"><h2>说明</h2></div>
-        <div class="card-body tips">
-          <p id="file-hint" class="hidden"><b>提示</b>：当前是直接打开的 HTML 文件，没有本地服务。请先运行 <code>vidnote gui</code>，或双击桌面应用。</p>
-          <p><b>分P</b>：多P 视频填第几集，时间戳会自动带上 <code>&amp;p=</code>。</p>
-          <p><b>关键帧</b>：默认 6 张，会插在对应字幕的后面；填 0 不抽。用 B 站现成的缩略图，不下载视频。</p>
-          <p><b>转写</b>：有字幕直接用；没字幕时可转写——Vosk 小模型 42 MB（快、自动分句），whisper 需要先装依赖，模型 75/145/485 MB（质量更好）。模型只在第一次使用时下载，进度会显示在按钮下方。</p>
-          <p><b>Cookie</b>：大部分字幕需要登录态，在左侧「登录」页填 SESSDATA 后能抓到。Cookie 只用于本次请求，不写进笔记，也不保存。</p>
-          <p><b>依赖与下载</b>：whisper 的依赖安装、模型下载渠道都在左侧「下载」页。</p>
-        </div>
-      </section>
+      </div>
     </div>
 
-    <section class="card grow">
-      <div class="preview-head">
-        <h2 style="margin:0;font-size:13px;font-weight:600">预览</h2>
-        <span class="path" id="path">生成后显示文件位置</span>
+    <!-- View 2: 搜索发现 (id="view-search") -->
+    <div class="pane-left hidden" id="view-search">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">搜索视频</span>
+          <span class="card-hint">输入关键词即时检索</span>
+        </div>
+        <div class="row-grid">
+          <button class="btn btn-secondary btn-sm active" data-search-type="video" id="search-type-video" type="button">搜索视频</button>
+          <button class="btn btn-secondary btn-sm" data-search-type="author" id="search-type-author" type="button">作者</button>
+        </div>
+        <div class="field">
+          <input id="q" type="text" placeholder="输入搜索词按回车，例如：Python 异步">
+        </div>
       </div>
-      <div class="doc" id="preview"><p class="empty">填入链接并点击「生成笔记」，这里会显示渲染后的结果。</p></div>
+      <div class="search-results" id="search-results">
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <p>还没有搜索结果，输入关键词并回车开始搜索</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 3: 登录 B 站 (id="view-login") -->
+    <div class="pane-left hidden" id="view-login">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">登录 B 站</span>
+          <span class="card-hint">可选 · 用于获取仅登录可见的字幕</span>
+        </div>
+        <div class="field">
+          <label class="field-label">SESSDATA / Cookie</label>
+          <div class="input-wrap">
+            <input id="cookie" type="password" placeholder="SESSDATA=...">
+            <button class="inner-btn" id="btn-toggle-cookie" type="button">显示</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" id="btn-save-cookie" type="button">保存凭据</button>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-cookie" type="button">清除</button>
+        </div>
+      </div>
+      <div class="card">
+        <span class="card-title">如何获取 SESSDATA？</span>
+        <ol style="margin-left:18px;font-size:12.5px;color:var(--text-2);line-height:1.7">
+          <li>在电脑浏览器打开 bilibili.com 并登录你的账号。</li>
+          <li>按键盘 <code>F12</code> 打开开发者工具，切换到 <b>应用 (Application)</b> 标签。</li>
+          <li>在左侧展开 <b>Cookie</b>，找到 <code>SESSDATA</code>，复制其值并粘贴在上方。</li>
+          <li>凭据仅保存在本机客户端，仅用于请求 B 站官方字幕 API。</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- View 4: 下载渠道 (id="view-download") -->
+    <div class="pane-left hidden" id="view-download">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">下载渠道</span>
+        </div>
+        <div class="field">
+          <select id="channel">
+            <option value="auto" selected>自动（完整版内置优先）</option>
+            <option value="mirror">hf-mirror 国内镜像</option>
+            <option value="official">HuggingFace 官方</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Vosk 离线引擎</span>
+          <span class="badge" style="color:var(--success);border-color:var(--success)">已就绪</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-2)">客户端已内置中文模型 (42 MB)，无字幕视频可直接秒速转写，无需连接外部网络。</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Faster-Whisper 深度模型</span>
+          <span class="badge" id="whisper-status-badge">检测中…</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-2)" id="whisper-status-desc">正在检查本地 whisper 运行环境…</p>
+        <button class="btn btn-secondary btn-sm hidden" id="btn-install-whisper" type="button">安装 whisper 依赖</button>
+        <div class="progress-bar-wrap hidden" id="whisper-prog-wrap" style="margin-top:6px">
+          <div class="progress-bar-inner" id="whisper-prog-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 5: 历史记录 -->
+    <div class="pane-left hidden" id="view-history">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">本地笔记历史</span>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-history" type="button">清空历史</button>
+        </div>
+        <div class="search-results" id="history-list"></div>
+      </div>
+    </div>
+
+    <!-- View 6: 说明与设置 -->
+    <div class="pane-left hidden" id="view-tips">
+      <div class="card">
+        <span class="card-title">关于 vidnote v0.3.4</span>
+        <p style="font-size:12.5px;color:var(--text-2);line-height:1.7">
+          vidnote 是一款专为知识提炼与归档设计的 B 站视频笔记工具。
+          本版本采用 <b>Tauri 2.0</b> 编译原生 Rust 桌面端与后台托盘核心，大幅优化内存占用与渲染流畅度。
+        </p>
+        <ul style="margin-left:18px;font-size:12px;color:var(--text-2);line-height:1.8">
+          <li><b>原生托盘核心</b>：关闭窗口自动最小化至系统托盘，右键托盘图标可一键呼出或快速抓取剪贴板。</li>
+          <li><b>原生文件对话框</b>：输出目录选择与打开文件直接调用 Windows 系统原生 API。</li>
+          <li><b>智能关键帧抽帧</b>：无需下载庞大视频，自动从 storyboard 抽取高画质时间轴缩略图并内嵌至文档。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right Pane: Markdown Studio & Preview -->
+    <section class="pane-right">
+      <div class="preview-topbar">
+        <div class="view-tabs">
+          <span class="view-tab active" data-tab="preview">预览</span>
+          <span class="view-tab" data-tab="gallery">关键帧画廊</span>
+          <span class="view-tab" data-tab="raw">原始 Markdown</span>
+        </div>
+        <span style="font-size:11.5px;color:var(--text-3);font-family:var(--font-mono)" id="current-file-label">就绪</span>
+      </div>
+
+      <div class="preview-scroll" id="studio-scroll">
+        <!-- Empty Placeholder -->
+        <div class="empty-state" id="studio-empty">
+          <div class="empty-icon">📝</div>
+          <h3 style="font-size:15px;color:var(--text-1)">还没有生成笔记</h3>
+          <p style="font-size:12.5px;max-width:320px">在左侧填入 B 站视频链接或 BV 号，点击「生成笔记」即可在数秒内得到结构化 Markdown 笔记。</p>
+        </div>
+
+        <!-- Active Document Area -->
+        <div class="hidden" id="studio-content">
+          <div class="video-hero" id="video-hero">
+            <img class="video-cover" id="hero-cover" src="" alt="封面">
+            <div class="video-info">
+              <div class="video-title" id="hero-title">--</div>
+              <div class="video-tags">
+                <span class="badge" id="hero-author">UP: --</span>
+                <span class="badge" id="hero-bvid">--</span>
+                <span class="badge" id="hero-duration">--</span>
+                <span class="badge" id="hero-views">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Markdown rendered content -->
+          <div class="markdown-body" id="md-render-container"></div>
+
+          <!-- Keyframe gallery view -->
+          <div class="gallery-grid hidden" id="gallery-container"></div>
+
+          <!-- Raw source view -->
+          <textarea class="raw-code hidden" id="raw-textarea" readonly></textarea>
+        </div>
+      </div>
     </section>
   </div>
 </main>
@@ -348,447 +786,677 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const $ = (id) => document.getElementById(id);
-let lastNote = "", lastPath = "";
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const isTauri = typeof window.__TAURI_INTERNALS__ !== 'undefined' || typeof window.__TAURI__ !== 'undefined';
+  let tauriInvoke = null;
 
-function toast(message, kind) {
-  const el = $("toast");
-  el.textContent = message;
-  el.className = "toast show " + (kind || "");
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.className = "toast " + (kind || ""); }, 3000);
-}
-
-async function api(path, options) {
-  let res;
-  try {
-    res = await fetch(path, options);
-  } catch (e) {
-    // 直接双击 HTML 时没有本地服务，fetch 会报 Failed to fetch。
-    throw new Error(location.protocol === "file:"
-      ? "这是静态页面，没有本地服务。请先运行 vidnote gui，或双击桌面应用打开。"
-      : "无法连接本地服务，请确认 vidnote 仍在运行。");
-  }
-  let data;
-  try {
-    data = await res.json();
-  } catch (e) {
-    throw new Error("本地服务返回异常（HTTP " + res.status + "）");
-  }
-  if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
-  return data;
-}
-
-function busy(btn, on, label) {
-  btn.disabled = on;
-  btn.innerHTML = on ? '<span class="spin"></span> ' + label : label;
-}
-
-$("pick-folder").onclick = async () => {
-  const btn = $("pick-folder");
-  btn.disabled = true;
-  try {
-    const data = await api("/api/pick-folder", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-    if (data.path) {
-      $("outdir").value = data.path;
-      toast("已选择输出目录", "ok");
-    }
-  } catch (e) {
-    toast(e.message, "err");
-  } finally {
-    btn.disabled = false;
-  }
-};
-
-/* ---- 视图切换 ---- */
-const VIEWS = { fetch: { title: "抓取视频", sub: "把 B 站视频变成带时间戳的 Markdown 笔记" },
-                search: { title: "搜索视频", sub: "先搜到 BV 号，再去抓取" },
-                login: { title: "登录 B 站", sub: "填入 SESSDATA，解锁登录后才可见的字幕" },
-                download: { title: "下载", sub: "whisper 依赖与模型下载渠道" } };
-document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
-  item.onclick = () => {
-    document.querySelectorAll(".nav-item[data-view]").forEach((i) => i.classList.remove("active"));
-    item.classList.add("active");
-    const view = item.dataset.view;
-    ["fetch", "search", "login", "download"].forEach((name) => {
-      $("view-" + name).classList.toggle("hidden", view !== name);
-    });
-    $("page-title").textContent = VIEWS[view].title;
-    $("page-sub").textContent = VIEWS[view].sub;
-  };
-});
-
-/* ---- 直接打开 HTML 时给出明确提示 ---- */
-if (location.protocol === "file:") {
-  $("file-hint").classList.remove("hidden");
-  toast("静态页面：请先运行 vidnote gui，抓取和搜索才有本地服务", "err");
-}
-
-/* ---- 主题 ---- */
-const root = document.documentElement;
-function applyTheme(theme) {
-  root.dataset.theme = theme;
-  $("theme-label").textContent = theme === "dark" ? "浅色模式" : "深色模式";
-  try { localStorage.setItem("vidnote-theme", theme); } catch (e) {}
-}
-applyTheme((() => {
-  const qs = new URLSearchParams(location.search).get("theme");
-  if (qs === "dark" || qs === "light") return qs;
-  try { return localStorage.getItem("vidnote-theme") || "light"; } catch (e) { return "light"; }
-})());
-$("theme").onclick = () => applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
-
-/* ---- Markdown 渲染 ---- */
-function renderMarkdown(md) {
-  const lines = md.split("\n"); let html = "", inTable = false, inList = false;
-  const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const inline = (s) => {
-    const images = [];
-    // 图片先抽出来，避免路径里的 < > 被下面的转义破坏。
-    s = s.replace(/!\[([^\]]*)\]\((<[^>]+>|[^)]+)\)/g, (m, alt, src) => {
-      const url = src.replace(/^<|>$/g, "");
-      images.push(`<img alt="${esc(alt)}" src="${esc(url)}">`);
-      return `\u0000${images.length - 1}\u0000`;
-    });
-    s = esc(s)
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
-      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-      .replace(/`([^`]+)`/g, "<code>$1</code>");
-    return s.replace(/\u0000(\d+)\u0000/g, (m, index) => images[Number(index)]);
-  };
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-    if (/^\|/.test(line)) {
-      const cells = line.split("|").slice(1, -1).map((c) => c.trim());
-      if (/^[-: ]+$/.test(cells.join(""))) continue;
-      if (!inTable) { html += "<table>"; inTable = true; }
-      const tag = html.endsWith("<table>") ? "th" : "td";
-      html += "<tr>" + cells.map((c) => `<${tag}>${inline(c)}</${tag}>`).join("") + "</tr>";
-      continue;
-    } else if (inTable) { html += "</table>"; inTable = false; }
-    if (/^### /.test(line)) html += "<h3>" + inline(line.slice(4)) + "</h3>";
-    else if (/^## /.test(line)) html += "<h2>" + inline(line.slice(3)) + "</h2>";
-    else if (/^# /.test(line)) html += "<h1>" + inline(line.slice(2)) + "</h1>";
-    else if (/^---$/.test(line)) html += "<hr>";
-    else if (line) html += "<p>" + inline(line) + "</p>";
-  }
-  if (inTable) html += "</table>";
-  return html;
-}
-
-/* ---- 进度 ---- */
-function showProgress(state) {
-  $("progress").classList.remove("hidden");
-  $("phase").textContent = state.phase || "处理中…";
-  const track = $("bar-track"), bar = $("bar");
-  if (state.total > 0) {
-    const pct = Math.max(0, Math.min(100, Math.round(state.done / state.total * 100)));
-    track.classList.remove("indet");
-    bar.style.width = pct + "%";
-    $("pct").textContent = pct + "%";
+  if (isTauri) {
+    tauriInvoke = window.__TAURI_INTERNALS__?.invoke || window.__TAURI__?.core?.invoke;
+    $('tray-pill').innerHTML = '<span class="tray-status-dot"></span><span>Tauri 2.0 原生托盘就绪</span>';
   } else {
-    track.classList.add("indet");
-    bar.style.width = "";
-    $("pct").textContent = "";
+    $('tray-pill').innerHTML = '<span class="tray-status-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b"></span><span>Web 核心模式运行中</span>';
+    $('btn-minimize-tray').style.display = 'none';
   }
-}
 
-function hideProgress() {
-  $("progress").classList.add("hidden");
-  $("bar-track").classList.remove("indet");
-  $("bar").style.width = "0";
-  $("pct").textContent = "";
-}
-
-/* ---- 交互 ---- */
-let jobTimer = null;
-
-$("go").onclick = async () => {
-  const target = $("target").value.trim();
-  if (!target) return toast("先填一个视频链接或 BV 号", "err");
-  clearTimeout(jobTimer);
-  busy($("go"), true, "抓取中…");
-  showProgress({ phase: "准备中…", done: 0, total: 0 });
-  try {
-    const data = await api("/api/fetch", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        target,
-        page: parseInt($("page").value || "1", 10),
-        frames: parseInt($("frames").value || "0", 10),
-        outdir: $("outdir").value.trim(),
-        transcribe: $("transcribe").value !== "",
-        model: $("transcribe").value,
-        channel: $("channel").value,
-        cookie: $("cookie").value.trim(),
-      }),
-    });
-    pollJob(data.job);
-  } catch (e) {
-    toast(e.message, "err");
-    busy($("go"), false, "生成笔记");
-    hideProgress();
+  // 静态页面直接打开提示
+  if (location.protocol === "file:") {
+    setTimeout(() => {
+      toast("静态页面：请先运行 vidnote gui，或双击桌面客户端打开", "err");
+    }, 400);
   }
-};
 
-async function pollJob(jobId) {
-  try {
-    const state = await api("/api/job?id=" + encodeURIComponent(jobId));
-    showProgress(state);
-    if (state.status === "running") {
-      jobTimer = setTimeout(() => pollJob(jobId), 350);
-      return;
+  let serverPort = null;
+  let activeJobId = null;
+  let pollTimer = null;
+  let currentMarkdown = "";
+  let currentFilePath = "";
+  let currentMeta = null;
+  let currentFrames = [];
+
+  function toast(message, kind = 'info') {
+    const el = $('toast');
+    el.textContent = message;
+    el.className = `toast show ${kind}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = `toast ${kind}`; }, 2800);
+  }
+
+  async function getServerPort() {
+    if (serverPort) return serverPort;
+    if (isTauri && tauriInvoke) {
+      try {
+        serverPort = await tauriInvoke('get_server_port');
+        return serverPort;
+      } catch (e) {
+        console.warn('获取 Tauri 后端端口失败，回退默认端口:', e);
+      }
     }
-    busy($("go"), false, "生成笔记");
-    if (state.status === "error") throw new Error(state.error || "抓取失败");
-    const result = state.result || {};
-    lastNote = result.note || ""; lastPath = result.path || "";
-    $("preview").innerHTML = renderMarkdown(lastNote);
-    // 笔记里的图片是相对路径，预览时交给后端读取并以图片形式返回。
-    $("preview").querySelectorAll("img").forEach((img) => {
-      const src = img.getAttribute("src") || "";
-      if (src.startsWith("data:") || src.startsWith("http")) return;
-      img.src = "/api/frame?note=" + encodeURIComponent(lastPath)
-        + "&src=" + encodeURIComponent(src);
-    });
-    $("path").textContent = lastPath;
-    $("copy").disabled = !lastNote; $("reveal").disabled = !lastPath; $("reveal-folder").disabled = !lastPath;
-    $("phase").textContent = "完成"; $("pct").textContent = "100%";
-    $("bar-track").classList.remove("indet"); $("bar").style.width = "100%";
-    if (result.warning) toast(result.warning, "err");
-    else toast(result.frames ? `完成，含 ${result.frames} 张关键帧` : "完成", "ok");
-  } catch (e) {
-    busy($("go"), false, "生成笔记");
-    toast(e.message, "err");
+    return location.port ? parseInt(location.port, 10) : 18233;
   }
-}
 
-let searchType = "video";
-let searchSeq = 0;
+  async function api(path, options = {}) {
+    let port = await getServerPort();
+    let url = path;
+    if (path.startsWith('/api/')) {
+      if (isTauri && port) {
+        // 构建本地服务地址
+        const scheme = 'http:';
+        url = `${scheme}//127.0.0.1:${port}${path}`;
+      }
+    }
+    const res = await fetch(url, options);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(data.error || `请求失败 (HTTP ${res.status})`);
+    }
+    return data;
+  }
 
-function setSearchType(kind) {
-  searchType = kind;
-  searchSeq += 1;
-  document.querySelectorAll(".mode-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.searchType === kind);
+  // 主题切换
+  const root = document.documentElement;
+  function applyTheme(t) {
+    root.dataset.theme = t;
+    $('theme-icon').textContent = t === 'dark' ? '☀️' : '🌙';
+    $('theme-text').textContent = t === 'dark' ? '浅色外观' : '深色外观';
+    localStorage.setItem('vidnote-theme', t);
+  }
+  applyTheme(localStorage.getItem('vidnote-theme') || 'dark');
+  $('btn-theme').onclick = () => applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark');
+
+  // 导航切换
+  const VIEWS = {
+    fetch: { title: '抓取视频', sub: '把 B 站视频变成带时间戳的 Markdown 笔记' },
+    search: { title: '搜索视频', sub: '快速检索 B 站视频与 UP 主，一键载入抓取' },
+    login: { title: '登录 B 站', sub: '填写 SESSDATA 以解锁登录后才可见的私有/高清字幕' },
+    download: { title: '下载渠道', sub: 'whisper 依赖与模型下载渠道' },
+    history: { title: '历史记录', sub: '浏览与重新查看本地已生成的笔记与关键帧' },
+    tips: { title: '说明与设置', sub: '关于 vidnote 0.3.4 与 Tauri 2.0 桌面端架构特性' },
+  };
+
+  document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
+    el.onclick = () => {
+      document.querySelectorAll('.nav-item[data-view]').forEach((i) => i.classList.remove('active'));
+      el.classList.add('active');
+      const v = el.dataset.view;
+      ['fetch', 'search', 'login', 'download', 'history', 'tips'].forEach((name) => {
+        const pane = $(`view-${name}`);
+        if (pane) pane.classList.toggle('hidden', name !== v);
+      });
+      $('page-title').textContent = VIEWS[v].title;
+      $('page-sub').textContent = VIEWS[v].sub;
+      if (v === 'history') loadHistory();
+      if (v === 'download') checkWhisperDeps();
+    };
   });
-  $("q").placeholder = kind === "author"
-    ? "输入 UP 主昵称，例如：老番茄"
-    : "输入关键词后回车，例如：Python 异步";
-  $("search-hint").textContent = kind === "author" ? "点击结果打开空间页" : "点击视频填入编号";
-  $("results").innerHTML = '<li class="empty">还没有搜索结果</li>';
-}
 
-document.querySelectorAll(".mode-btn").forEach((btn) => {
-  btn.onclick = () => setSearchType(btn.dataset.searchType);
-});
-
-function formatCount(value) {
-  const n = Number(value) || 0;
-  if (n >= 100000000) return (n / 100000000).toFixed(1) + " 亿";
-  if (n >= 10000) return (n / 10000).toFixed(1) + " 万";
-  return n.toLocaleString();
-}
-
-async function openSpace(url) {
-  try {
-    await api("/api/open-url", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-  } catch (e) { toast(e.message, "err"); }
-}
-
-function renderAuthors(list, items) {
-  for (const item of items) {
-    const li = document.createElement("li");
-    li.className = "author";
-    const avatar = document.createElement("img");
-    if (item.avatar && item.avatar.startsWith("https://")) {
-      avatar.src = item.avatar;
-      avatar.alt = "";
-      avatar.loading = "lazy";
-      avatar.referrerPolicy = "no-referrer";
-    }
-    const info = document.createElement("div");
-    info.className = "info";
-    const name = document.createElement("b");
-    name.textContent = item.name + (item.verified ? " ✓" : "");
-    const meta = document.createElement("small");
-    const bits = [formatCount(item.fans) + " 粉丝", item.videos + " 个视频"];
-    if (item.sign) bits.push(item.sign);
-    meta.textContent = bits.join(" · ");
-    info.append(name, meta);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn-ghost";
-    button.textContent = "打开空间";
-    button.onclick = (e) => { e.stopPropagation(); openSpace(item.url); };
-    li.append(avatar, info, button);
-    li.onclick = () => openSpace(item.url);
-    list.appendChild(li);
-  }
-}
-
-$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
-
-async function doSearch() {
-  const q = $("q").value.trim();
-  if (!q) return toast("先输入关键词", "err");
-  const kind = searchType;
-  const seq = ++searchSeq;
-  const list = $("results");
-  list.innerHTML = '<li class="empty">搜索中…</li>';
-  try {
-    const data = await api("/api/search?q=" + encodeURIComponent(q)
-      + "&limit=10&type=" + encodeURIComponent(kind));
-    if (seq !== searchSeq) return;
-    list.innerHTML = "";
-    if (!data.results.length) {
-      list.innerHTML = kind === "author"
-        ? '<li class="empty">没有找到作者</li>'
-        : '<li class="empty">没有找到结果</li>';
-      return;
-    }
-    if (kind === "author") {
-      renderAuthors(list, data.results);
-      return;
-    }
-    for (const item of data.results) {
-      const li = document.createElement("li");
-      li.innerHTML = "<b></b><small></small>";
-      li.querySelector("b").textContent = item.title;
-      li.querySelector("small").textContent = `${item.author} · ${item.duration} · ${item.play.toLocaleString()} 播放`;
-      li.onclick = () => { $("target").value = item.bvid; toast("已填入 " + item.bvid, "ok"); document.querySelector('[data-view="fetch"]').click(); };
-      list.appendChild(li);
-    }
-  } catch (e) {
-    if (seq !== searchSeq) return;
-    const li = document.createElement("li");
-    li.className = "empty";
-    li.textContent = e.message;
-    list.replaceChildren(li);
-    toast(e.message, "err");
-  }
-}
-
-$("copy").onclick = async () => {
-  if (!lastNote) return;
-  try { await navigator.clipboard.writeText(lastNote); toast("已复制", "ok"); }
-  catch (e) { toast("复制失败", "err"); }
-};
-
-$("reveal").onclick = async () => {
-  if (!lastPath) return;
-  try {
-    await api("/api/reveal", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: lastPath }),
-    });
-  } catch (e) { toast(e.message, "err"); }
-};
-
-$("reveal-folder").onclick = async () => {
-  if (!lastPath) return;
-  try {
-    await api("/api/reveal-folder", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: lastPath }),
-    });
-  } catch (e) { toast(e.message, "err"); }
-};
-
-setInterval(() => { fetch("/api/ping").catch(() => {}); }, 3000);
-
-/* 后端有哪些引擎：没有的选项标灰并说明；whisper 依赖可以单独安装 */
-async function pollDeps() {
-  try {
-    const s = await api("/api/deps");
-    $("deps-progress").classList.remove("hidden");
-    if (s.running) $("deps-row").classList.remove("hidden");
-    $("deps-phase").textContent = s.phase || "安装中…";
-    const pct = s.total ? Math.min(100, Math.round((s.done / s.total) * 100)) : 0;
-    $("deps-pct").textContent = s.total ? pct + "%" : "";
-    $("deps-bar").style.width = s.total ? pct + "%" : "0";
-    if (s.running) { setTimeout(pollDeps, 800); return; }
-    $("install-whisper").disabled = false;
-    if (s.last_error) {
-      toast(s.last_error, "err");
-      $("deps-phase").textContent = "安装失败";
-      $("deps-pct").textContent = "";
-      return;
-    }
-    $("deps-progress").classList.add("hidden");
-    loadEngines();
-    toast("whisper 依赖安装完成", "ok");
-  } catch (e) {
-    setTimeout(pollDeps, 1200);
-  }
-}
-
-$("install-whisper").onclick = async () => {
-  $("install-whisper").disabled = true;
-  try {
-    await api("/api/deps/install", { method: "POST" });
-    pollDeps();
-  } catch (e) {
-    toast(e.message, "err");
-    $("install-whisper").disabled = false;
-  }
-};
-
-function applyEngines(data) {
-  const engines = data.engines || {};
-  const deps = data.whisper_deps || {};
-  const box = $("transcribe");
-  [...box.options].forEach((option) => {
-    if (!option.value) return;
-    if (!option.dataset.label) option.dataset.label = option.textContent;
-    option.textContent = option.dataset.label;
-    option.disabled = false;
-    const whisper = !option.value.startsWith("vosk");
-    const available = whisper ? engines.whisper : engines.vosk;
-    if (!available) {
-      option.disabled = true;
-      option.textContent += whisper && deps.installable
-        ? "（需安装依赖）"
-        : "（此版本未内置）";
-    }
+  // 关键帧预设 Pills
+  document.querySelectorAll('.pill[data-frames]').forEach((p) => {
+    p.onclick = () => {
+      document.querySelectorAll('.pill[data-frames]').forEach((x) => x.classList.remove('active'));
+      p.classList.add('active');
+      $('frames').value = p.dataset.frames;
+    };
   });
-  const usable = [...box.options].filter((option) => option.value && !option.disabled);
-  if (usable.length) {
-    box.disabled = false;
-  } else {
-    box.value = "";
-    box.disabled = true;
-  }
-  $("deps-row").classList.toggle("hidden", !(deps.installable && !deps.available));
-  $("install-whisper").textContent =
-    "安装 whisper 依赖" + (deps.size_mb ? "（约 " + deps.size_mb + " MB）" : "");
-  $("deps-state").textContent = deps.available
-    ? "已安装，可直接选择 whisper 方案。"
-    : deps.import_error
-      ? "依赖导入失败：" + deps.import_error
-      : deps.installable
-        ? "未安装；装好后才能选择 whisper 方案。"
-        : "当前版本不包含 whisper 转写。";
-}
+  $('frames').oninput = () => {
+    const val = $('frames').value;
+    document.querySelectorAll('.pill[data-frames]').forEach((p) => {
+      p.classList.toggle('active', p.dataset.frames === val);
+    });
+  };
 
-function loadEngines() {
-  return fetch("/api/health").then((r) => r.json()).then(applyEngines).catch(() => {});
-}
+  // 最小化到托盘
+  $('btn-minimize-tray').onclick = async () => {
+    if (isTauri && tauriInvoke) {
+      await tauriInvoke('hide_to_tray');
+      toast('已最小化至系统托盘', 'ok');
+    }
+  };
 
-loadEngines().then(() => api("/api/deps").catch(() => null)).then((s) => {
-  if (s && s.running) {
-    $("deps-progress").classList.remove("hidden");
-    pollDeps();
+  // 剪贴板一键粘贴
+  async function pasteFromClipboard() {
+    try {
+      let text = "";
+      if (navigator.clipboard) {
+        text = await navigator.clipboard.readText();
+      }
+      if (text) {
+        $('target').value = text.trim();
+        toast('已从剪贴板填入链接', 'ok');
+      } else {
+        toast('剪贴板中没有文本', 'err');
+      }
+    } catch (e) {
+      toast('无法读取剪贴板: ' + e.message, 'err');
+    }
   }
-});
+  $('btn-paste-clip').onclick = pasteFromClipboard;
+
+  // 选择输出目录
+  $('pick-folder').onclick = async () => {
+    if (isTauri && tauriInvoke) {
+      try {
+        const path = await tauriInvoke('pick_folder');
+        if (path) {
+          $('outdir').value = path;
+          toast('已选择目录: ' + path, 'ok');
+        }
+      } catch (e) {
+        toast('选择目录失败: ' + e.message, 'err');
+      }
+    } else {
+      try {
+        const res = await api('/api/pick-folder', { method: 'POST', body: '{}' });
+        if (res.path) {
+          $('outdir').value = res.path;
+          toast('已选择目录: ' + res.path, 'ok');
+        }
+      } catch (e) {
+        toast(e.message, 'err');
+      }
+    }
+  };
+
+  // 复制与打开操作
+  $('btn-copy').onclick = async () => {
+    if (!currentMarkdown) return;
+    try {
+      await navigator.clipboard.writeText(currentMarkdown);
+      toast('Markdown 已复制到剪贴板！', 'ok');
+    } catch (e) {
+      toast('复制失败: ' + e.message, 'err');
+    }
+  };
+
+  $('btn-open-file').onclick = async () => {
+    if (!currentFilePath) return;
+    if (isTauri && tauriInvoke) {
+      try {
+        await tauriInvoke('open_file', { path: currentFilePath });
+      } catch (e) {
+        toast('打开文件失败: ' + e.message, 'err');
+      }
+    } else {
+      api('/api/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentFilePath }),
+      }).catch((e) => toast(e.message, 'err'));
+    }
+  };
+
+  $('btn-open-folder').onclick = async () => {
+    if (!currentFilePath) return;
+    if (isTauri && tauriInvoke) {
+      try {
+        await tauriInvoke('reveal_path', { path: currentFilePath });
+      } catch (e) {
+        toast('定位文件失败: ' + e.message, 'err');
+      }
+    } else {
+      api('/api/reveal-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentFilePath }),
+      }).catch((e) => toast(e.message, 'err'));
+    }
+  };
+
+  // 生成笔记逻辑
+  $('go').onclick = async () => {
+    const target = $('target').value.trim();
+    if (!target) {
+      toast('请先填入 B 站视频链接或编号', 'err');
+      $('target').focus();
+      return;
+    }
+
+    const payload = {
+      target,
+      page: parseInt($('page').value || '1', 10),
+      frames: parseInt($('frames').value || '6', 10),
+      transcribe: $('transcribe').value,
+      outdir: $('outdir').value.trim(),
+      cookie: $('cookie').value.trim(),
+      channel: $('channel').value,
+    };
+
+    $('go').disabled = true;
+    $('go-text').textContent = '正在处理中…';
+    $('progress-card').classList.remove('hidden');
+    resetSteps();
+
+    try {
+      const res = await api('/api/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      activeJobId = res.job;
+      startPolling(activeJobId);
+    } catch (e) {
+      $('go').disabled = false;
+      $('go-text').textContent = '生成笔记';
+      $('progress-card').classList.add('hidden');
+      toast(e.message, 'err');
+    }
+  };
+
+  function resetSteps() {
+    for (let i = 1; i <= 4; i++) {
+      $(`step-${i}`).className = 'step-node';
+    }
+    $('step-1').classList.add('active');
+    $('progress-bar').style.width = '10%';
+    $('progress-phase').textContent = '正在获取元数据…';
+    $('progress-pct').textContent = '10%';
+  }
+
+  function updateSteps(phaseText, pctVal) {
+    $('progress-phase').textContent = phaseText;
+    $('progress-pct').textContent = pctVal ? `${Math.round(pctVal)}%` : '运行中';
+    $('progress-bar').style.width = pctVal ? `${Math.max(10, Math.min(100, pctVal))}%` : '50%';
+
+    if (phaseText.includes('元数据') || phaseText.includes('解析')) {
+      setStep(1);
+    } else if (phaseText.includes('字幕') || phaseText.includes('转写') || phaseText.includes('音频')) {
+      setStep(2);
+    } else if (phaseText.includes('关键帧') || phaseText.includes('缩略图') || phaseText.includes('抽帧')) {
+      setStep(3);
+    } else if (phaseText.includes('完成') || phaseText.includes('保存')) {
+      setStep(4, true);
+    }
+  }
+
+  function setStep(idx, allDone = false) {
+    for (let i = 1; i <= 4; i++) {
+      const node = $(`step-${i}`);
+      if (allDone) {
+        node.className = 'step-node done';
+      } else if (i < idx) {
+        node.className = 'step-node done';
+      } else if (i === idx) {
+        node.className = 'step-node active';
+      } else {
+        node.className = 'step-node';
+      }
+    }
+  }
+
+  function startPolling(jobId) {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        const job = await api(`/api/job?id=${encodeURIComponent(jobId)}`);
+        if (job.phase) {
+          const pct = job.total > 0 ? (job.done / job.total) * 100 : (job.status === 'done' ? 100 : 0);
+          updateSteps(job.phase, pct);
+        }
+
+        if (job.status === 'done' && job.result) {
+          clearInterval(pollTimer);
+          $('go').disabled = false;
+          $('go-text').textContent = '生成笔记';
+          $('progress-card').classList.add('hidden');
+          toast('笔记生成成功！', 'ok');
+          renderResult(job.result);
+          saveHistory(job.result);
+        } else if (job.status === 'error') {
+          clearInterval(pollTimer);
+          $('go').disabled = false;
+          $('go-text').textContent = '生成笔记';
+          $('progress-card').classList.add('hidden');
+          toast(`生成失败: ${job.error || '未知错误'}`, 'err');
+        }
+      } catch (e) {
+        clearInterval(pollTimer);
+        $('go').disabled = false;
+        $('go-text').textContent = '生成笔记';
+        toast('查询进度异常: ' + e.message, 'err');
+      }
+    }, 800);
+  }
+
+  // 渲染结果
+  function renderResult(result) {
+    currentMarkdown = result.markdown || "";
+    currentFilePath = result.path || "";
+    currentMeta = result.meta || {};
+    currentFrames = result.frames || [];
+
+    $('btn-copy').disabled = false;
+    $('btn-open-file').disabled = false;
+    $('btn-open-folder').disabled = false;
+    $('current-file-label').textContent = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : '未命名.md';
+
+    $('studio-empty').classList.add('hidden');
+    $('studio-content').classList.remove('hidden');
+
+    $('hero-cover').src = currentMeta.cover || "";
+    $('hero-title').textContent = currentMeta.title || "未知标题";
+    $('hero-author').textContent = `UP: ${currentMeta.author || "未知"}`;
+    $('hero-bvid').textContent = currentMeta.bvid || "";
+    $('hero-duration').textContent = formatSeconds(currentMeta.duration || 0);
+    $('hero-views').textContent = `${formatCount(currentMeta.views || 0)} 播放`;
+
+    renderMarkdownView();
+    renderGalleryView();
+    $('raw-textarea').value = currentMarkdown;
+  }
+
+  function renderMarkdownView() {
+    const container = $('md-render-container');
+    let md = currentMarkdown;
+
+    md = md.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]\((https:\/\/www\.bilibili\.com\/video\/[^\s)]+)\)/g, (match, ts, link) => {
+      return `<a class="ts-chip" href="${link}" target="_blank" onclick="window.__openExternal && window.__openExternal(event, '${link}')">▶ ${ts}</a>`;
+    });
+
+    md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+      let imgSrc = src;
+      if (src.startsWith('keyframes/') || (!src.startsWith('http') && !src.startsWith('data:'))) {
+        imgSrc = `/api/frame?note=${encodeURIComponent(currentFilePath)}&src=${encodeURIComponent(src)}`;
+      }
+      return `<div class="keyframe-img-wrap" onclick="window.open('${imgSrc}')"><img src="${imgSrc}" alt="${alt}" loading="lazy"></div>`;
+    });
+
+    let html = "";
+    const lines = md.split('\n');
+    let inList = false;
+
+    for (let line of lines) {
+      if (line.startsWith('# ')) {
+        html += `<h1>${line.slice(2)}</h1>`;
+      } else if (line.startsWith('## ')) {
+        html += `<h2>${line.slice(3)}</h2>`;
+      } else if (line.startsWith('### ')) {
+        html += `<h3>${line.slice(4)}</h3>`;
+      } else if (line.startsWith('> ')) {
+        html += `<blockquote>${line.slice(2)}</blockquote>`;
+      } else if (line.startsWith('- ')) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${line.slice(2)}</li>`;
+      } else if (line.trim() === '---') {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">';
+      } else {
+        if (inList) { html += '</ul>'; inList = false; }
+        if (line.trim()) {
+          html += `<p>${line}</p>`;
+        }
+      }
+    }
+    if (inList) html += '</ul>';
+    container.innerHTML = html;
+  }
+
+  function renderGalleryView() {
+    const container = $('gallery-container');
+    container.innerHTML = "";
+    if (!currentFrames || currentFrames.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>本次生成未抽取关键帧或关键帧数量为 0</p></div>';
+      return;
+    }
+
+    currentFrames.forEach((f) => {
+      const card = document.createElement('div');
+      card.className = 'gallery-card';
+      const imgSrc = `/api/frame?note=${encodeURIComponent(currentFilePath)}&src=${encodeURIComponent(f.path || f.src || f)}`;
+      card.innerHTML = `
+        <img src="${imgSrc}" loading="lazy">
+        <div class="gallery-card-foot">
+          <span style="font-family:var(--font-mono);font-weight:600">${f.timestamp || f.ts || '帧'}</span>
+          <span style="color:var(--text-3);font-size:11px">点击放大</span>
+        </div>
+      `;
+      card.onclick = () => window.open(imgSrc);
+      container.appendChild(card);
+    });
+  }
+
+  // 标签切换
+  document.querySelectorAll('.view-tab[data-tab]').forEach((tab) => {
+    tab.onclick = () => {
+      document.querySelectorAll('.view-tab[data-tab]').forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      const name = tab.dataset.tab;
+      $('md-render-container').classList.toggle('hidden', name !== 'preview');
+      $('gallery-container').classList.toggle('hidden', name !== 'gallery');
+      $('raw-textarea').classList.toggle('hidden', name !== 'raw');
+    };
+  });
+
+  // 搜索
+  let searchType = 'video';
+  $('search-type-video').onclick = () => {
+    searchType = 'video';
+    $('search-type-video').classList.add('active');
+    $('search-type-author').classList.remove('active');
+  };
+  $('search-type-author').onclick = () => {
+    searchType = 'author';
+    $('search-type-author').classList.add('active');
+    $('search-type-video').classList.remove('active');
+  };
+
+  $('q').onkeydown = async (e) => {
+    if (e.key === 'Enter') {
+      const keyword = $('q').value.trim();
+      if (!keyword) return;
+      const listEl = $('search-results');
+      listEl.innerHTML = '<div class="empty-state"><span class="spin">⏳</span><p>正在搜索 B 站…</p></div>';
+      try {
+        const res = await api(`/api/search?q=${encodeURIComponent(keyword)}&type=${searchType}&limit=12`);
+        renderSearchResults(res);
+      } catch (err) {
+        listEl.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">搜索失败: ${err.message}</p></div>`;
+      }
+    }
+  };
+
+  function renderSearchResults(items) {
+    const listEl = $('search-results');
+    listEl.innerHTML = "";
+    if (!items || items.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><p>未找到相关结果</p></div>';
+      return;
+    }
+
+    items.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'search-card';
+      if (searchType === 'video') {
+        card.innerHTML = `
+          <img class="search-cover" src="${item.cover || ''}" loading="lazy">
+          <div class="search-info">
+            <div class="search-title">${item.title || ''}</div>
+            <div class="search-meta">
+              <span>UP: ${item.author || ''}</span>
+              <span>${item.bvid || ''}</span>
+              <span>${item.duration || ''}</span>
+            </div>
+          </div>
+        `;
+        card.onclick = () => {
+          $('target').value = item.bvid;
+          document.querySelector('.nav-item[data-view="fetch"]').click();
+          toast(`已填入 ${item.bvid}，可直接生成笔记`, 'ok');
+        };
+      } else {
+        card.innerHTML = `
+          <img class="search-cover" style="width:56px;height:56px;border-radius:50%" src="${item.avatar || ''}">
+          <div class="search-info">
+            <div class="search-title">${item.name || ''}</div>
+            <div class="search-meta">
+              <span>粉丝: ${formatCount(item.fans || 0)}</span>
+              <span>视频数: ${item.videos || 0}</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto;align-self:center">打开空间</button>
+        `;
+        card.onclick = () => {
+          if (item.mid) {
+            const spaceUrl = `https://space.bilibili.com/${item.mid}`;
+            if (isTauri && tauriInvoke) {
+              tauriInvoke('open_external_url', { url: spaceUrl });
+            } else {
+              api('/api/open-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: spaceUrl }),
+              }).catch(() => window.open(spaceUrl, '_blank'));
+            }
+          }
+        };
+      }
+      listEl.appendChild(card);
+    });
+  }
+
+  // Whisper 依赖检查
+  async function checkWhisperDeps() {
+    try {
+      const res = await api('/api/deps');
+      const badge = $('whisper-status-badge');
+      const desc = $('whisper-status-desc');
+      const btn = $('btn-install-whisper');
+
+      if (res.installed) {
+        badge.textContent = '就绪';
+        badge.style.color = 'var(--success)';
+        badge.style.borderColor = 'var(--success)';
+        desc.textContent = 'Faster-Whisper 环境已配置就绪，可流畅运行 tiny/base/small 模型。';
+        btn.classList.add('hidden');
+      } else {
+        badge.textContent = '未安装';
+        badge.style.color = 'var(--danger)';
+        badge.style.borderColor = 'var(--danger)';
+        desc.textContent = '检测到当前尚未安装 faster-whisper 运行库，点击下方按钮开始下载安装。';
+        btn.classList.remove('hidden');
+      }
+    } catch (e) {
+      console.warn('检测 whisper 依赖失败:', e);
+    }
+  }
+
+  $('btn-install-whisper').onclick = async () => {
+    $('btn-install-whisper').disabled = true;
+    $('whisper-prog-wrap').classList.remove('hidden');
+    try {
+      await api('/api/deps/install', { method: 'POST' });
+      toast('已启动依赖安装任务，请稍候…', 'ok');
+    } catch (e) {
+      toast('安装启动失败: ' + e.message, 'err');
+      $('btn-install-whisper').disabled = false;
+    }
+  };
+
+  // 账号凭据 Cookie
+  $('cookie').value = localStorage.getItem('vidnote-cookie') || "";
+  $('btn-toggle-cookie').onclick = () => {
+    const input = $('cookie');
+    if (input.type === 'password') {
+      input.type = 'text';
+      $('btn-toggle-cookie').textContent = '隐藏';
+    } else {
+      input.type = 'password';
+      $('btn-toggle-cookie').textContent = '显示';
+    }
+  };
+  $('btn-save-cookie').onclick = () => {
+    const val = $('cookie').value.trim();
+    localStorage.setItem('vidnote-cookie', val);
+    toast('凭据已保存到本地存储', 'ok');
+  };
+  $('btn-clear-cookie').onclick = () => {
+    $('cookie').value = "";
+    localStorage.removeItem('vidnote-cookie');
+    toast('已清除凭据', 'info');
+  };
+
+  // 历史记录
+  function saveHistory(result) {
+    let hist = [];
+    try { hist = JSON.parse(localStorage.getItem('vidnote-history') || '[]'); } catch (e) {}
+    hist.unshift({
+      title: result.meta?.title || '无标题',
+      bvid: result.meta?.bvid || '',
+      cover: result.meta?.cover || '',
+      path: result.path || '',
+      time: new Date().toLocaleString(),
+      markdown: result.markdown || '',
+      meta: result.meta || {},
+      frames: result.frames || [],
+    });
+    if (hist.length > 20) hist = hist.slice(0, 20);
+    localStorage.setItem('vidnote-history', JSON.stringify(hist));
+  }
+
+  function loadHistory() {
+    const container = $('history-list');
+    container.innerHTML = "";
+    let hist = [];
+    try { hist = JSON.parse(localStorage.getItem('vidnote-history') || '[]'); } catch (e) {}
+
+    if (hist.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>还没有生成过的笔记历史</p></div>';
+      return;
+    }
+
+    hist.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'search-card';
+      card.innerHTML = `
+        <img class="search-cover" src="${item.cover || ''}" loading="lazy">
+        <div class="search-info">
+          <div class="search-title">${item.title}</div>
+          <div class="search-meta">
+            <span>${item.bvid}</span>
+            <span>${item.time}</span>
+          </div>
+        </div>
+      `;
+      card.onclick = () => {
+        renderResult(item);
+        document.querySelector('.nav-item[data-view="fetch"]').click();
+        toast('已重新载入笔记: ' + item.title, 'ok');
+      };
+      container.appendChild(card);
+    });
+  }
+
+  $('btn-clear-history').onclick = () => {
+    localStorage.removeItem('vidnote-history');
+    loadHistory();
+    toast('历史记录已清空', 'info');
+  };
+
+  function formatSeconds(s) {
+    s = Math.floor(s);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  function formatCount(n) {
+    if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+    if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+    return n.toLocaleString();
+  }
+
+  // Tauri 全局事件监听
+  if (isTauri && window.__TAURI__?.event) {
+    window.__TAURI__.event.listen('tray-quick-grab', () => {
+      pasteFromClipboard();
+    });
+    window.__TAURI__.event.listen('tray-open-folder', () => {
+      $('btn-open-folder').click();
+    });
+    window.__TAURI__.event.listen('tray-open-about', () => {
+      document.querySelector('.nav-item[data-view="tips"]').click();
+    });
+  }
+})();
 </script>
 </body>
 </html>
