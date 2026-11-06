@@ -1,6 +1,6 @@
 [project]
 name = "vidnote"
-version = "0.3.2"
+version = "0.3.3"
 description = "把 B 站视频变成带时间戳的 Markdown 笔记。"
 readme = "README.md"
 requires-python = ">=3.10"
