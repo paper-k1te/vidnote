@@ -104,6 +104,17 @@ def test_timestamp_links_are_not_bold() -> None:
     assert ts_link(META.url, 754) in text
 
 
+def test_frame_carries_its_own_timestamp_before_the_image() -> None:
+    text = build_note(
+        META,
+        CUES,
+        options=NoteOptions(fetched=date(2026, 11, 4)),
+        frames=[(754.0, "x_frames/02_12-34.jpg")],
+    )
+    image_at = text.index("![关键帧 12:34]")
+    assert text[:image_at].rstrip().endswith(ts_link(META.url, 754))
+
+
 def test_keyframes_without_transcript_get_their_own_section() -> None:
     text = build_note(
         META,

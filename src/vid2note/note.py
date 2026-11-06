@@ -334,6 +334,9 @@ def build_note(
             lines.append(f"{ts_link(url, cue.start)} {cue.text}")
             lines.append("")
             for seconds, relative in buckets.get(index, []):
+                # 帧自带一条时间戳，别让它看起来属于上面那条更早的字幕。
+                lines.append(ts_link(url, seconds))
+                lines.append("")
                 lines += _frame_image(seconds, relative)
     elif frames:
         lines += ["## 关键帧", ""]

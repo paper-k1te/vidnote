@@ -1,6 +1,6 @@
 # dsh-vidnote（适配 vid2note）
 
-把 [vid2note](https://github.com/paper-k1te/vid2note)（0.4.4 起由 vidnote 改名，Tauri 桌面端）接进 DeepSeek Harness：模型可以直接抓 B 站视频、搜视频，界面里也能抓取、看关键帧、翻历史。
+把 [vid2note](https://github.com/paper-k1te/vid2note)（0.4.5 起由 vidnote 改名，Tauri 桌面端）接进 DeepSeek Harness：模型可以直接抓 B 站视频、搜视频，界面里也能抓取、看关键帧、翻历史。
 
 插件页显示为 **vid2note — B 站视频转 Markdown 笔记**，标题/描述来自 `locale/*.json`，图标用新版的 Tauri 图标（MIT）。
 
@@ -47,7 +47,7 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vid2note.git
 
 ## 界面
 
-用 DSH 自己的 slot 和主题变量重写，布局对齐 0.4.4 的新界面：
+用 DSH 自己的 slot 和主题变量重写，布局对齐 0.4.5 的新界面：
 
 - 左侧导航：抓取视频 / 搜索 / 登录 B 站 / API 设置 / 下载 / 历史 / 提示；
 - 抓取：链接、分P、关键帧（0/3/6/12 预设 + 0–30 自定义填空）、输出目录（可用「选择」）、解析方案；带阶段 + 百分比进度；

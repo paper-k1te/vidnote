@@ -11,7 +11,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let grab_item = MenuItem::with_id(app, "grab", "从剪贴板抓取", true, None::<&str>)?;
     let folder_item = MenuItem::with_id(app, "folder", "打开笔记输出目录", true, None::<&str>)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    let about_item = MenuItem::with_id(app, "about", "关于 vid2note v0.4.4", true, None::<&str>)?;
+    let about_item = MenuItem::with_id(app, "about", "关于 vid2note v0.4.5", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "退出 vid2note", true, None::<&str>)?;
 
     let menu = Menu::with_items(
@@ -35,7 +35,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     let _tray = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
-        .tooltip("vid2note v0.4.4 - B站视频带时间戳笔记")
+        .tooltip("vid2note v0.4.5 - B站视频带时间戳笔记")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
