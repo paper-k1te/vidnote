@@ -121,6 +121,31 @@ class Handler(BaseHTTPRequestHandler):
             Handler.seen_ping = True
             self._json({"ok": True})
             return
+        if parsed.path == "/api/login/qr":
+            from .login import LoginError, generate as login_generate
+
+            try:
+                self._json(login_generate())
+            except LoginError as exc:
+                self._json({"error": str(exc)})
+            return
+        if parsed.path == "/api/login/poll":
+            query = parse_qs(parsed.query)
+            key = (query.get("key") or [""])[0]
+            from .login import LoginError, poll as login_poll
+
+            try:
+                self._json(login_poll(key))
+            except LoginError as exc:
+                self._json({"status": "error", "message": str(exc)})
+            return
+        if parsed.path == "/api/login/user":
+            query = parse_qs(parsed.query)
+            cookie = (query.get("cookie") or [""])[0]
+            from .login import nav as login_nav
+
+            self._json({"user": login_nav(cookie)})
+            return
         if parsed.path == "/api/search":
             query = parse_qs(parsed.query)
             keyword = (query.get("q") or [""])[0]
@@ -552,7 +577,7 @@ def fetch_video(
             on_status("正在提取关键帧…")
         try:
             out = destination.parent / f"{destination.stem}_frames"
-            shots = storyboard_frames(meta.bvid, page, out, count=frames)
+            shots = storyboard_frames(meta.bvid, page, out, count=frames, duration=meta.duration)
             keyframes = [
                 (shot.seconds, shot.relative_to(destination.parent)) for shot in shots
             ]

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>vid2note v0.4.2</title>
+<title>vid2note v0.4.3</title>
 <style>
   :root {
     --bg-sidebar: #f5f5f7;
@@ -673,7 +673,7 @@
   <div class="titlebar-left" data-tauri-drag-region>
     <div class="titlebar-app-icon" data-tauri-drag-region>v</div>
     <span class="titlebar-app-name" data-tauri-drag-region>vid2note</span>
-    <span class="titlebar-app-ver" data-tauri-drag-region>v0.4.2</span>
+    <span class="titlebar-app-ver" data-tauri-drag-region>v0.4.3</span>
   </div>
   <div class="titlebar-center" data-tauri-drag-region>
     <span class="titlebar-status-chip" id="titlebar-status" data-tauri-drag-region>
@@ -702,7 +702,7 @@
     <div class="brand-logo">v</div>
     <div class="brand-text">
       <span class="brand-name">vid2note</span>
-      <span class="brand-badge">v0.4.2 · 原生桌面端</span>
+      <span class="brand-badge">v0.4.3 · 原生桌面端</span>
     </div>
   </div>
 
@@ -723,6 +723,10 @@
     <div class="nav-item" data-view="login">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       <span>登录 B 站</span>
+    </div>
+    <div class="nav-item" data-view="api">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>API 设置</span>
     </div>
     <div class="nav-item" data-view="download">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -825,18 +829,6 @@
           </select>
         </div>
         <div class="field">
-          <label class="field-label">转写 API Key（只保存在本机浏览器）</label>
-          <div class="input-wrap">
-            <input id="asr-key" type="password" placeholder="Gemini Key，或 OpenAI 兼容接口的 Key">
-          </div>
-        </div>
-        <div class="field">
-          <label class="field-label">转写接口地址（Whisper 兼容时填写，可留空）</label>
-          <div class="input-wrap">
-            <input id="asr-base" type="text" placeholder="https://api.openai.com/v1">
-          </div>
-        </div>
-        <div class="field">
           <label class="field-label">笔记保存目录</label>
           <div class="input-wrap">
             <input id="outdir" type="text" placeholder="留空 = 默认当前目录">
@@ -895,6 +887,21 @@
     <div class="pane-left hidden" id="view-login">
       <div class="card">
         <div class="card-header">
+          <span class="card-title">扫码登录</span>
+          <span class="card-hint">推荐 · 用 B 站 App 扫一下</span>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <img id="login-qr" class="hidden" alt="登录二维码" width="168" height="168"
+               style="border-radius:10px;background:#fff;padding:6px">
+          <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+            <button class="btn btn-primary btn-sm" id="btn-login-qr" type="button">生成二维码</button>
+            <span id="login-status" style="font-size:12px;color:var(--text-2)">用 B 站手机客户端扫码</span>
+            <a id="login-qr-link" class="hidden" target="_blank" rel="noreferrer" style="font-size:12px">在浏览器打开二维码链接</a>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
           <span class="card-title">登录 B 站</span>
           <span class="card-hint">可选 · 用于获取仅登录可见的字幕</span>
         </div>
@@ -921,7 +928,32 @@
       </div>
     </div>
 
-    <!-- View 4: 下载渠道 (id="view-download") -->
+    <!-- View 4: API 设置 (id="view-api") -->
+    <div class="pane-left hidden" id="view-api">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">云端转写 API</span>
+          <span class="card-hint">只存在本机浏览器</span>
+        </div>
+        <div class="field">
+          <label class="field-label">转写 API Key</label>
+          <div class="input-wrap">
+            <input id="asr-key" type="password" placeholder="Gemini Key，或 OpenAI 兼容接口的 Key">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">转写接口地址（Whisper 兼容时填写，可留空）</label>
+          <div class="input-wrap">
+            <input id="asr-base" type="text" placeholder="https://api.openai.com/v1">
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-2);line-height:1.6">
+          本地识别（Vosk / whisper）不需要 Key；只有选云端 Gemini / Whisper API 时才需要填。
+        </p>
+      </div>
+    </div>
+
+    <!-- View 5: 下载渠道 (id="view-download") -->
     <div class="pane-left hidden" id="view-download">
       <div class="card">
         <div class="card-header">
@@ -969,7 +1001,7 @@
     <!-- View 6: 说明与设置 -->
     <div class="pane-left hidden" id="view-tips">
       <div class="card">
-        <span class="card-title">关于 vid2note v0.4.2</span>
+        <span class="card-title">关于 vid2note v0.4.3</span>
         <p style="font-size:12.5px;color:var(--text-2);line-height:1.7">
           vid2note 是一款专为知识提炼与归档设计的 B 站视频笔记工具。
           本版本采用 <b>Tauri 2.0</b> 编译原生 Rust 桌面端与后台托盘核心，大幅优化内存占用与渲染流畅度。
@@ -1153,10 +1185,11 @@
   const VIEWS = {
     fetch: { title: '抓取视频', sub: '把 B 站视频变成带时间戳的 Markdown 笔记' },
     search: { title: '搜索视频', sub: '快速检索 B 站视频与 UP 主，一键载入抓取' },
-    login: { title: '登录 B 站', sub: '填写 SESSDATA 以解锁登录后才可见的私有/高清字幕' },
+    login: { title: '登录 B 站', sub: '扫码登录，或手动填写 SESSDATA' },
+    api: { title: 'API 设置', sub: '云端转写 Key 与接口地址' },
     download: { title: '下载渠道', sub: 'whisper 依赖与模型下载渠道' },
     history: { title: '历史记录', sub: '浏览与重新查看本地已生成的笔记与关键帧' },
-    tips: { title: '说明与设置', sub: '关于 vid2note 0.4.2 与 Tauri 2.0 桌面端架构特性' },
+    tips: { title: '说明与设置', sub: '关于 vid2note 0.4.3 与 Tauri 2.0 桌面端架构特性' },
   };
 
   document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
@@ -1164,7 +1197,7 @@
       document.querySelectorAll('.nav-item[data-view]').forEach((i) => i.classList.remove('active'));
       el.classList.add('active');
       const v = el.dataset.view;
-      ['fetch', 'search', 'login', 'download', 'history', 'tips'].forEach((name) => {
+      ['fetch', 'search', 'login', 'api', 'download', 'history', 'tips'].forEach((name) => {
         const pane = $(`view-${name}`);
         if (pane) pane.classList.toggle('hidden', name !== v);
       });
@@ -1849,6 +1882,57 @@
 
   // 账号凭据 Cookie
   $('cookie').value = (localStorage.getItem('vid2note-cookie') || localStorage.getItem('vidnote-cookie')) || "";
+
+  // 扫码登录
+  let loginKey = '';
+  let loginTimer = null;
+  function stopLoginPoll() {
+    if (loginTimer) { clearInterval(loginTimer); loginTimer = null; }
+  }
+  function setLoginStatus(text) {
+    const el = $('login-status');
+    if (el) el.textContent = text;
+  }
+  async function pollLogin() {
+    if (!loginKey) return;
+    try {
+      const data = await (await fetch(`/api/login/poll?key=${encodeURIComponent(loginKey)}`)).json();
+      if (data.status === 'ok') {
+        stopLoginPoll();
+        $('cookie').value = data.cookie;
+        localStorage.setItem('vid2note-cookie', data.cookie);
+        setLoginStatus(`已登录${data.user && data.user.name ? '：' + data.user.name : ''}`);
+        $('login-qr').classList.add('hidden');
+      } else if (data.status === 'expired' || data.status === 'error') {
+        stopLoginPoll();
+        setLoginStatus(data.message || '登录失败，请刷新二维码');
+      } else {
+        setLoginStatus(data.message || '等待扫码…');
+      }
+    } catch (e) {
+      setLoginStatus('轮询失败：' + e.message);
+    }
+  }
+  if ($('btn-login-qr')) {
+    $('btn-login-qr').onclick = async () => {
+      stopLoginPoll();
+      setLoginStatus('正在生成二维码…');
+      try {
+        const data = await (await fetch('/api/login/qr')).json();
+        if (data.error) throw new Error(data.error);
+        loginKey = data.key;
+        const img = $('login-qr');
+        if (data.image) { img.src = data.image; img.classList.remove('hidden'); }
+        const link = $('login-qr-link');
+        if (data.url) { link.href = data.url; link.classList.remove('hidden'); }
+        setLoginStatus('等待扫码…');
+        loginTimer = setInterval(pollLogin, 2000);
+      } catch (e) {
+        setLoginStatus('生成失败：' + e.message);
+      }
+    };
+  }
+
   $('btn-toggle-cookie').onclick = () => {
     const input = $('cookie');
     if (input.type === 'password') {

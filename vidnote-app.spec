@@ -26,6 +26,8 @@ a = Analysis(
         "requests",
         "av",
         "yt_dlp",
+        "qrcode",
+        "qrcode.image.pil",
         # whisper 用 tqdm.auto。
         "tqdm.auto",
     ],
@@ -67,8 +69,6 @@ a = Analysis(
         "PIL.ImageGrab",
         "PIL.AvifImagePlugin",
         "PIL.WebPImagePlugin",
-        "PIL.ImageFont",
-        "PIL.ImageDraw",
         "PIL.ImageCms",
         "PIL.IptcImagePlugin",
         "PIL.FitsImagePlugin",

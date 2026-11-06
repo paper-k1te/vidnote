@@ -23,6 +23,7 @@ window.__ModuleLoader__.load({
         fetchNav: '抓取视频',
         searchNav: '搜索',
         loginNav: '登录 B 站',
+        apiNav: 'API 设置',
         downloadNav: '下载',
         historyNav: '历史',
         tipsNav: '提示',
@@ -31,7 +32,17 @@ window.__ModuleLoader__.load({
         searchTitle: '搜索',
         searchSub: '先找视频，挑一条再回来抓',
         loginTitle: '登录 B 站',
-        loginSub: '可选，只用于读取登录后才可见的字幕',
+        loginSub: '扫码登录，读取登录后才可见的字幕',
+        apiTitle: 'API 设置',
+        apiSub: '云端转写 Key 与接口地址',
+        loginScan: '生成二维码',
+        loginRefresh: '刷新二维码',
+        loginHint: '用 B 站手机客户端扫码，确认后自动保存登录态。',
+        loginWaiting: '等待扫码…',
+        loginDone: '已登录',
+        loginFailed: '登录失败，请刷新二维码',
+        loginOpen: '在浏览器打开二维码链接',
+        apiHint: '本地识别不需要 Key；只有切到云端 Gemini / Whisper 时才需要填。',
         downloadTitle: '下载',
         downloadSub: 'whisper 依赖与模型下载渠道',
         historyTitle: '历史记录',
@@ -85,7 +96,7 @@ window.__ModuleLoader__.load({
         videos: '投稿',
         space: '空间',
         cookie: 'Cookie',
-        cookieHint: '大部分字幕需要登录态。粘贴 SESSDATA=... 或整段 Cookie；只用于本次抓取，不写进笔记，也不保存。',
+        cookieHint: '扫码登录会自动保存；也可以手动粘贴 SESSDATA=... 或整段 Cookie。只存在本机浏览器，不写进笔记。',
         cookiePlaceholder: 'SESSDATA=...',
         channel: '下载渠道',
         channelAuto: '自动（完整版内置优先）',
@@ -127,6 +138,7 @@ window.__ModuleLoader__.load({
         fetchNav: 'Fetch',
         searchNav: 'Search',
         loginNav: 'Sign in',
+        apiNav: 'API settings',
         downloadNav: 'Downloads',
         historyNav: 'History',
         tipsNav: 'Tips',
@@ -135,7 +147,17 @@ window.__ModuleLoader__.load({
         searchTitle: 'Search',
         searchSub: 'Find a video first, then come back to fetch it',
         loginTitle: 'Sign in to Bilibili',
-        loginSub: 'Optional, only for subtitles that require a login',
+        loginSub: 'Scan a QR code to read login-only subtitles',
+        apiTitle: 'API settings',
+        apiSub: 'Cloud transcription key and endpoint',
+        loginScan: 'Show QR code',
+        loginRefresh: 'Refresh QR code',
+        loginHint: 'Scan with the Bilibili mobile app; the session is saved after you confirm.',
+        loginWaiting: 'Waiting for the scan…',
+        loginDone: 'Signed in',
+        loginFailed: 'Sign-in failed; refresh the QR code',
+        loginOpen: 'Open the QR link in a browser',
+        apiHint: 'Local recognition needs no key; fill these only for cloud Gemini / Whisper.',
         downloadTitle: 'Downloads',
         downloadSub: 'whisper dependencies and model download channel',
         historyTitle: 'History',
@@ -189,7 +211,7 @@ window.__ModuleLoader__.load({
         videos: 'videos',
         space: 'Space',
         cookie: 'Cookie',
-        cookieHint: 'Most subtitles need a login. Paste SESSDATA=... or the whole cookie; it is used for this fetch only and never stored.',
+        cookieHint: 'QR sign-in saves the session automatically, or paste SESSDATA=... manually. It stays in this browser and never goes into the note.',
         cookiePlaceholder: 'SESSDATA=...',
         channel: 'Download channel',
         channelAuto: 'Auto (bundled first)',
@@ -376,7 +398,7 @@ window.__ModuleLoader__.load({
 .vn-tips { margin: 0; padding-left: 18px; }
 .vn-tips li { margin: 6px 0; line-height: 1.7; font-size: 13px; }
 
-/* ---- 0.4.2 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
+/* ---- 0.4.3 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
 .vn-view { background: radial-gradient(1100px 380px at 18% -12%, rgba(251,114,153,.10), transparent 62%), radial-gradient(900px 320px at 92% 0%, rgba(249,115,22,.10), transparent 58%), var(--dsw-alias-bg-base, #fff); }
 .vn-side { width: 184px; gap: 3px; }
 .vn-brand { padding-bottom: 16px; }
@@ -392,6 +414,11 @@ window.__ModuleLoader__.load({
 .vn-status.error i { background: #ef4444; }
 @keyframes vn-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
 .vn-card { border-radius: 14px; box-shadow: 0 10px 30px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04); }
+.vn-login-row { display: flex; gap: 16px; align-items: flex-start; }
+.vn-login-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.vn-qr { border-radius: 10px; background: #fff; padding: 6px; flex: none; }
+.vn-divider { border: 0; border-top: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); margin: 16px 0; }
+.vn-link { color: #f97316; font-size: 12px; text-decoration: none; }
 .vn-primary { background: linear-gradient(135deg, #fb7299 0%, #f97316 100%); box-shadow: 0 6px 16px rgba(249,115,22,.28); border-radius: 8px; }
 .vn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #fb7299 0%, #f97316 100%); filter: brightness(1.05); }
 .vn-ghost { border-radius: 8px; }
@@ -430,6 +457,8 @@ window.__ModuleLoader__.load({
       asrKey: '',
       asrBase: '',
       asrLoaded: false,
+      cookie: '',
+      cookieLoaded: false,
       cookie: '',
       channel: 'auto',
       status: 'idle',
@@ -1001,24 +1030,6 @@ window.__ModuleLoader__.load({
               h('option', { value: 'base' }, t.planBase),
               h('option', { value: 'small' }, t.planSmall)),
             h('p', { className: 'vn-hint' }, t.planHint),
-            h('label', { className: 'vn-label', htmlFor: 'vn-asr-key' }, t.asrKey),
-            h('input', {
-              id: 'vn-asr-key', className: 'vn-input', type: 'password', value: state.asrKey,
-              placeholder: 'Gemini Key / OpenAI Key', spellCheck: false,
-              onChange: (event) => {
-                set({ asrKey: event.target.value })
-                try { localStorage.setItem('vid2note:asr-key', event.target.value) } catch { /* 忽略 */ }
-              },
-            }),
-            h('label', { className: 'vn-label', htmlFor: 'vn-asr-base' }, t.asrBase),
-            h('input', {
-              id: 'vn-asr-base', className: 'vn-input', value: state.asrBase,
-              placeholder: 'https://api.openai.com/v1', spellCheck: false,
-              onChange: (event) => {
-                set({ asrBase: event.target.value })
-                try { localStorage.setItem('vid2note:asr-base', event.target.value) } catch { /* 忽略 */ }
-              },
-            }),
             h('div', { className: 'vn-actions' },
               h('button', { className: 'vn-primary', disabled: running, onClick: startFetch },
                 running ? t.running : t.go)),
@@ -1075,15 +1086,98 @@ window.__ModuleLoader__.load({
     }
 
     function LoginPage({ t }) {
+      const [qr, setQr] = React.useState(null)
+      const [notice, setNotice] = React.useState('')
+      const [busy, setBusy] = React.useState(false)
+
+      const start = async () => {
+        setBusy(true)
+        setNotice('')
+        try {
+          const data = await call('/login/qr')
+          if (data?.error) throw new Error(data.error)
+          setQr(data)
+        } catch (failure) {
+          setNotice(String(failure?.message ?? failure))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      React.useEffect(() => {
+        if (!qr?.key) return undefined
+        let stopped = false
+        const tick = async () => {
+          try {
+            const data = await call(`/login/poll?key=${encodeURIComponent(qr.key)}`)
+            if (stopped) return
+            if (data?.status === 'ok') {
+              set({ cookie: data.cookie })
+              try { localStorage.setItem('vid2note:cookie', data.cookie) } catch { /* 忽略 */ }
+              setQr(null)
+              setNotice(`${t.loginDone}${data.user?.name ? `：${data.user.name}` : ''}`)
+            } else if (data?.status === 'expired' || data?.status === 'error') {
+              setQr(null)
+              setNotice(data.message || t.loginFailed)
+            } else {
+              setNotice(data?.message || t.loginWaiting)
+            }
+          } catch (failure) {
+            setNotice(String(failure?.message ?? failure))
+          }
+        }
+        tick()
+        const timer = setInterval(tick, 2000)
+        return () => { stopped = true; clearInterval(timer) }
+      }, [qr])
+
       return h('section', { className: 'vn-card' },
         h('div', { className: 'vn-card-body' },
+          h('div', { className: 'vn-login-row' },
+            qr?.image ? h('img', { className: 'vn-qr', src: qr.image, alt: 'QR', width: 176, height: 176 }) : null,
+            h('div', { className: 'vn-login-side' },
+              h('p', { className: 'vn-hint' }, notice || t.loginHint),
+              h('div', { className: 'vn-actions' },
+                h('button', { type: 'button', className: 'vn-primary', disabled: busy, onClick: start },
+                  qr ? t.loginRefresh : t.loginScan)),
+              qr?.url ? h('a', {
+                className: 'vn-link', href: qr.url, target: '_blank', rel: 'noreferrer',
+              }, t.loginOpen) : null)),
+          h('hr', { className: 'vn-divider' }),
           h('label', { className: 'vn-label', htmlFor: 'vn-cookie' }, t.cookie),
           h('input', {
             id: 'vn-cookie', className: 'vn-input', type: 'password', value: state.cookie,
             placeholder: t.cookiePlaceholder, spellCheck: false,
-            onChange: (event) => set({ cookie: event.target.value }),
+            onChange: (event) => {
+              set({ cookie: event.target.value })
+              try { localStorage.setItem('vid2note:cookie', event.target.value) } catch { /* 忽略 */ }
+            },
           }),
           h('p', { className: 'vn-hint' }, t.cookieHint)))
+    }
+
+    function ApiPage({ t }) {
+      return h('section', { className: 'vn-card' },
+        h('div', { className: 'vn-card-body' },
+          h('label', { className: 'vn-label', htmlFor: 'vn-asr-key' }, t.asrKey),
+          h('input', {
+            id: 'vn-asr-key', className: 'vn-input', type: 'password', value: state.asrKey,
+            placeholder: 'Gemini Key / OpenAI Key', spellCheck: false,
+            onChange: (event) => {
+              set({ asrKey: event.target.value })
+              try { localStorage.setItem('vid2note:asr-key', event.target.value) } catch { /* 忽略 */ }
+            },
+          }),
+          h('label', { className: 'vn-label', htmlFor: 'vn-asr-base' }, t.asrBase),
+          h('input', {
+            id: 'vn-asr-base', className: 'vn-input', value: state.asrBase,
+            placeholder: 'https://api.openai.com/v1', spellCheck: false,
+            onChange: (event) => {
+              set({ asrBase: event.target.value })
+              try { localStorage.setItem('vid2note:asr-base', event.target.value) } catch { /* 忽略 */ }
+            },
+          }),
+          h('p', { className: 'vn-hint' }, t.apiHint)))
     }
 
     function DownloadPage({ t }) {
@@ -1191,6 +1285,7 @@ window.__ModuleLoader__.load({
       fetch: { nav: 'fetchNav', title: 'fetchTitle', sub: 'fetchSub', icon: FetchIcon },
       search: { nav: 'searchNav', title: 'searchTitle', sub: 'searchSub', icon: SearchIcon },
       login: { nav: 'loginNav', title: 'loginTitle', sub: 'loginSub', icon: LoginIcon },
+      api: { nav: 'apiNav', title: 'apiTitle', sub: 'apiSub', icon: TipsIcon },
       download: { nav: 'downloadNav', title: 'downloadTitle', sub: 'downloadSub', icon: DownloadIcon },
       history: { nav: 'historyNav', title: 'historyTitle', sub: 'historySub', icon: HistoryIcon },
       tips: { nav: 'tipsNav', title: 'tipsTitle', sub: 'tipsSub', icon: TipsIcon },
@@ -1214,6 +1309,15 @@ window.__ModuleLoader__.load({
           }
           set({ asrKey, asrBase, asrLoaded: true })
         }
+        if (!state.cookieLoaded) {
+          let cookie = ''
+          try {
+            cookie = globalThis.localStorage?.getItem('vid2note:cookie') || ''
+          } catch {
+            // 没有 localStorage 时留空
+          }
+          set({ cookie, cookieLoaded: true })
+        }
         if (state.status === 'running' && state.jobId) pollJob(state.jobId)
         const heartbeat = setInterval(() => {
           fetch(`${API}/ping`).catch(() => {})
@@ -1226,6 +1330,7 @@ window.__ModuleLoader__.load({
         switch (state.tab) {
           case 'search': return h(SearchPage, { t })
           case 'login': return h(LoginPage, { t })
+          case 'api': return h(ApiPage, { t })
           case 'download': return h(DownloadPage, { t })
           case 'history': return h(HistoryPage, { t })
           case 'tips': return h(TipsPage, { t })
@@ -1253,7 +1358,7 @@ window.__ModuleLoader__.load({
               h(entry.icon),
               h('span', null, t[entry.nav]))),
           h('div', { className: 'vn-side-foot' },
-            h('span', { className: 'vn-version' }, 'v0.4.2 · Tauri'),
+            h('span', { className: 'vn-version' }, 'v0.4.3 · Tauri'),
             h('button', { type: 'button', className: 'vn-ghost', onClick: openWindow }, state.opened ? t.opened : t.legacy))),
         h('main', { className: 'vn-main' },
           h('div', { className: 'vn-topbar' },

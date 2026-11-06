@@ -37,6 +37,22 @@ def fmt_count(value: int) -> str:
     return f"{value:,}"
 
 
+_URL_IN_TEXT = re.compile(r"[（(]\s*https?://[^\s()（）]+?\s*[)）]|https?://[^\s()（）]+")
+
+
+def clean_description(text: str) -> str:
+    """去掉简介里的裸链接和括号链接。
+
+    B 站简介里常出现 ``(https://www.bilibili.com/video/BV...)`` 这种「想做成
+    超链接但没做成」的残句，直接删掉比留在笔记里干净。
+    """
+    cleaned = _URL_IN_TEXT.sub("", text)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
 def ts_link(url: str, seconds: float) -> str:
     """B 站的 ?t= 参数接受秒数，点开会从该时刻播放。"""
     return f"[{fmt_ts(seconds)}]({url}?t={int(seconds)})"
@@ -278,8 +294,9 @@ def build_note(
         lines.append(f"| 标签 | {'、'.join(meta.tags[:12])} |")
     lines.append("")
 
-    if opts.include_desc and meta.desc:
-        lines += ["## 简介", "", meta.desc.strip(), ""]
+    description = clean_description(meta.desc) if meta.desc else ""
+    if opts.include_desc and description:
+        lines += ["## 简介", "", description, ""]
 
     if len(meta.pages) > 1:
         lines += ["## 分P", ""]

@@ -71,6 +71,55 @@ def version() -> None:
     console.print(f"vid2note {__version__}")
 
 
+@app.command()
+def login() -> None:
+    """扫码登录 B 站，打印可复用的 Cookie。"""
+    import time as _time  # noqa: PLC0415
+
+    from .login import LoginError, generate, poll  # noqa: PLC0415
+
+    try:
+        qr = generate()
+    except LoginError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(EXIT_ERROR) from exc
+
+    console.print("用 B 站手机客户端扫码，或打开：")
+    console.print(qr["url"])
+    try:
+        import qrcode  # noqa: PLC0415
+
+        code = qrcode.QRCode(border=1)
+        code.add_data(qr["url"])
+        code.make()
+        code.print_ascii(invert=True)
+    except Exception:  # noqa: BLE001 - 终端里画不出来就只给链接
+        pass
+
+    last = ""
+    while True:
+        try:
+            result = poll(qr["key"])
+        except LoginError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_ERROR) from exc
+        status = result.get("status", "")
+        message = result.get("message", "")
+        if message and status != last:
+            console.print(message)
+        last = status
+        if status == "ok":
+            user = result.get("user") or {}
+            if user.get("name"):
+                console.print(f"登录成功：{user['name']}")
+            console.print("\nCookie（传给 --cookie 或设 VID2NOTE_COOKIE）：")
+            console.print(result["cookie"])
+            return
+        if status in ("expired", "error"):
+            raise typer.Exit(EXIT_ERROR)
+        _time.sleep(2)
+
+
 def _progress_runner(
     engine: str,
     meta: VideoMeta,
@@ -165,7 +214,7 @@ def _extract_frames(
             )
 
     with console.status("正在取缩略帧…"):
-        return storyboard_frames(meta.bvid, page_no, outdir, count=count)
+        return storyboard_frames(meta.bvid, page_no, outdir, count=count, duration=meta.duration)
 
 
 @app.command()

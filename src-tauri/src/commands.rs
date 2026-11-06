@@ -23,7 +23,7 @@ pub fn get_server_port(server: State<Arc<ServerManager>>) -> u16 {
 pub fn get_app_info() -> AppInfo {
     AppInfo {
         name: "vid2note".into(),
-        version: "0.4.2".into(),
+        version: "0.4.3".into(),
         platform: std::env::consts::OS.into(),
         tauri: true,
     }
