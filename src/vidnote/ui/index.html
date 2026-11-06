@@ -632,8 +632,9 @@
           <button class="btn btn-secondary btn-sm active" data-search-type="video" id="search-type-video" type="button">搜索视频</button>
           <button class="btn btn-secondary btn-sm" data-search-type="author" id="search-type-author" type="button">作者</button>
         </div>
-        <div class="field">
-          <input id="q" type="text" placeholder="输入搜索词按回车，例如：Python 异步">
+        <div class="field" style="display:flex;gap:8px">
+          <input id="q" type="text" placeholder="输入搜索词按回车，例如：Python 异步" style="flex:1">
+          <button class="btn btn-primary btn-sm" id="btn-search-go" type="button" style="white-space:nowrap">搜索</button>
         </div>
       </div>
       <div class="search-results" id="search-results">
@@ -1245,31 +1246,48 @@
     searchType = 'video';
     $('search-type-video').classList.add('active');
     $('search-type-author').classList.remove('active');
+    if ($('q').value.trim()) doSearch();
   };
   $('search-type-author').onclick = () => {
     searchType = 'author';
     $('search-type-author').classList.add('active');
     $('search-type-video').classList.remove('active');
+    if ($('q').value.trim()) doSearch();
   };
 
-  $('q').onkeydown = async (e) => {
+  async function doSearch() {
+    const keyword = $('q').value.trim();
+    if (!keyword) return;
+    const listEl = $('search-results');
+    listEl.innerHTML = '<div class="empty-state"><span class="spin">⏳</span><p>正在搜索 B 站…</p></div>';
+    try {
+      const res = await api(`/api/search?q=${encodeURIComponent(keyword)}&type=${searchType}&limit=12`);
+      renderSearchResults(res);
+    } catch (err) {
+      listEl.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">搜索失败: ${err.message}</p></div>`;
+    }
+  }
+
+  $('q').onkeydown = (e) => {
     if (e.key === 'Enter') {
-      const keyword = $('q').value.trim();
-      if (!keyword) return;
-      const listEl = $('search-results');
-      listEl.innerHTML = '<div class="empty-state"><span class="spin">⏳</span><p>正在搜索 B 站…</p></div>';
-      try {
-        const res = await api(`/api/search?q=${encodeURIComponent(keyword)}&type=${searchType}&limit=12`);
-        renderSearchResults(res);
-      } catch (err) {
-        listEl.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">搜索失败: ${err.message}</p></div>`;
-      }
+      doSearch();
     }
   };
+  const btnSearchGo = $('btn-search-go');
+  if (btnSearchGo) btnSearchGo.onclick = () => doSearch();
 
-  function renderSearchResults(items) {
+  function renderSearchResults(data) {
     const listEl = $('search-results');
     listEl.innerHTML = "";
+    if (!data) {
+      listEl.innerHTML = '<div class="empty-state"><p>未找到相关结果</p></div>';
+      return;
+    }
+    if (data.error) {
+      listEl.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">搜索失败: ${data.error}</p></div>`;
+      return;
+    }
+    const items = Array.isArray(data) ? data : (data.results || []);
     if (!items || items.length === 0) {
       listEl.innerHTML = '<div class="empty-state"><p>未找到相关结果</p></div>';
       return;
@@ -1280,7 +1298,7 @@
       card.className = 'search-card';
       if (searchType === 'video') {
         card.innerHTML = `
-          <img class="search-cover" src="${item.cover || ''}" loading="lazy">
+          <img class="search-cover" src="${item.cover || ''}" loading="lazy" referrerpolicy="no-referrer">
           <div class="search-info">
             <div class="search-title">${item.title || ''}</div>
             <div class="search-meta">
@@ -1297,7 +1315,7 @@
         };
       } else {
         card.innerHTML = `
-          <img class="search-cover" style="width:56px;height:56px;border-radius:50%" src="${item.avatar || ''}">
+          <img class="search-cover" style="width:56px;height:56px;border-radius:50%" src="${item.avatar || ''}" referrerpolicy="no-referrer">
           <div class="search-info">
             <div class="search-title">${item.name || ''}</div>
             <div class="search-meta">
