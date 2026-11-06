@@ -1,6 +1,6 @@
 # dsh-vidnote（适配 vid2note）
 
-把 [vid2note](https://github.com/paper-k1te/vid2note)（0.4.1 起由 vidnote 改名，Tauri 桌面端）接进 DeepSeek Harness：模型可以直接抓 B 站视频、搜视频，界面里也能抓取、看关键帧、翻历史。
+把 [vid2note](https://github.com/paper-k1te/vid2note)（0.4.2 起由 vidnote 改名，Tauri 桌面端）接进 DeepSeek Harness：模型可以直接抓 B 站视频、搜视频，界面里也能抓取、看关键帧、翻历史。
 
 插件页显示为 **vid2note — B 站视频转 Markdown 笔记**，标题/描述来自 `locale/*.json`，图标用新版的 Tauri 图标（MIT）。
 
@@ -47,10 +47,10 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vid2note.git
 
 ## 界面
 
-用 DSH 自己的 slot 和主题变量重写，布局对齐 0.4.1 的新界面：
+用 DSH 自己的 slot 和主题变量重写，布局对齐 0.4.2 的新界面：
 
 - 左侧导航：抓取视频 / 搜索 / 登录 B 站 / 下载 / 历史 / 提示；
-- 抓取：链接、分P、关键帧、输出目录（可用「选择」）、解析方案；带阶段 + 百分比进度；
+- 抓取：链接、分P、关键帧（0/3/6/12 预设 + 0–30 自定义填空）、输出目录（可用「选择」）、解析方案；带阶段 + 百分比进度；
 - 右侧三种视图：**预览 / 关键帧 / 源文**，上方是元数据头（封面、标题、UP 主、BV 号、时长、播放量）；
 - 关键帧画廊：来自后端返回的 `frames`，点击在新标签页打开原图；
 - 历史：最近 24 条记在浏览器 localStorage，点一下重新载入预览，可单条删除或清空；
@@ -70,6 +70,22 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vid2note.git
 ## 配置
 
 默认设置即可用：插件自己找命令行，超时 3 分钟，不需要写配置。
+
+### 本地语音识别（无需 Key）
+
+插件默认的解析方案是 **DSH 自带的本地 SenseVoice**：插件在 Host 侧通过
+`ctx.speechToText` 调用 voice-input bundle 的本地识别，再让后端按 4 分钟切片
+把音频送过去，音频不出本机，也不需要任何 API Key。
+
+第一次用需要：
+
+1. 打开「设置 → 插件」，启用 **Voice Input**（蓝色波形图标）；
+2. 在它的详情里点「下载并准备」，等 INT8 模型（约 239 MB）就绪；
+3. 回到 vid2note 视图，保持「本地识别 · DSH SenseVoice」。
+
+没有启用时，抓取会返回「宿主没有启用语音输入（speechToText 服务不存在）」。
+SenseVoice 只返回整段文本，时间戳是按切片和字数估算的；要逐句精度就在解析
+方案里切到云端 Gemini / Whisper API。
 
 只有需要固定路径或给长视频转写留更多时间时，才在 `cordis.patch.yml` 里覆盖：
 
@@ -114,7 +130,7 @@ icacls <目录> /setintegritylevel Medium /t /c
 ## 已知限制
 
 - 每次工具调用会起一个 vid2note 进程，冷启动约 1 秒；界面服务第一次打开约 3–5 秒；
-- 转写默认走云端（Gemini / OpenAI 兼容 Whisper），需要 API Key；本地 Vosk 改为可选安装；
+- 转写默认走 DSH 本地 SenseVoice（无需 Key，需启用 Voice Input 并下载模型）；云端 Gemini / Whisper 与本地 Vosk 仍可选；
 - 界面状态和历史上限 24 条，存在**当前浏览器**里：刷新或换设备会重置，不同步；
 - 界面抓取会把笔记和关键帧写进输出目录（默认 `%LOCALAPPDATA%\vid2note\notes`）；
 - 「打开原界面」优先起 Tauri 桌面端；没有桌面端时退回 Edge 应用窗口，那个不跟随 DSH 主题。

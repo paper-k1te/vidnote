@@ -9,6 +9,7 @@ from vid2note.cloud_asr import (
     CloudAsrError,
     _model_for,
     _segments_to_cues,
+    _split_text_cues,
     resolve_provider,
 )
 
@@ -57,5 +58,27 @@ def test_parse_transcribe_options_cloud() -> None:
 
     assert parse_transcribe_options({"model": "cloud"}) == (True, "cloud")
     assert parse_transcribe_options({"model": "gemini"}) == (True, "gemini")
+    assert parse_transcribe_options({"model": "dsh"}) == (True, "dsh")
+    assert parse_transcribe_options({"model": "sensevoice"}) == (True, "sensevoice")
     assert parse_transcribe_options({"transcribe": "whisper-api"}) == (True, "whisper-api")
     assert parse_transcribe_options({"transcribe": True, "model": "vosk-cn"}) == (True, "vosk-cn")
+
+
+def test_dsh_provider_selection(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VID2NOTE_STT_URL", "http://127.0.0.1:9/transcribe")
+    assert resolve_provider("dsh") == "dsh"
+    assert resolve_provider("auto") == "dsh"
+    monkeypatch.delenv("VID2NOTE_STT_URL", raising=False)
+    for name in ("VID2NOTE_ASR_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    with pytest.raises(CloudAsrError):
+        resolve_provider("auto")
+
+
+def test_split_text_cues() -> None:
+    cues = _split_text_cues("第一句。第二句更长一些。", offset=0.0, duration=10.0)
+    assert [cue.text for cue in cues] == ["第一句。", "第二句更长一些。"]
+    assert cues[0].start == 0.0
+    assert cues[-1].end == 10.0
+    assert cues[0].end < cues[1].end
+

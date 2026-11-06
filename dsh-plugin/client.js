@@ -42,12 +42,14 @@ window.__ModuleLoader__.load({
         targetHint: 'BV1xx411c7mD 或 https://www.bilibili.com/video/...',
         page: '分P',
         frames: '关键帧',
+        framesCustom: '自定义',
         outdir: '输出目录',
         outdirHint: '留空 = 默认目录',
         pick: '选择',
         paste: '粘贴',
         plan: '解析方案',
-        planCloud: '云端转写 · 默认，需要 API Key',
+        planDsh: '本地识别 · DSH SenseVoice，无需 Key',
+        planCloud: '云端转写 · 需要 API Key',
         planGemini: 'Gemini · 音频直传，时间戳准',
         planWhisperApi: 'Whisper API · OpenAI 兼容接口',
         planNone: '不转写 · 只输出元数据',
@@ -55,7 +57,7 @@ window.__ModuleLoader__.load({
         planTiny: 'whisper tiny · 本机，最快',
         planBase: 'whisper base · 本机，平衡',
         planSmall: 'whisper small · 本机，中文最好',
-        planHint: '默认走云端转写；Key 填在「下载」页，或设置 GEMINI_API_KEY / OPENAI_API_KEY。',
+        planHint: '默认用 DSH 自带的本地 SenseVoice（先在插件管理器启用 Voice Input 并下载模型）；也可以切到云端，Key 填在「下载」页。',
         asrKey: '转写 API Key',
         asrBase: '转写接口地址（Whisper 兼容时填）',
         go: '生成笔记',
@@ -144,12 +146,14 @@ window.__ModuleLoader__.load({
         targetHint: 'BV1xx411c7mD or https://www.bilibili.com/video/...',
         page: 'Part',
         frames: 'Keyframes',
+        framesCustom: 'Custom',
         outdir: 'Output folder',
         outdirHint: 'Empty = default folder',
         pick: 'Choose',
         paste: 'Paste',
         plan: 'Transcription',
-        planCloud: 'Cloud · default, needs an API key',
+        planDsh: 'Local · DSH SenseVoice, no key',
+        planCloud: 'Cloud · needs an API key',
         planGemini: 'Gemini · audio upload, precise timestamps',
         planWhisperApi: 'Whisper API · OpenAI-compatible endpoint',
         planNone: 'Off · metadata only',
@@ -157,7 +161,7 @@ window.__ModuleLoader__.load({
         planTiny: 'whisper tiny · local, fastest',
         planBase: 'whisper base · local, balanced',
         planSmall: 'whisper small · local, best Chinese',
-        planHint: 'Cloud transcription is the default; put the key on the Downloads page or set GEMINI_API_KEY / OPENAI_API_KEY.',
+        planHint: 'The default is DSH local SenseVoice (enable Voice Input in the plugin manager and download the model); switch to cloud and put the key on the Downloads page if you prefer.',
         asrKey: 'Transcription API key',
         asrBase: 'Transcription endpoint (for Whisper-compatible APIs)',
         go: 'Generate note',
@@ -372,7 +376,7 @@ window.__ModuleLoader__.load({
 .vn-tips { margin: 0; padding-left: 18px; }
 .vn-tips li { margin: 6px 0; line-height: 1.7; font-size: 13px; }
 
-/* ---- 0.4.1 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
+/* ---- 0.4.2 界面风格：渐变强调、药丸、封面头图、四步进度 ---- */
 .vn-view { background: radial-gradient(1100px 380px at 18% -12%, rgba(251,114,153,.10), transparent 62%), radial-gradient(900px 320px at 92% 0%, rgba(249,115,22,.10), transparent 58%), var(--dsw-alias-bg-base, #fff); }
 .vn-side { width: 184px; gap: 3px; }
 .vn-brand { padding-bottom: 16px; }
@@ -409,6 +413,7 @@ window.__ModuleLoader__.load({
 .vn-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .vn-pill { border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.12)); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--dsw-alias-label-secondary, #52525b); cursor: pointer; }
 .vn-pill[aria-pressed="true"] { border-color: transparent; background: linear-gradient(135deg, #fb7299, #f97316); color: #fff; font-weight: 600; }
+.vn-frames-input { width: 76px; padding: 4px 8px; font-size: 12px; }
 .vn-version { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 9px; border-radius: 999px; font-size: 11px; color: var(--dsw-alias-label-secondary, #777); background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
 .vn-frame { transition: transform .18s ease, box-shadow .18s ease; }
 .vn-frame:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,.12); }
@@ -421,7 +426,7 @@ window.__ModuleLoader__.load({
       page: '1',
       frames: '6',
       outdir: '',
-      plan: 'cloud',
+      plan: 'dsh',
       asrKey: '',
       asrBase: '',
       asrLoaded: false,
@@ -974,13 +979,19 @@ window.__ModuleLoader__.load({
                     className: 'vn-pill',
                     'aria-pressed': String(state.frames) === value,
                     onClick: () => set({ frames: value }),
-                  }, value))))),
+                  }, value)),
+                  h('input', {
+                    type: 'number', min: 0, max: 30, className: 'vn-input vn-frames-input',
+                    value: state.frames, placeholder: t.framesCustom, title: t.framesCustom,
+                    onChange: (event) => set({ frames: event.target.value }),
+                  })))),
             h('label', { className: 'vn-label', htmlFor: 'vn-outdir' }, t.outdir),
             h('div', { className: 'vn-outdir' },
               h('input', { id: 'vn-outdir', className: 'vn-input', value: state.outdir, placeholder: t.outdirHint, onChange: (event) => set({ outdir: event.target.value }) }),
               h('button', { type: 'button', className: 'vn-ghost', onClick: pickFolder }, t.pick)),
             h('label', { className: 'vn-label', htmlFor: 'vn-plan' }, t.plan),
             h('select', { id: 'vn-plan', className: 'vn-select', value: state.plan, onChange: (event) => set({ plan: event.target.value }) },
+              h('option', { value: 'dsh' }, t.planDsh),
               h('option', { value: 'cloud' }, t.planCloud),
               h('option', { value: 'gemini' }, t.planGemini),
               h('option', { value: 'whisper-api' }, t.planWhisperApi),
@@ -1242,7 +1253,7 @@ window.__ModuleLoader__.load({
               h(entry.icon),
               h('span', null, t[entry.nav]))),
           h('div', { className: 'vn-side-foot' },
-            h('span', { className: 'vn-version' }, 'v0.4.1 · Tauri'),
+            h('span', { className: 'vn-version' }, 'v0.4.2 · Tauri'),
             h('button', { type: 'button', className: 'vn-ghost', onClick: openWindow }, state.opened ? t.opened : t.legacy))),
         h('main', { className: 'vn-main' },
           h('div', { className: 'vn-topbar' },

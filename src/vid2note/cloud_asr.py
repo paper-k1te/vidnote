@@ -84,10 +84,14 @@ def _env_key(provider: str) -> str:
 def resolve_provider(requested: str | None, *, api_key: str | None = None) -> str:
     """决定用哪个提供方：显式指定优先，auto 时看环境里配了谁的 Key。"""
     value = (requested or os.environ.get("VID2NOTE_ASR_PROVIDER") or "auto").strip().lower()
+    if value in ("dsh", "sensevoice", "local", "sensevoice-local"):
+        return "dsh"
     if value in ("gemini", "google"):
         return "gemini"
     if value in ("whisper", "openai", "whisper-api"):
         return "whisper"
+    if os.environ.get("VID2NOTE_STT_URL", "").strip():
+        return "dsh"
     if api_key:
         is_gemini = api_key.startswith("AIza") or api_key.startswith("AQ.")
         return "gemini" if is_gemini else "whisper"
@@ -96,13 +100,15 @@ def resolve_provider(requested: str | None, *, api_key: str | None = None) -> st
     if _env_key("whisper"):
         return "whisper"
     raise CloudAsrError(
-        "云端转写需要 API Key：在设置里填写 Gemini 或 OpenAI 兼容的 Key，"
-        "或设置环境变量 GEMINI_API_KEY / OPENAI_API_KEY。"
+        "没有可用的转写方式：DSH 插件会自动提供本地 SenseVoice；"
+        "桌面版请填 Gemini 或 OpenAI 兼容的 Key。"
     )
 
 
 def _model_for(provider: str, value: str | None) -> str:
     name = (value or "").strip()
+    if provider == "dsh":
+        return name or "sensevoice-local"
     if provider == "gemini":
         if not name or name in ("cloud", "gemini", "whisper", "whisper-api"):
             name = DEFAULT_GEMINI_MODEL
@@ -471,6 +477,81 @@ def _transcribe_whisper(
     return str(data.get("language") or "zh"), cues
 
 
+def _split_text_cues(text: str, *, offset: float, duration: float) -> list[Cue]:
+    """把整段识别文本按句号切开，按字数比例摊到切片时长里。"""
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return []
+    parts = [part.strip() for part in re.split(r"(?<=[。！？!?；;])|\n+", cleaned) if part.strip()]
+    if not parts:
+        parts = [cleaned]
+    total = sum(len(part) for part in parts) or 1
+    cues: list[Cue] = []
+    cursor = offset
+    for index, part in enumerate(parts):
+        share = duration * len(part) / total
+        end = offset + duration if index == len(parts) - 1 else cursor + max(0.3, share)
+        end = min(offset + duration, max(end, cursor + 0.3))
+        cues.append(Cue(start=round(cursor, 2), end=round(end, 2), text=part))
+        cursor = end
+    return cues
+
+
+def _post_dsh(path: Path, url: str, token: str) -> str:
+    try:
+        response = httpx.post(
+            url,
+            content=path.read_bytes(),
+            headers={"content-type": "application/octet-stream", "x-vidnote-token": token},
+            timeout=httpx.Timeout(1800.0, connect=10.0),
+            trust_env=False,
+        )
+    except httpx.HTTPError as exc:
+        raise CloudAsrError(f"连不上 DSH 语音接口（{exc}）。") from exc
+    if response.status_code >= 400:
+        try:
+            message = response.json().get("error")
+        except ValueError:
+            message = response.text[:200]
+        raise CloudAsrError(f"本地语音识别失败（HTTP {response.status_code}）：{message}")
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise CloudAsrError("本地语音识别返回了无法解析的内容。") from exc
+    text = str((data or {}).get("text") or "").strip()
+    if not text:
+        raise CloudAsrError("本地语音识别没有返回文字。")
+    return text
+
+
+def _transcribe_dsh(
+    audio: Path,
+    *,
+    on_progress: ProgressFn | None = None,
+    on_status: StatusFn | None = None,
+) -> tuple[str, list[Cue]]:
+    url = os.environ.get("VID2NOTE_STT_URL", "").strip()
+    token = os.environ.get("VID2NOTE_STT_TOKEN", "").strip()
+    if not url:
+        raise CloudAsrError("没有 DSH 语音端点：请在 DSH 插件里启用本地语音识别。")
+    with tempfile.TemporaryDirectory(prefix="vid2note-dsh-") as tmp:
+        chunks = _write_wav_chunks(audio, Path(tmp), on_progress=on_progress)
+        total = sum(duration for _, duration in chunks)
+        cues: list[Cue] = []
+        start = 0.0
+        for index, (path, duration) in enumerate(chunks):
+            if on_status:
+                on_status(f"正在用本地 SenseVoice 识别第 {index + 1}/{len(chunks)} 段…")
+            text = _post_dsh(path, url, token)
+            cues.extend(_split_text_cues(text, offset=start, duration=duration))
+            start += duration
+            if on_progress and total:
+                on_progress(min(start, total), total)
+    if not cues:
+        raise CloudAsrError("本地语音识别没有识别出文字。")
+    return "zh", cues
+
+
 def transcribe_audio(
     audio: Path,
     *,
@@ -482,6 +563,8 @@ def transcribe_audio(
     on_status: StatusFn | None = None,
 ) -> tuple[str, list[Cue]]:
     """转写一个本地音频文件，返回 (语言, 带时间戳的 Cue)。"""
+    if provider == "dsh":
+        return _transcribe_dsh(audio, on_progress=on_progress, on_status=on_status)
     selected = _model_for(provider, model or os.environ.get("VID2NOTE_ASR_MODEL"))
     key = _key_for(provider, api_key)
     base = base_url or os.environ.get("VID2NOTE_ASR_BASE") or ""

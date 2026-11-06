@@ -187,6 +187,11 @@ def fetch(
     cloud: bool = typer.Option(
         False, "--cloud", help="没有字幕时用云端转写（Gemini / OpenAI 兼容 Whisper，需要 API Key）"
     ),
+    dsh: bool = typer.Option(
+        False,
+        "--dsh",
+        help="没有字幕时用 DSH 本地语音识别（插件宿主注入 VID2NOTE_STT_URL 后可用，无需 Key）",
+    ),
     asr_provider: str = typer.Option(
         "auto", "--asr-provider", help="cloud 提供方：auto / gemini / whisper"
     ),
@@ -283,7 +288,7 @@ def fetch(
             err.print(f"[red]{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
 
-    if cues is None and cloud:
+    if cues is None and (cloud or dsh):
         from .cloud_asr import CloudAsrError
 
         try:
@@ -293,7 +298,7 @@ def fetch(
                 page_no,
                 "",
                 use_cache=not no_cache,
-                provider=asr_provider,
+                provider="dsh" if dsh else asr_provider,
                 api_key=asr_key,
                 base_url=asr_base,
                 asr_model=asr_model,

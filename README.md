@@ -116,7 +116,7 @@ vid2note gui
 
 ### 桌面应用（Tauri 2.0 原生 Rust 桌面端 + 系统托盘）
 
-v0.4.1 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
+v0.4.2 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
 
 ```powershell
 powershell -File scripts/build_tauri.ps1
@@ -186,7 +186,7 @@ powershell -File scripts/build_exe.ps1
 
 B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以默认走**云端转写**：把音频交给 Gemini 或任意 OpenAI 兼容的 Whisper 接口，拿回带时间戳的逐句文本，再生成笔记。
 
-第一次用需要填一个 API Key：桌面端在「解析方案」下面，DSH 插件在「下载」页，或者设环境变量：
+桌面端第一次用需要填一个 API Key（DSH 插件默认走本地识别，不需要 Key）：
 
 ```bash
 export GEMINI_API_KEY=...        # Gemini（优先识别 AIza 开头的 Key）
@@ -310,6 +310,8 @@ agent 会多出一个工具 `fetch_note`：
 | `vidnote_user` | 按关键词搜 UP 主，返回 UID、昵称、粉丝、投稿数、签名、空间链接（JSON） |
 
 界面也是原生的：会话视图栏里「对话 / 轨迹」旁边多一个「B站笔记」，布局照着原窗口（左侧导航 + 表单 + 渲染好的 Markdown 预览）；抓取进度、关键帧、输出目录、Cookie、whisper 依赖都通过代理复用 vidnote 自己的接口，功能和原窗口一致，状态切标签页不会丢。需要原窗口时点「打开原界面」，会起 vidnote 自己的独立应用窗口。
+
+插件默认的转写方式是 **DSH 自带的本地 SenseVoice**（voice-input bundle，CPU，无需任何 Key，音频不出本机）：先在插件管理器启用 Voice Input 并下载约 239 MB 模型，然后在「解析方案」里保持「本地识别 · DSH SenseVoice」。也可以切回云端 Gemini / Whisper API。关键帧数量除 0/3/6/12 预设外，可以直接填 0–30 的任意数量。
 
 ```bash
 dsh plugin --profile desktop add ./dsh-plugin

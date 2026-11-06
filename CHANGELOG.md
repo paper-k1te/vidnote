@@ -2,6 +2,25 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.2] - 2026-11-07
+
+### 新增
+
+- **DSH 插件接入 Harness 本地语音识别**：插件通过 `ctx.speechToText` 调用
+  DSH 自带的 SenseVoice（voice-input bundle，本地 CPU），**不需要 OpenAI /
+  Gemini Key**，音频不出本机。首次使用需在插件管理器启用 Voice Input 并下载
+  约 239 MB 的 INT8 模型。
+- 插件「解析方案」新增「本地识别 · DSH SenseVoice」并设为默认；关键帧数量在
+  0/3/6/12 预设旁新增自定义填空（0–30）。
+- 后端新增 `dsh` provider：4 分钟切片，按句号切句并按字数把时间戳摊到切片内；
+  `VID2NOTE_STT_URL` / `VID2NOTE_STT_TOKEN` 由插件注入后端进程。
+- CLI 新增 `--dsh`。
+
+### 说明
+
+- 桌面独立版仍默认云端（Gemini / Whisper API），需要自己的 Key；SenseVoice
+  只返回整段文本，时间戳是按切片和字数估算的，精度不如云端逐句时间戳。
+
 ## [0.4.1] - 2026-11-07
 
 ### 变更

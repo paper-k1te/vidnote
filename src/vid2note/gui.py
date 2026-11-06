@@ -410,7 +410,7 @@ def parse_transcribe_options(payload: dict[str, Any]) -> tuple[bool, str]:
         m = raw_model.strip()
         if m in ("none", "false", "0"):
             return False, ""
-        if m in ("cloud", "cloud-asr", "gemini", "whisper-api"):
+        if m in ("cloud", "cloud-asr", "gemini", "whisper-api", "dsh", "sensevoice"):
             return True, m
         if m in ("vosk", "vosk-cn") or "vosk" in m.lower():
             return True, "vosk-cn"
@@ -422,7 +422,7 @@ def parse_transcribe_options(payload: dict[str, Any]) -> tuple[bool, str]:
         t = raw_transcribe.strip()
         if t in ("none", "false", "0", ""):
             return False, ""
-        if t in ("cloud", "cloud-asr", "gemini", "whisper-api"):
+        if t in ("cloud", "cloud-asr", "gemini", "whisper-api", "dsh", "sensevoice"):
             return True, t
         if t in ("vosk", "vosk-cn") or "vosk" in t.lower():
             return True, "vosk-cn"
@@ -473,7 +473,7 @@ def fetch_video(
 
     if cues is None and model:
         engines = transcribe_engines()
-        if model in ("cloud", "gemini", "whisper-api"):
+        if model in ("cloud", "gemini", "whisper-api", "dsh", "sensevoice"):
             if not engines["cloud"]:
                 return {
                     "error": "这个版本没有音频下载/解码能力，云端转写不可用；"
@@ -483,7 +483,9 @@ def fetch_video(
             from .cloud_asr import transcribe_video as cloud_transcribe
 
             provider = (
-                "gemini"
+                "dsh"
+                if model in ("dsh", "sensevoice")
+                else "gemini"
                 if model == "gemini"
                 else "whisper"
                 if model == "whisper-api"

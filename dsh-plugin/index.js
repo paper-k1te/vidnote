@@ -2,6 +2,7 @@ import { createHandlers } from './lib/api.js'
 import { searchUsers } from './lib/bili.js'
 import { createProxy } from './lib/proxy.js'
 import { buildArgs, resolveCli, runVidnote } from './lib/run.js'
+import { createSttServer } from './lib/stt.js'
 import { createUiServer } from './lib/ui.js'
 import { openAppWindow } from './lib/window.js'
 
@@ -24,14 +25,29 @@ export const inject = ['tools', 'webServer']
  * 浏览器侧是「对话 / 轨迹」旁边的第三个视图，界面走代理复用 vid2note 自己的
  * serve-ui 接口（进度、关键帧、选目录、打开文件、whisper 依赖都在那边）。
  */
-export function apply(ctx, config = {}) {
+export async function apply(ctx, config = {}) {
   const cliPath = resolveCli(config)
   const timeoutMs = Number(config.timeoutMs) || 180_000
+
+  // 把 DSH 自带的本地语音识别（SenseVoice）借给后端；没有启用 voice-input
+  // bundle 时端点仍然起来，但请求会返回 503 和原因。
+  let stt = null
+  let sttEnv = {}
+  try {
+    stt = createSttServer(ctx)
+    await stt.ready
+    sttEnv = { VID2NOTE_STT_URL: stt.url, VID2NOTE_STT_TOKEN: stt.token }
+    ctx.effect(() => () => stt.stop())
+  } catch {
+    stt = null
+    sttEnv = {}
+  }
 
   const ui = createUiServer({
     cliPath,
     env: {
       ...process.env,
+      ...sttEnv,
       ...(config.asrKey ? { VID2NOTE_ASR_KEY: String(config.asrKey) } : {}),
       ...(config.asrBase ? { VID2NOTE_ASR_BASE: String(config.asrBase) } : {}),
       ...(config.asrModel ? { VID2NOTE_ASR_MODEL: String(config.asrModel) } : {}),
