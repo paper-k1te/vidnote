@@ -69,7 +69,9 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#
 
 ## 配置
 
-`cordis.patch.yml` 里可以覆盖默认值：
+默认设置即可用：插件会按上面「依赖」里的顺序自己找 vidnote 命令行，超时 3 分钟，不需要写任何配置。
+
+只有需要固定路径或给长视频转写留更多时间时，才在 `cordis.patch.yml` 里覆盖：
 
 ```yaml
 - insert:
@@ -80,8 +82,8 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vidnote.git#
         timeoutMs: 600000
 ```
 
-- `cliPath`：vidnote 可执行文件路径；
-- `timeoutMs`：单次调用超时，默认 180000（3 分钟）。转写长视频要调大。
+- `cliPath`：（可选）vidnote 可执行文件路径；
+- `timeoutMs`：（可选）单次调用超时，默认 180000（3 分钟）。转写长视频要调大。
 
 ## 参数说明
 

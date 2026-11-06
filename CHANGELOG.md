@@ -2,13 +2,18 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.3.2] - 2026-11-06
 
 ### 新增
 
 - **DeepSeek Harness 插件**：`dsh-plugin/` 把 vidnote 接进 DSH，模型可以直接调用 `vidnote_note`（链接 → 带时间戳的 Markdown）、`vidnote_search`（关键词 → 候选视频 JSON）和 `vidnote_user`（关键词 → 候选 UP 主 JSON）；带中英文标题、描述和图标，安装一条命令即可。
 - **原生 DSH 界面**：会话视图栏里「对话 / 轨迹」旁边多一个「B站笔记」视图，布局照着原窗口（左侧导航 + 表单 + Markdown 预览）；抓取进度、关键帧、输出目录、Cookie、whisper 依赖通过代理复用 `serve-ui` 接口，功能与原窗口对齐，状态切标签页不丢；「打开原界面」拉起 vidnote 自己的独立应用窗口。
 - 插件把单文件 exe 解压失败（`PYI-xxxx`）翻译成可操作的提示，不再只抛一行 bootloader 错误。
+
+### 变更
+
+- **桌面端只发布轻量版**：GitHub Release 不再提供完整版 exe，`vidnote-app-full-*.zip` 停止更新；需要 Vosk / whisper 时用 pip 版，或本地 `scripts/build_app.ps1 -Full` 构建。
+- **DSH 插件按默认设置工作**：安装后无需配置，自动按 `cliPath` → `VIDNOTE_CLI` → 仓库构建产物 → 常见安装位置 → PATH 的顺序找命令行，默认超时 180 秒；只有需要固定路径或长视频转写时才改 `cliPath` / `timeoutMs`。
 
 ## [0.3.1] - 2026-11-05
 

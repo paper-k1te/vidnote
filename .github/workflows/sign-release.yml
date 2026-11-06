@@ -20,8 +20,11 @@
 #        SIGNPATH_API_TOKEN
 #
 # Run this workflow manually with the release tag after the GitHub Release has
-# been created. It rebuilds the lite/full exe, signs both through SignPath,
-# verifies the signatures, re-packs the release ZIPs and replaces the assets.
+# been created. It rebuilds the lite exe, signs it through SignPath, verifies
+# the signature, re-packs the release ZIP and replaces the asset.
+#
+# From 0.3.2 on, releases only ship the lite build; the full build is a local
+# build option and is no longer published or signed.
 
 name: Sign Windows release
 
@@ -29,7 +32,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag, for example v0.3.1
+        description: Release tag, for example v0.3.2
         required: true
         type: string
 
@@ -107,19 +110,6 @@ jobs:
         shell: pwsh
         run: powershell -NoProfile -File scripts\build_app.ps1
 
-      - name: Build full app
-        shell: pwsh
-        run: powershell -NoProfile -File scripts\build_app.ps1 -Full
-
-      - name: Upload unsigned full exe
-        id: unsigned-full
-        uses: actions/upload-artifact@v4
-        with:
-          name: vidnote-unsigned-full-${{ github.run_id }}
-          path: dist-app-full\vidnote-app.exe
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Upload unsigned lite exe
         id: unsigned-lite
         uses: actions/upload-artifact@v4
@@ -128,20 +118,6 @@ jobs:
           path: dist-app\vidnote-app.exe
           if-no-files-found: error
           retention-days: 1
-
-      - name: Sign full exe
-        id: sign-full
-        uses: signpath/github-action-submit-signing-request@v3
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.unsigned-full.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 900
-          output-artifact-directory: signed-full
 
       - name: Sign lite exe
         id: sign-lite
@@ -157,39 +133,31 @@ jobs:
           wait-for-completion-timeout-in-seconds: 900
           output-artifact-directory: signed-lite
 
-      - name: Verify signatures
+      - name: Verify signature
         shell: pwsh
         run: |
-          $files = @(
-            (Get-ChildItem signed-full -Recurse -Filter vidnote-app.exe | Select-Object -First 1),
-            (Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1)
-          )
-          if ($files.Count -ne 2 -or ($files | Where-Object { $_ -eq $null }).Count) {
-            throw "SignPath 返回的产物里找不到两个 vidnote-app.exe"
+          $file = Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1
+          if (-not $file) {
+            throw "SignPath 返回的产物里找不到 vidnote-app.exe"
           }
-          foreach ($file in $files) {
-            $signature = Get-AuthenticodeSignature -FilePath $file.FullName
-            if ($signature.Status -ne 'Valid') {
-              throw "签名校验失败：$($file.FullName) ($($signature.Status))"
-            }
-            "已签名：$($file.FullName) / $($signature.SignerCertificate.Subject)"
+          $signature = Get-AuthenticodeSignature -FilePath $file.FullName
+          if ($signature.Status -ne 'Valid') {
+            throw "签名校验失败：$($file.FullName) ($($signature.Status))"
           }
+          "已签名：$($file.FullName) / $($signature.SignerCertificate.Subject)"
 
-      - name: Re-pack signed release assets
+      - name: Re-pack signed release asset
         shell: pwsh
         run: |
-          $full = Get-ChildItem signed-full -Recurse -Filter vidnote-app.exe | Select-Object -First 1
           $lite = Get-ChildItem signed-lite -Recurse -Filter vidnote-app.exe | Select-Object -First 1
-          Compress-Archive -Path $full.FullName -DestinationPath "vidnote-app-full-$env:VERSION.zip" -Force
           Compress-Archive -Path $lite.FullName -DestinationPath "vidnote-app-lite-$env:VERSION.zip" -Force
 
-      - name: Replace release assets
+      - name: Replace release asset
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ inputs.tag }}" `
-            "vidnote-app-full-$env:VERSION.zip" `
             "vidnote-app-lite-$env:VERSION.zip" `
             --clobber -R "${{ github.repository }}"
 
@@ -200,6 +168,5 @@ jobs:
           @"
           ## SignPath
 
-          - Full signing request: ${{ steps.sign-full.outputs.signing-request-web-url }}
           - Lite signing request: ${{ steps.sign-lite.outputs.signing-request-web-url }}
           "@ >> $env:GITHUB_STEP_SUMMARY
