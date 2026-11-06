@@ -91,7 +91,7 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vid2note.git
 node --test        # 36 个用例，纯逻辑（请求都传 fake fetch），不需要装 DSH
 ```
 
-`lib/run.js`、`lib/bili.js`、`lib/api.js`、`lib/markdown.js`、`lib/proxy.js`、`lib/ui.js`、`lib/window.js` 都不 import 任何 DSH 的包；`index.js` 才依赖 `@deepseek-ai/dsh-tools`。
+`lib/run.js`、`lib/bili.js`、`lib/api.js`、`lib/markdown.js`、`lib/proxy.js`、`lib/ui.js`、`lib/window.js` 都不 import 任何 DSH 的包；`index.js` 也不 import `@deepseek-ai/*`——宿主是从 profile 目录 import 插件的，链接进来的包解析不到安装目录里的 `@deepseek-ai/dsh-tools`，所以工具参数直接用 JSON Schema 声明。
 
 ## 排错
 
