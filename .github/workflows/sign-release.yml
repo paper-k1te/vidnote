@@ -23,8 +23,7 @@
 # been created. It rebuilds the lite exe, signs it through SignPath, verifies
 # the signature, re-packs the release ZIP and replaces the asset.
 #
-# From 0.3.2 on, releases only ship the lite build; the full build is a local
-# build option and is no longer published or signed.
+# Releases ship a single desktop asset; the older split build is gone.
 
 name: Sign Windows release
 
@@ -32,7 +31,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag, for example v0.3.2
+        description: Release tag, for example v0.4.0
         required: true
         type: string
 

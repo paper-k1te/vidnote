@@ -47,7 +47,7 @@ dsh plugin --profile desktop add "git+https://github.com/paper-k1te/vid2note.git
 
 ## 界面
 
-用 DSH 自己的 slot 和主题变量重写，布局对齐 0.3.4 的新界面：
+用 DSH 自己的 slot 和主题变量重写，布局对齐 0.4.0 的新界面：
 
 - 左侧导航：抓取视频 / 搜索 / 登录 B 站 / 下载 / 历史 / 提示；
 - 抓取：链接、分P、关键帧、输出目录（可用「选择」）、解析方案；带阶段 + 百分比进度；

@@ -25,7 +25,7 @@
 模板：
 
 ```markdown
-**环境**：Windows 11 / Python 3.13 / 项目版本 0.1.0
+**环境**：Windows 11 / Python 3.13 / 项目版本 0.4.0
 
 **复现步骤**：
 1. 运行 `xxx`
