@@ -1,6 +1,6 @@
 {
   "name": "dsh-vidnote",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "vid2note for DeepSeek Harness: native view, tools, and UP search for Bilibili videos.",
   "type": "module",
   "main": "index.js",

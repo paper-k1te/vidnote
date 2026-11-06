@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>vid2note v0.4.0</title>
+<title>vid2note v0.4.1</title>
 <style>
   :root {
     --bg-sidebar: #f5f5f7;
@@ -673,7 +673,7 @@
   <div class="titlebar-left" data-tauri-drag-region>
     <div class="titlebar-app-icon" data-tauri-drag-region>v</div>
     <span class="titlebar-app-name" data-tauri-drag-region>vid2note</span>
-    <span class="titlebar-app-ver" data-tauri-drag-region>v0.4.0</span>
+    <span class="titlebar-app-ver" data-tauri-drag-region>v0.4.1</span>
   </div>
   <div class="titlebar-center" data-tauri-drag-region>
     <span class="titlebar-status-chip" id="titlebar-status" data-tauri-drag-region>
@@ -702,7 +702,7 @@
     <div class="brand-logo">v</div>
     <div class="brand-text">
       <span class="brand-name">vid2note</span>
-      <span class="brand-badge">v0.4.0 · 原生桌面端</span>
+      <span class="brand-badge">v0.4.1 · 原生桌面端</span>
     </div>
   </div>
 
@@ -814,12 +814,27 @@
         <div class="field">
           <label class="field-label">解析方案 (无字幕时兜底)</label>
           <select id="transcribe">
-            <option value="" selected>字幕优先 / 无字幕则不转写</option>
-            <option value="vosk-cn">Vosk 离线引擎 (内置中文模型 42MB · 极速)</option>
-            <option value="tiny">Whisper Tiny (轻量 75MB)</option>
-            <option value="base">Whisper Base (平衡 145MB)</option>
-            <option value="small">Whisper Small (高精 485MB)</option>
+            <option value="cloud" selected>云端转写（默认 · 需要 API Key）</option>
+            <option value="gemini">Gemini（Google · 音频直传）</option>
+            <option value="whisper-api">Whisper API（OpenAI 兼容接口）</option>
+            <option value="">字幕优先 / 无字幕则不转写</option>
+            <option value="vosk-cn">Vosk 离线（可选 · 需安装模型）</option>
+            <option value="tiny">Whisper Tiny（本机）</option>
+            <option value="base">Whisper Base（本机）</option>
+            <option value="small">Whisper Small（本机）</option>
           </select>
+        </div>
+        <div class="field">
+          <label class="field-label">转写 API Key（只保存在本机浏览器）</label>
+          <div class="input-wrap">
+            <input id="asr-key" type="password" placeholder="Gemini Key，或 OpenAI 兼容接口的 Key">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">转写接口地址（Whisper 兼容时填写，可留空）</label>
+          <div class="input-wrap">
+            <input id="asr-base" type="text" placeholder="https://api.openai.com/v1">
+          </div>
         </div>
         <div class="field">
           <label class="field-label">笔记保存目录</label>
@@ -954,7 +969,7 @@
     <!-- View 6: 说明与设置 -->
     <div class="pane-left hidden" id="view-tips">
       <div class="card">
-        <span class="card-title">关于 vid2note v0.4.0</span>
+        <span class="card-title">关于 vid2note v0.4.1</span>
         <p style="font-size:12.5px;color:var(--text-2);line-height:1.7">
           vid2note 是一款专为知识提炼与归档设计的 B 站视频笔记工具。
           本版本采用 <b>Tauri 2.0</b> 编译原生 Rust 桌面端与后台托盘核心，大幅优化内存占用与渲染流畅度。
@@ -1141,7 +1156,7 @@
     login: { title: '登录 B 站', sub: '填写 SESSDATA 以解锁登录后才可见的私有/高清字幕' },
     download: { title: '下载渠道', sub: 'whisper 依赖与模型下载渠道' },
     history: { title: '历史记录', sub: '浏览与重新查看本地已生成的笔记与关键帧' },
-    tips: { title: '说明与设置', sub: '关于 vid2note 0.4.0 与 Tauri 2.0 桌面端架构特性' },
+    tips: { title: '说明与设置', sub: '关于 vid2note 0.4.1 与 Tauri 2.0 桌面端架构特性' },
   };
 
   document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
@@ -1289,6 +1304,8 @@
       frames: parseInt($('frames').value || '6', 10),
       transcribe: isTranscribe,
       model: isTranscribe ? transcribeVal : '',
+      asr_key: $('asr-key').value.trim(),
+      asr_base: $('asr-base').value.trim(),
       outdir: $('outdir').value.trim(),
       cookie: $('cookie').value.trim(),
       channel: $('channel').value,
@@ -1823,6 +1840,12 @@
       $('btn-install-whisper').disabled = false;
     }
   };
+
+  // 云端转写 Key（只存本机浏览器）
+  $('asr-key').value = localStorage.getItem('vid2note-asr-key') || "";
+  $('asr-base').value = localStorage.getItem('vid2note-asr-base') || "";
+  $('asr-key').addEventListener('input', (e) => localStorage.setItem('vid2note-asr-key', e.target.value));
+  $('asr-base').addEventListener('input', (e) => localStorage.setItem('vid2note-asr-base', e.target.value));
 
   // 账号凭据 Cookie
   $('cookie').value = (localStorage.getItem('vid2note-cookie') || localStorage.getItem('vidnote-cookie')) || "";

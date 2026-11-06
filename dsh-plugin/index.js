@@ -28,7 +28,16 @@ export function apply(ctx, config = {}) {
   const cliPath = resolveCli(config)
   const timeoutMs = Number(config.timeoutMs) || 180_000
 
-  const ui = createUiServer({ cliPath })
+  const ui = createUiServer({
+    cliPath,
+    env: {
+      ...process.env,
+      ...(config.asrKey ? { VID2NOTE_ASR_KEY: String(config.asrKey) } : {}),
+      ...(config.asrBase ? { VID2NOTE_ASR_BASE: String(config.asrBase) } : {}),
+      ...(config.asrModel ? { VID2NOTE_ASR_MODEL: String(config.asrModel) } : {}),
+      ...(config.asrProvider ? { VID2NOTE_ASR_PROVIDER: String(config.asrProvider) } : {}),
+    },
+  })
   ctx.effect(() => () => ui.stop())
 
   const api = createHandlers()

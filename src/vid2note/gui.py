@@ -311,7 +311,7 @@ _engine_errors: dict[str, str] = {}
 
 def transcribe_engines() -> dict[str, bool]:
     """后端可用的转写引擎。"""
-    engines = {"vosk": False, "whisper": False}
+    engines = {"vosk": False, "whisper": False, "cloud": False}
     try:
         import av  # noqa: F401, PLC0415
         import vosk  # noqa: F401, PLC0415
@@ -320,6 +320,14 @@ def transcribe_engines() -> dict[str, bool]:
         _engine_errors.pop("vosk", None)
     except Exception as exc:  # noqa: BLE001
         _engine_errors["vosk"] = f"{type(exc).__name__}: {exc}"
+    try:
+        import av  # noqa: F401, PLC0415
+        import yt_dlp  # noqa: F401, PLC0415
+
+        engines["cloud"] = True
+        _engine_errors.pop("cloud", None)
+    except Exception as exc:  # noqa: BLE001
+        _engine_errors["cloud"] = f"{type(exc).__name__}: {exc}"
     engines["whisper"] = whisper_deps.available()
     return engines
 
@@ -402,6 +410,8 @@ def parse_transcribe_options(payload: dict[str, Any]) -> tuple[bool, str]:
         m = raw_model.strip()
         if m in ("none", "false", "0"):
             return False, ""
+        if m in ("cloud", "cloud-asr", "gemini", "whisper-api"):
+            return True, m
         if m in ("vosk", "vosk-cn") or "vosk" in m.lower():
             return True, "vosk-cn"
         if m.startswith("whisper-"):
@@ -412,6 +422,8 @@ def parse_transcribe_options(payload: dict[str, Any]) -> tuple[bool, str]:
         t = raw_transcribe.strip()
         if t in ("none", "false", "0", ""):
             return False, ""
+        if t in ("cloud", "cloud-asr", "gemini", "whisper-api"):
+            return True, t
         if t in ("vosk", "vosk-cn") or "vosk" in t.lower():
             return True, "vosk-cn"
         if t.startswith("whisper-"):
@@ -461,7 +473,36 @@ def fetch_video(
 
     if cues is None and model:
         engines = transcribe_engines()
-        if model.startswith("vosk"):
+        if model in ("cloud", "gemini", "whisper-api"):
+            if not engines["cloud"]:
+                return {
+                    "error": "这个版本没有音频下载/解码能力，云端转写不可用；"
+                    "请安装 [vosk] 依赖或换用完整版。"
+                }
+            from .cloud_asr import CloudAsrError
+            from .cloud_asr import transcribe_video as cloud_transcribe
+
+            provider = (
+                "gemini"
+                if model == "gemini"
+                else "whisper"
+                if model == "whisper-api"
+                else str(payload.get("asr_provider") or "auto")
+            )
+            try:
+                lang, cues = cloud_transcribe(
+                    meta,
+                    page,
+                    provider=provider,
+                    api_key=str(payload.get("asr_key") or "").strip() or None,
+                    base_url=str(payload.get("asr_base") or "").strip() or None,
+                    model=str(payload.get("asr_model") or "").strip() or None,
+                    on_progress=on_progress,
+                    on_status=on_status,
+                )
+            except CloudAsrError as exc:
+                return {"error": f"云端转写失败：{exc}"}
+        elif model.startswith("vosk"):
             if not engines["vosk"]:
                 return {
                     "error": "这个版本没有内置 Vosk 转写。请用完整版（vidnote-app-full），"

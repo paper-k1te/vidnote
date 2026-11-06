@@ -1,6 +1,6 @@
-﻿# 构建桌面应用（原生窗口 + WebView2 外壳）
+# 构建旧版 WebView2 外壳（备用；发布用 scripts/build_tauri.ps1）
 #
-# 唯一的桌面构建：Vosk 引擎和中文模型内置，第一次转写不用下载；
+# 默认不再内置 Vosk 模型：没有字幕时走云端 Gemini / OpenAI 兼容转写。
 # whisper 的依赖仍然按需下载。
 #
 # 用法：
@@ -31,7 +31,7 @@ $spec = "vidnote-app.spec"
 $exeDir = "dist-exe"
 $workDir = "build-exe"
 $appDir = "dist-app"
-$serverName = "vidnote-server.exe"
+$serverName = "vid2note-server.exe"
 
 # 应用版本号：写进 exe 的版本信息，跟 pyproject.toml 保持一致。
 $pyproject = Get-Content pyproject.toml -Raw
@@ -42,24 +42,6 @@ $pieces = @($numeric.Split('.') | Where-Object { $_ -ne '' })
 $four = (@($pieces + @('0', '0', '0', '0'))[0..3]) -join '.'
 $icon = "assets\vidnote.ico"
 if (-not (Test-Path $icon)) { throw "缺少图标：$icon" }
-
-# Vosk 引擎和模型都打进 exe；本地有缓存就复制，没有就下载。
-$modelFolder = "vosk-model-small-cn-0.22"
-$modelDir = "assets\$modelFolder"
-if (-not (Test-Path "$modelDir\am")) {
-    $cached = Join-Path $env:LOCALAPPDATA "vidnote\vosk\$modelFolder"
-    New-Item -ItemType Directory -Force -Path "assets" | Out-Null
-    if (Test-Path "$cached\am") {
-        Write-Host "==> 复制 Vosk 模型"
-        Copy-Item $cached $modelDir -Recurse -Force
-    } else {
-        Write-Host "==> 下载 Vosk 模型"
-        $zip = "assets\$modelFolder.zip"
-        Invoke-WebRequest "https://alphacephei.com/vosk/models/$modelFolder.zip" -OutFile $zip -UseBasicParsing
-        Expand-Archive $zip -DestinationPath "assets" -Force
-        Remove-Item $zip -Force
-    }
-}
 
 # 1. 编译 Python 后端
 Write-Host "==> 打包后端（$spec）"

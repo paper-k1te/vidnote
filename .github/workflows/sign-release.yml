@@ -31,7 +31,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag, for example v0.4.0
+        description: Release tag, for example v0.4.1
         required: true
         type: string
 
@@ -103,18 +103,7 @@ jobs:
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
-          .\.venv\Scripts\python.exe -m pip install -e ".[vosk]" pyinstaller
-
-      - name: Ensure the Vosk model
-        shell: pwsh
-        run: |
-          $model = "assets\vosk-model-small-cn-0.22"
-          if (-not (Test-Path "$model\am")) {
-            $zip = "assets\vosk-model-small-cn-0.22.zip"
-            Invoke-WebRequest "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip" -OutFile $zip -UseBasicParsing
-            Expand-Archive $zip -DestinationPath "assets" -Force
-            Remove-Item $zip -Force
-          }
+          .\.venv\Scripts\python.exe -m pip install -e ".[cloud]" pyinstaller
 
       - name: Build Python backend
         shell: pwsh

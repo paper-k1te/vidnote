@@ -47,12 +47,17 @@ window.__ModuleLoader__.load({
         pick: '选择',
         paste: '粘贴',
         plan: '解析方案',
+        planCloud: '云端转写 · 默认，需要 API Key',
+        planGemini: 'Gemini · 音频直传，时间戳准',
+        planWhisperApi: 'Whisper API · OpenAI 兼容接口',
         planNone: '不转写 · 只输出元数据',
-        planVosk: 'Vosk 小模型 · 快、占用小、自动分句',
-        planTiny: 'whisper tiny · 最快，质量一般',
-        planBase: 'whisper base · 速度与质量平衡',
-        planSmall: 'whisper small · 中文质量最好',
-        planHint: 'whisper 的依赖安装和模型下载渠道在左侧「下载」页。',
+        planVosk: 'Vosk 小模型 · 需本地安装',
+        planTiny: 'whisper tiny · 本机，最快',
+        planBase: 'whisper base · 本机，平衡',
+        planSmall: 'whisper small · 本机，中文最好',
+        planHint: '默认走云端转写；Key 填在「下载」页，或设置 GEMINI_API_KEY / OPENAI_API_KEY。',
+        asrKey: '转写 API Key',
+        asrBase: '转写接口地址（Whisper 兼容时填）',
         go: '生成笔记',
         running: '正在抓取…',
         preparing: '准备中…',
@@ -144,12 +149,17 @@ window.__ModuleLoader__.load({
         pick: 'Choose',
         paste: 'Paste',
         plan: 'Transcription',
+        planCloud: 'Cloud · default, needs an API key',
+        planGemini: 'Gemini · audio upload, precise timestamps',
+        planWhisperApi: 'Whisper API · OpenAI-compatible endpoint',
         planNone: 'Off · metadata only',
-        planVosk: 'Vosk small · fast and small',
-        planTiny: 'whisper tiny · fastest, rough',
-        planBase: 'whisper base · balanced',
-        planSmall: 'whisper small · best Chinese',
-        planHint: 'whisper dependencies and download channel live on the Downloads page.',
+        planVosk: 'Vosk small · needs a local install',
+        planTiny: 'whisper tiny · local, fastest',
+        planBase: 'whisper base · local, balanced',
+        planSmall: 'whisper small · local, best Chinese',
+        planHint: 'Cloud transcription is the default; put the key on the Downloads page or set GEMINI_API_KEY / OPENAI_API_KEY.',
+        asrKey: 'Transcription API key',
+        asrBase: 'Transcription endpoint (for Whisper-compatible APIs)',
         go: 'Generate note',
         running: 'Fetching…',
         preparing: 'Preparing…',
@@ -411,7 +421,10 @@ window.__ModuleLoader__.load({
       page: '1',
       frames: '6',
       outdir: '',
-      plan: '',
+      plan: 'cloud',
+      asrKey: '',
+      asrBase: '',
+      asrLoaded: false,
       cookie: '',
       channel: 'auto',
       status: 'idle',
@@ -614,6 +627,8 @@ window.__ModuleLoader__.load({
             channel: state.channel,
             transcribe: state.plan !== '',
             model: state.plan,
+            asr_key: state.asrKey.trim(),
+            asr_base: state.asrBase.trim(),
           },
         })
         if (data.error) throw new Error(data.error)
@@ -966,12 +981,33 @@ window.__ModuleLoader__.load({
               h('button', { type: 'button', className: 'vn-ghost', onClick: pickFolder }, t.pick)),
             h('label', { className: 'vn-label', htmlFor: 'vn-plan' }, t.plan),
             h('select', { id: 'vn-plan', className: 'vn-select', value: state.plan, onChange: (event) => set({ plan: event.target.value }) },
+              h('option', { value: 'cloud' }, t.planCloud),
+              h('option', { value: 'gemini' }, t.planGemini),
+              h('option', { value: 'whisper-api' }, t.planWhisperApi),
               h('option', { value: '' }, t.planNone),
               h('option', { value: 'vosk-cn' }, t.planVosk),
               h('option', { value: 'tiny' }, t.planTiny),
               h('option', { value: 'base' }, t.planBase),
               h('option', { value: 'small' }, t.planSmall)),
             h('p', { className: 'vn-hint' }, t.planHint),
+            h('label', { className: 'vn-label', htmlFor: 'vn-asr-key' }, t.asrKey),
+            h('input', {
+              id: 'vn-asr-key', className: 'vn-input', type: 'password', value: state.asrKey,
+              placeholder: 'Gemini Key / OpenAI Key', spellCheck: false,
+              onChange: (event) => {
+                set({ asrKey: event.target.value })
+                try { localStorage.setItem('vid2note:asr-key', event.target.value) } catch { /* 忽略 */ }
+              },
+            }),
+            h('label', { className: 'vn-label', htmlFor: 'vn-asr-base' }, t.asrBase),
+            h('input', {
+              id: 'vn-asr-base', className: 'vn-input', value: state.asrBase,
+              placeholder: 'https://api.openai.com/v1', spellCheck: false,
+              onChange: (event) => {
+                set({ asrBase: event.target.value })
+                try { localStorage.setItem('vid2note:asr-base', event.target.value) } catch { /* 忽略 */ }
+              },
+            }),
             h('div', { className: 'vn-actions' },
               h('button', { className: 'vn-primary', disabled: running, onClick: startFetch },
                 running ? t.running : t.go)),
@@ -1156,6 +1192,17 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         if (!state.health) loadHealth()
         if (!state.historyLoaded) set({ history: readHistory(), historyLoaded: true })
+        if (!state.asrLoaded) {
+          let asrKey = ''
+          let asrBase = ''
+          try {
+            asrKey = globalThis.localStorage?.getItem('vid2note:asr-key') || ''
+            asrBase = globalThis.localStorage?.getItem('vid2note:asr-base') || ''
+          } catch {
+            // 没有 localStorage 时留空
+          }
+          set({ asrKey, asrBase, asrLoaded: true })
+        }
         if (state.status === 'running' && state.jobId) pollJob(state.jobId)
         const heartbeat = setInterval(() => {
           fetch(`${API}/ping`).catch(() => {})

@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/license-MIT-07C160" alt="MIT License">
   <img src="https://img.shields.io/badge/MCP-ready-00A1D6" alt="MCP ready">
-  <img src="https://img.shields.io/badge/本地转写-无需_API_Key-8957E5" alt="Local transcription">
+  <img src="https://img.shields.io/badge/cloud_transcription-Gemini_/_Whisper-8957E5" alt="Cloud transcription">
 </p>
 
 <p align="center">
@@ -65,7 +65,7 @@ tags:
 - **一条命令归档**：链接、BV 号、av 号、b23.tv 短链都支持识别，自动抓标题、UP 主、分区、时长、发布时间、简介、标签，以及播放 / 点赞 / 投币 / 收藏 / 弹幕 / 评论数据。
 - **分P 不迷路**：多P 视频会记录当前在第几集，时间戳链接自动添加 `&p=`。
 - **先搜再抓**：`vid2note search "关键词"` 直接列出候选视频，挑中 BV 号再归档。
-- **字幕优先，转写兜底**：视频有字幕就直接用；没有就在本机跑 Vosk 或 Whisper，音频不出你的电脑。
+- **字幕优先，云端转写兜底**：视频有字幕就直接用；没有就把音频交给 Gemini 或 OpenAI 兼容的 Whisper 接口，拿回带时间戳的文本再拼成笔记。
 - **自动关键帧**：默认取 6 张，用 B 站现成的缩略图切出画面，按时间插在对应字幕后面；`--frames 0` 关闭，加 `--scene` 则按画面变化重新选帧。
 - **时间戳可点**：`[12:34](…?t=754)`，在 Obsidian、Logseq、浏览器里都能跳转。
 - **YAML frontmatter**：字段固定，能被 Dataview 之类的工具直接查询、筛选、聚合。
@@ -116,7 +116,7 @@ vid2note gui
 
 ### 桌面应用（Tauri 2.0 原生 Rust 桌面端 + 系统托盘）
 
-v0.4.0 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
+v0.4.1 起，桌面端全面升级为 **Tauri 2.0 原生 Rust 核心与系统托盘驻留**：
 
 ```powershell
 powershell -File scripts/build_tauri.ps1
@@ -129,17 +129,20 @@ powershell -File scripts/build_tauri.ps1
 | 托盘能力 | 支持最小化到托盘、托盘右键菜单、单击平滑显隐、快速抓取剪贴板 |
 | 界面设计 | 全新高颜值现代流体工作台（深浅色无缝切换、交互式时间戳、关键帧画廊） |
 | 抓取 / 搜索 / 笔记 / 缩略帧 | ✅ |
-| 本地转写 | ✅ Vosk（模型内置）；whisper（依赖按需安装） |
+| 转写 | ✅ 云端转写（Gemini / Whisper API，默认）；Vosk / whisper 可选本地 |
 | 核心体积 | 约 8.8 MB（轻巧极速，秒级冷启动） |
 
 转写引擎可选：
 
 | 引擎 | 首次下载 | 说明 |
 | --- | --- | --- |
-| Vosk `vosk-cn` | 已内置 | 默认，快、按停顿自动分句，清晰语音可用 |
-| whisper `tiny` | 75 MB | 最快，质量一般 |
-| whisper `base` | 145 MB | 平衡 |
-| whisper `small` | 485 MB | 中文最好 |
+| 云端 `cloud` | 无 | 默认；需要 Gemini 或 OpenAI 兼容接口的 API Key |
+| Gemini `gemini` | 无 | 音频直传 Gemini，时间戳准 |
+| Whisper API `whisper-api` | 无 | 任何兼容 `/audio/transcriptions` 的服务 |
+| Vosk `vosk-cn` | 42 MB | 可选，装 `[vosk]` 后离线用 |
+| whisper `tiny` | 75 MB | 本机，最快，质量一般 |
+| whisper `base` | 145 MB | 本机，平衡 |
+| whisper `small` | 485 MB | 本机，中文最好 |
 
 `vid2note.exe` 采用 **Tauri 2.0 原生桌面框架**：
 - **原生系统托盘**：常驻 Windows 托盘区，支持最小化到托盘、一键从剪贴板抓取、定位输出目录。
@@ -181,17 +184,34 @@ powershell -File scripts/build_exe.ps1
 
 ## 🔊 没有字幕怎么办
 
-B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以真正的主力是本地转写。桌面应用已经内置 Vosk；whisper 的依赖可以在界面里单独安装，装好后直接选。命令行按需安装：
+B 站对字幕接口做了登录限制，**未登录时大多数视频拿不到字幕**。所以默认走**云端转写**：把音频交给 Gemini 或任意 OpenAI 兼容的 Whisper 接口，拿回带时间戳的逐句文本，再生成笔记。
+
+第一次用需要填一个 API Key：桌面端在「解析方案」下面，DSH 插件在「下载」页，或者设环境变量：
 
 ```bash
-pip install 'vidnote[vosk]'     # 命令行版：首次使用下载 42 MB 模型
-pip install 'vidnote[whisper]'  # whisper
+export GEMINI_API_KEY=...        # Gemini（优先识别 AIza 开头的 Key）
+export OPENAI_API_KEY=...        # 或 OpenAI 兼容转写服务
+export VID2NOTE_ASR_BASE=...     # Whisper 兼容接口的 base URL，可省略
+```
+
+命令行：
+
+```bash
+vid2note fetch BV1xx411c7mD --cloud
+vid2note fetch BV1xx411c7mD --cloud --asr-provider whisper --asr-key sk-...
+```
+
+隐私说明：云端模式下**音频会上传到对应服务商**；Key 只从参数/环境变量读取，不写进笔记、不落盘。费用按各家音频计费（Gemini 2.5 Flash 很便宜，1 小时视频约 10 万音频 token）。
+
+想完全离线可以装本地引擎：
+
+```bash
+pip install 'vid2note[vosk]'     # 42 MB 中文模型，首次使用下载
+pip install 'vid2note[whisper]'  # faster-whisper
 vid2note fetch BV1xx411c7mD --vosk
 ```
 
-流程：`yt-dlp` 取音频 → 在本机转写 → 生成带时间戳的笔记。**音频不会上传到任何服务器。**
-
-桌面版的 Vosk 模型已经打包进去，第一次转写直接可用；whisper 的推理引擎需要先在界面里点一次「安装 whisper 依赖」（约 66 MB），之后和 pip 安装的版本一样按需下载模型。命令行进度条会依次显示「下载音频 → 下载模型 → 本地转写」，网页界面在按钮下方显示阶段和百分比。
+桌面端默认不再内置 Vosk 模型，安装包因此小了约 65 MB；本地 Vosk 需要自己装依赖，或者直接用云端。whisper 的推理引擎仍可在界面里点一次「安装 whisper 依赖」（约 66 MB）。
 
 whisper 的模型大小：
 

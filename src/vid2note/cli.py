@@ -79,6 +79,10 @@ def _progress_runner(
     *,
     use_cache: bool,
     endpoint: str | None = None,
+    provider: str | None = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    asr_model: str | None = None,
 ):
     """带进度条地跑一遍「下载音频 → 下载模型 → 本地转写」。"""
     with Progress(
@@ -107,6 +111,20 @@ def _progress_runner(
                 meta,
                 page_no,
                 model=model,
+                on_progress=on_progress,
+                on_status=on_status,
+            )
+        if engine in ("cloud", "gemini", "whisper-api"):
+            from .cloud_asr import transcribe_video as cloud_transcribe
+
+            return cloud_transcribe(
+                meta,
+                page_no,
+                provider=provider or engine,
+                api_key=api_key,
+                base_url=base_url,
+                model=asr_model,
+                use_cache=use_cache,
                 on_progress=on_progress,
                 on_status=on_status,
             )
@@ -165,6 +183,23 @@ def fetch(
     ),
     vosk: bool = typer.Option(
         False, "--vosk", help="没有字幕时用 Vosk 小模型转写（42 MB，需要 [vosk] 依赖）"
+    ),
+    cloud: bool = typer.Option(
+        False, "--cloud", help="没有字幕时用云端转写（Gemini / OpenAI 兼容 Whisper，需要 API Key）"
+    ),
+    asr_provider: str = typer.Option(
+        "auto", "--asr-provider", help="cloud 提供方：auto / gemini / whisper"
+    ),
+    asr_key: str = typer.Option(
+        None,
+        "--asr-key",
+        help="转写 API Key；也可设 GEMINI_API_KEY / OPENAI_API_KEY / VID2NOTE_ASR_KEY",
+    ),
+    asr_base: str = typer.Option(
+        None, "--asr-base", help="OpenAI 兼容转写接口的 base URL，默认 https://api.openai.com/v1"
+    ),
+    asr_model: str = typer.Option(
+        None, "--asr-model", help="转写模型，如 gemini-2.5-flash / whisper-1"
     ),
     model: str = typer.Option(
         "small", "--model", help="whisper 模型：tiny/base/small/medium/large-v3"
@@ -246,6 +281,26 @@ def fetch(
             transcribed = True
         except MediaError as exc:
             err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(EXIT_MISSING_DEPS) from exc
+
+    if cues is None and cloud:
+        from .cloud_asr import CloudAsrError
+
+        try:
+            lang, cues = _progress_runner(
+                "cloud",
+                meta,
+                page_no,
+                "",
+                use_cache=not no_cache,
+                provider=asr_provider,
+                api_key=asr_key,
+                base_url=asr_base,
+                asr_model=asr_model,
+            )
+            transcribed = True
+        except CloudAsrError as exc:
+            err.print(f"[red]云端转写失败：{exc}[/red]")
             raise typer.Exit(EXIT_MISSING_DEPS) from exc
 
     if stdout and frames:

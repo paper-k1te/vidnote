@@ -1,6 +1,6 @@
 [package]
 name = "vid2note-desktop"
-version = "0.4.0"
+version = "0.4.1"
 description = "vid2note - B站视频带时间戳笔记桌面端"
 authors = ["Paperkite Studio", "vid2note contributors"]
 edition = "2021"

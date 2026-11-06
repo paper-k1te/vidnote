@@ -1,47 +1,32 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""桌面版打包配置：核心功能 + Vosk 本地转写 + yt-dlp。
+"""桌面版打包配置：核心功能 + 云端转写 + yt-dlp。
 
-Vosk 引擎和中文模型（约 65 MB）直接打进 exe，第一次转写不用再下载；
-whisper 的推理引擎（ctranslate2 / onnxruntime / tokenizers 等）默认不打进
-exe，第一次要用 whisper 时由界面单独下载 ``vidnote-whisper-deps-<版本>.zip``。
+默认不再内置 Vosk 模型（省 65 MB），没有字幕时走云端的 Gemini / OpenAI 兼容
+Whisper 接口；想离线转写可以 ``pip install 'vid2note[vosk]'`` 后手动选 Vosk。
+whisper 的推理引擎（ctranslate2 / onnxruntime / tokenizers 等）同样不打进
+exe，第一次要用时由界面单独下载 ``vidnote-whisper-deps-<版本>.zip``。
 
-这是唯一发布的桌面构建（轻量版）；完整版目标已合并进来，不再单独构建。
+这是唯一发布的桌面构建；完整版目标已合并进来，不再单独构建。
 
 用法：
     pyinstaller vidnote-app.spec --noconfirm --distpath dist-exe --workpath build-exe
 """
 
-import os
-
-from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
-
-# Vosk 小模型直接打进 exe，第一次转写不用再下载。
-_MODEL_FOLDER = "vosk-model-small-cn-0.22"
-_MODEL_DIR = os.path.join("assets", _MODEL_FOLDER)
-if not os.path.isdir(_MODEL_DIR):
-    raise SystemExit(
-        f"找不到 Vosk 模型：{_MODEL_DIR}\n"
-        "先运行 scripts/build_app.ps1 -Full，脚本会自动复制或下载模型。"
-    )
+from PyInstaller.utils.hooks import collect_data_files
 
 a = Analysis(
     ["packaging/entry.py"],
     pathex=["src"],
-    # vosk 用 ctypes 加载自带的 libvosk.dll；原生库不会被自动收集。
-    binaries=collect_dynamic_libs("vosk"),
     datas=[
         ("src/vid2note/ui/index.html", "vid2note/ui"),
-        (_MODEL_DIR, f"vid2note/models/{_MODEL_FOLDER}"),
     ]
-    + collect_data_files("vosk")
     + collect_data_files("srt"),
     hiddenimports=[
-        "vosk",
         "srt",
         "requests",
         "av",
         "yt_dlp",
-        # vosk 在导入时就会 import tqdm；whisper 用 tqdm.auto。
+        # whisper 用 tqdm.auto。
         "tqdm.auto",
     ],
     hookspath=[],

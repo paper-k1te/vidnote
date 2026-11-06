@@ -173,7 +173,9 @@ def test_parse_transcribe_options() -> None:
 
 
 def test_vidnote_backwards_compat() -> None:
+    import vid2note
     import vidnote
-    assert vidnote.__version__ == "0.4.0"
+
+    assert vidnote.__version__ == vid2note.__version__
     assert hasattr(vidnote, "BilibiliClient")
     assert hasattr(vidnote, "build_note")

@@ -2,6 +2,28 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.1] - 2026-11-07
+
+### 变更
+
+- **默认改为云端转写**：没有字幕时把音频交给 Gemini 2.5 Flash 或任意 OpenAI
+  兼容的 Whisper 接口（`/audio/transcriptions`），拿回带时间戳的逐句文本。
+  桌面端「解析方案」默认选中「云端转写」，解析方案下面新增 API Key 与接口地址。
+- **不再内置 Vosk 模型**：桌面安装包去掉 42 MB 中文模型和 vosk 原生库，
+  `vid2note-server.exe` 从约 105 MB 降到约 40 MB；Vosk 改为可选
+  （`pip install 'vid2note[vosk]'`），whisper 仍然按需安装。
+- **命令行新增** `--cloud`、`--asr-provider`、`--asr-key`、`--asr-base`、
+  `--asr-model`；新增 `[cloud]` 依赖组（`av` + `yt-dlp`）。
+- **DSH 插件同步**：解析方案新增云端选项，下载页可填 Key；
+  插件配置也可以写 `asrKey` / `asrBase` / `asrModel` / `asrProvider`，
+  由宿主注入到后端进程的环境变量。
+- 新增 Windows 系统代理识别（`urllib.getproxies`），Gemini 请求会走系统代理。
+
+### 隐私
+
+云端模式下音频会上传到对应服务商；Key 只从参数、界面输入或环境变量读取，
+不写进笔记、不落盘。
+
 ## [0.4.0] - 2026-11-07
 
 ### 重大变更

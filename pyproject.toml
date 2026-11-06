@@ -1,6 +1,6 @@
 [project]
 name = "vid2note"
-version = "0.4.0"
+version = "0.4.1"
 description = "把 B 站视频变成带时间戳的 Markdown 笔记。"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]
+cloud = ["av>=11,<14", "yt-dlp>=2025.1"]
 vosk = ["vosk>=0.3.45", "av>=11,<14", "yt-dlp>=2025.1"]
 whisper = ["faster-whisper>=1.0", "av>=11,<14", "yt-dlp>=2025.1"]
 scene = ["av>=11,<14", "yt-dlp>=2025.1"]
