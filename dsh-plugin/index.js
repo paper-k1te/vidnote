@@ -68,7 +68,7 @@ export async function apply(ctx, config = {}) {
   const proxy = createProxy(async () => {
     await ui.ensure()
     return ui.origin()
-  })
+  }, { token: ui.token })
   ctx.effect(() => ctx.webServer.register({
     kind: 'prefix',
     path: '/vidnote/app',

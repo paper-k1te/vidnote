@@ -499,11 +499,14 @@ def gui(
 @app.command("serve-ui")
 def serve_ui(
     port: int = typer.Option(0, "--port", help="监听端口，0 表示自动选择"),
+    token: str = typer.Option(
+        "", "--token", help="界面 API 的会话令牌；不传则随机生成并嵌入首页"
+    ),
 ) -> None:
     """只启动界面后端，不打开浏览器（供桌面外壳调用）。"""
     from .gui import serve as serve_web
 
-    serve_web(port=port, open_browser=False)
+    serve_web(port=port, open_browser=False, token=token or None)
 
 
 @app.command()

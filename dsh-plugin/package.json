@@ -1,6 +1,6 @@
 {
   "name": "dsh-vidnote",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "vid2note for DeepSeek Harness: native view, tools, and UP search for Bilibili videos.",
   "type": "module",
   "main": "index.js",
@@ -57,7 +57,11 @@
   ],
   "license": "MIT",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "prepack": "npm test"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "dsh": ">=0.1.7-rc.1"

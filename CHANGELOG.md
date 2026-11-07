@@ -2,6 +2,22 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.6] - 2026-11-08
+
+### 安全
+
+- **serve-ui 增加会话令牌**：`/api/*` 需要 `x-vidnote-token`（或 `?token=`），
+  `--token` 未传时启动随机生成并嵌入首页；`/`、`/api/health`、`/api/ping` 放行。
+- **去掉宽松 CORS**：不再返回 `Access-Control-Allow-Origin: *` 等响应头，
+  `OPTIONS` 只回 204。
+- **DSH 插件代理携带令牌**：宿主为每个实例生成随机令牌，拉起 serve-ui 时传入，
+  再由代理统一注入请求头；客户端自带的令牌会被覆盖。
+- `/api/deps/install`、`/api/fetch`、`/api/reveal*` 等动作接口都受令牌保护。
+
+### 变更
+
+- 桌面端和插件的版本同步到 0.4.6。
+
 ## [0.4.5] - 2026-11-07
 
 ### 修复

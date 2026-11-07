@@ -38,7 +38,7 @@ function readBody(req) {
  * 直接 `req.pipe()` 一个 chunked 请求会让它以为没有 body（表现就是「请输入 B 站
  * 视频链接、BV 号或 av 号」）。
  */
-export function createProxy(resolveOrigin) {
+export function createProxy(resolveOrigin, { token = '' } = {}) {
   return async function proxy(req, res) {
     let body
     try {
@@ -66,6 +66,9 @@ export function createProxy(resolveOrigin) {
     delete headers['transfer-encoding']
     delete headers['content-length']
     headers['content-length'] = String(body.length)
+    // 客户端不该自带后端令牌；统一由宿主代理注入。
+    delete headers['x-vidnote-token']
+    if (token) headers['x-vidnote-token'] = token
 
     const upstream = request(
       {

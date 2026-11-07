@@ -74,3 +74,40 @@ test('代理把 chunked 请求体补成 Content-Length 再转发', async () => {
   await close(front)
   await close(target)
 })
+
+test('代理注入后端令牌，并覆盖客户端伪造的值', async () => {
+  let seen = ''
+  const target = createServer((req, res) => {
+    seen = String(req.headers['x-vidnote-token'] ?? '')
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end('{}')
+  })
+  const targetPort = await listen(target)
+
+  const proxy = createProxy(async () => ({ port: targetPort }), { token: 'host-token' })
+  const front = createServer((req, res) => {
+    proxy(req, res)
+  })
+  const frontPort = await listen(front)
+
+  await new Promise((resolve, reject) => {
+    const req = request(
+      {
+        hostname: '127.0.0.1',
+        port: frontPort,
+        path: '/vidnote/app/api/health',
+        headers: { 'x-vidnote-token': 'forged' },
+      },
+      (res) => {
+        res.resume()
+        res.on('end', resolve)
+      },
+    )
+    req.on('error', reject)
+    req.end()
+  })
+
+  assert.equal(seen, 'host-token')
+  await close(front)
+  await close(target)
+})

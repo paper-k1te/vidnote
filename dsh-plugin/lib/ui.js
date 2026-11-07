@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -62,6 +63,8 @@ export function createUiServer({
   let port = 0
   let lastUsed = 0
   let timer = null
+  // 每个插件实例一个随机令牌：后端只认它，代理转发时再加上。
+  const token = randomBytes(24).toString('hex')
 
   async function healthy(target) {
     try {
@@ -111,7 +114,7 @@ export function createUiServer({
     const target = `http://${HOST}:${port}/`
     let proc
     try {
-      proc = spawnImpl(cliPath, ['serve-ui', '--port', String(port)], {
+      proc = spawnImpl(cliPath, ['serve-ui', '--port', String(port), '--token', token], {
         stdio: 'ignore',
         windowsHide: true,
         env,
@@ -161,5 +164,5 @@ export function createUiServer({
     return { url, port }
   }
 
-  return { ensure, touch, stop, origin }
+  return { ensure, touch, stop, origin, token }
 }

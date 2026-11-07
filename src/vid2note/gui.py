@@ -13,7 +13,9 @@ wheel），而 Electron/Tauri 会把体积推到几十上百 MB。
 from __future__ import annotations
 
 import json
+import hmac
 import os
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -43,10 +45,24 @@ def index_html() -> str:
     return path.read_text(encoding="utf-8")
 
 
+def api_authorized(path: str, supplied: str, token: str) -> bool:
+    """``/api/*`` 的会话校验。
+
+    ``/`` 和只读的 ``/api/health`` / ``/api/ping`` 放行：首页要把令牌交给
+    浏览器，健康检查不返回数据也不触发动作。
+    """
+    if not path.startswith("/api/"):
+        return True
+    if path in ("/api/health", "/api/ping"):
+        return True
+    return bool(supplied) and bool(token) and hmac.compare_digest(supplied, token)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = f"vid2note/{__version__}"
     last_ping = time.time()
     seen_ping = False
+    token = ""
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         pass
@@ -55,20 +71,20 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
         self.wfile.write(body)
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         self.send_response(HTTPStatus.NO_CONTENT)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "*")
-        self.send_header("Access-Control-Max-Age", "86400")
         self.send_header("Content-Length", "0")
         self.end_headers()
+
+    def _authorized(self, parsed) -> bool:
+        """所有会读写数据或触发动作的 /api/* 都要会话令牌。"""
+        supplied = self.headers.get("x-vidnote-token") or (
+            parse_qs(parsed.query).get("token") or [""]
+        )[0]
+        return api_authorized(parsed.path, supplied, Handler.token)
 
     def _json(
         self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK
@@ -96,8 +112,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def _get(self) -> None:
         parsed = urlparse(self.path)
+        if not self._authorized(parsed):
+            self._json({"error": "unauthorized"}, HTTPStatus.UNAUTHORIZED)
+            return
         if parsed.path == "/":
-            page = index_html().replace("__VERSION__", __version__)
+            page = (
+                index_html()
+                .replace("__VERSION__", __version__)
+                .replace("__UI_TOKEN__", Handler.token)
+            )
             self._send(HTTPStatus.OK, page.encode("utf-8"), "text/html; charset=utf-8")
             return
         if parsed.path == "/api/health":
@@ -187,6 +210,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _post(self) -> None:
         parsed = urlparse(self.path)
+        if not self._authorized(parsed):
+            self._json({"error": "unauthorized"}, HTTPStatus.UNAUTHORIZED)
+            return
         if parsed.path == "/api/fetch":
             Handler.last_ping = time.time()
             self._json({"job": start_fetch(self._body())})
@@ -879,12 +905,22 @@ def _log(message: str) -> None:
         pass
 
 
-def serve(*, port: int = 0, open_browser: bool = True, app_window: bool = False) -> None:
+def serve(
+    *,
+    port: int = 0,
+    open_browser: bool = True,
+    app_window: bool = False,
+    token: str | None = None,
+) -> None:
     """启动服务并打开界面，直到窗口关闭或 Ctrl+C。
 
     生命周期跟着窗口进程走：不再用心跳猜——页面没加载完就退出，会变成
     「拒绝连接」。窗口进程结束，服务才结束。
+
+    ``token`` 用于 /api/* 的会话校验；不传就随机生成，并嵌入首页交给浏览器。
+    插件宿主会传自己的令牌，再由代理转发时带上。
     """
+    Handler.token = (token or "").strip() or secrets.token_urlsafe(24)
     try:
         server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     except OSError as exc:

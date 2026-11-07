@@ -1,0 +1,50 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.17.0
+2 info using node@v24.19.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\10447\Desktop\openproject\vidnote\dsh-plugin\.npmrc
+5 silly config load:file:C:\Users\10447\.npmrc
+6 silly config load:file:C:\Users\10447\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm pack
+8 verbose argv "pack" "--dry-run" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:C:\Users\10447\Desktop\openproject\vidnote\dsh-plugin\.npm-cache\_logs\2026-11-07T11_53_06_001Z-
+10 verbose logfile C:\Users\10447\Desktop\openproject\vidnote\dsh-plugin\.npm-cache\_logs\2026-11-07T11_53_06_001Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 notice
+14 notice 📦  dsh-vidnote@0.4.5
+15 notice Tarball Contents
+16 notice 1.1kB LICENSE
+16 notice 7.2kB README.md
+16 notice 71.1kB client.js
+16 notice 55B cordis.patch.yml
+16 notice 50.0kB icon.png
+16 notice 6.6kB index.js
+16 notice 1.5kB lib/admission.js
+16 notice 1.6kB lib/api.js
+16 notice 5.1kB lib/bili.js
+16 notice 5.1kB lib/markdown.js
+16 notice 3.4kB lib/proxy.js
+16 notice 8.0kB lib/run.js
+16 notice 5.2kB lib/stt.js
+16 notice 4.4kB lib/ui.js
+16 notice 2.1kB lib/window.js
+16 notice 222B locale/en.json
+16 notice 231B locale/zh.json
+16 notice 1.9kB package.json
+17 notice Tarball Details
+18 notice name: dsh-vidnote
+19 notice version: 0.4.5
+20 notice filename: dsh-vidnote-0.4.5.tgz
+21 notice package size: 88.1 kB
+22 notice unpacked size: 174.7 kB
+23 notice shasum: 70b02dffa8cb3440d16faa53b03e15d6aedb793d
+24 notice integrity: sha512-0ur/BHDL1d5hY[...]pMz9SMnwIDUGQ==
+25 notice total files: 18
+26 notice
+27 verbose cwd C:\Users\10447\Desktop\openproject\vidnote\dsh-plugin
+28 verbose os Windows_NT 10.0.26300
+29 verbose node v24.19.0
+30 verbose npm  v11.17.0
+31 verbose exit 0
+32 info ok
