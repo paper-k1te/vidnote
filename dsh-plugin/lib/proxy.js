@@ -76,7 +76,18 @@ export function createProxy(resolveOrigin) {
         headers,
       },
       (response) => {
-        res.writeHead(response.statusCode ?? 502, response.headers)
+        // 后端给的是宽松 CORS；经过宿主代理后同源访问即可，去掉这些头，
+        // 避免别的站点借 * 直接调本地接口。
+        const headers = { ...response.headers }
+        for (const name of [
+          'access-control-allow-origin',
+          'access-control-allow-credentials',
+          'access-control-allow-methods',
+          'access-control-allow-headers',
+        ]) {
+          delete headers[name]
+        }
+        res.writeHead(response.statusCode ?? 502, headers)
         response.pipe(res)
       },
     )

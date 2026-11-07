@@ -4,6 +4,15 @@
   "description": "vid2note for DeepSeek Harness: native view, tools, and UP search for Bilibili videos.",
   "type": "module",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paper-k1te/vid2note.git",
+    "directory": "dsh-plugin"
+  },
+  "homepage": "https://github.com/paper-k1te/vid2note/tree/main/dsh-plugin",
+  "bugs": {
+    "url": "https://github.com/paper-k1te/vid2note/issues"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -12,6 +21,8 @@
     "./lib/api": "./lib/api.js",
     "./lib/markdown": "./lib/markdown.js",
     "./lib/proxy": "./lib/proxy.js",
+    "./lib/admission": "./lib/admission.js",
+    "./lib/stt": "./lib/stt.js",
     "./lib/ui": "./lib/ui.js",
     "./lib/window": "./lib/window.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
@@ -27,11 +38,14 @@
     "lib/api.js",
     "lib/markdown.js",
     "lib/proxy.js",
+    "lib/admission.js",
+    "lib/stt.js",
     "lib/ui.js",
     "lib/window.js",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.png",
+    "LICENSE",
     "README.md"
   ],
   "keywords": [

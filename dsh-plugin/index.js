@@ -1,4 +1,5 @@
 import { createHandlers } from './lib/api.js'
+import { guarded } from './lib/admission.js'
 import { searchUsers } from './lib/bili.js'
 import { createProxy } from './lib/proxy.js'
 import { buildArgs, resolveCli, runVidnote } from './lib/run.js'
@@ -7,7 +8,7 @@ import { createUiServer } from './lib/ui.js'
 import { openAppWindow } from './lib/window.js'
 
 export const name = 'dsh-vidnote'
-export const inject = ['tools', 'webServer']
+export const inject = ['tools', 'webServer', 'connection']
 
 /**
  * 把 vid2note（原 vidnote）接到 DSH 里：模型可以直接抓 B 站视频、搜视频/搜 UP 主。
@@ -60,7 +61,7 @@ export async function apply(ctx, config = {}) {
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: '/vidnote/parse',
-    handler: api.parse,
+    handler: guarded(ctx.connection, api.parse),
   }))
 
   // /vidnote/app/api/* → 本地 serve-ui 的 /api/*（流式代理，图片和进度都在里面）
@@ -71,14 +72,14 @@ export async function apply(ctx, config = {}) {
   ctx.effect(() => ctx.webServer.register({
     kind: 'prefix',
     path: '/vidnote/app',
-    handler: proxy,
+    handler: guarded(ctx.connection, proxy),
   }))
 
   // 「打开原界面」：优先 Tauri 桌面端，找不到再退回 `gui --app`。
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: '/vidnote/window',
-    async handler(_req, res) {
+    handler: guarded(ctx.connection, async (_req, res) => {
       try {
         openAppWindow({ cliPath })
         res.writeHead(200, {
@@ -93,7 +94,7 @@ export async function apply(ctx, config = {}) {
         })
         res.end(JSON.stringify({ error: String(error?.message ?? error) }))
       }
-    },
+    }),
   }))
 
   const renderText = (_args, value) => [{ type: 'text', text: value }]
