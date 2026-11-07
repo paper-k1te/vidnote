@@ -40,3 +40,6 @@ signed/
 
 src-tauri/target/
 target/
+
+# npm pack cache
+dsh-plugin/.npm-cache/
