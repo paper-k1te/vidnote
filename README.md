@@ -29,6 +29,18 @@
 
 ---
 
+## 📷 项目预览
+
+| 抓取与关键帧 | 预览与资料 |
+| --- | --- |
+| ![抓取页：左侧表单，右侧关键帧画廊](docs/images/preview-fetch-keyframes.png) | ![资料页：视频信息与 Markdown 源文](docs/images/preview-fetch-source.png) |
+| 抓取视频，右侧直接在「预览 / 关键帧 / 源文」间切换 | 元数据、分P、时间戳和原始 Markdown 都能核对 |
+
+| 搜索视频 | 搜索 UP 主 |
+| --- | --- |
+| ![搜索视频](docs/images/preview-search-video.png) | ![搜索 UP 主](docs/images/preview-search-author.png) |
+| 关键词搜视频，一键带回抓取页 | 按作者搜，显示粉丝数、投稿数和空间入口 |
+
 ```console
 $ vid2note fetch BV1xx411c7mD --whisper
 ✓ 已生成 2026-11-04_标题_BV1xx411c7mD.md  （本地转写，412 条）
